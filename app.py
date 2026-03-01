@@ -114,12 +114,20 @@ def portfolio():
         monthly_active_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
 
         # Momentum universes (fixed, era-independent for active)
-        active_momentum_tickers = ACTIVE_FUND_SETS["american_funds"]["tickers"]
         diy_momentum_tickers = diy_tickers  # same universe, momentum-rotated
+        active_momentum_tickers = ACTIVE_FUND_SETS["american_funds"]["tickers"]
 
-        # Load returns data for all needed tickers (deduplicated)
-        all_tickers = list(dict.fromkeys(diy_tickers + active_tickers + active_momentum_tickers))
-        returns_df = data_module.load_returns_for_tickers(all_tickers)
+        # Load core tickers first; then attempt to add momentum-specific tickers
+        core_tickers = list(dict.fromkeys(diy_tickers + active_tickers))
+        try:
+            all_tickers = list(dict.fromkeys(core_tickers + active_momentum_tickers))
+            returns_df = data_module.load_returns_for_tickers(all_tickers)
+        except Exception as mom_err:
+            # Momentum-specific tickers unavailable; fall back to core only
+            active_momentum_tickers = None
+            returns_df = data_module.load_returns_for_tickers(core_tickers)
+            print(f"Warning: active momentum tickers unavailable ({mom_err}), skipping")
+
         absolute_date_start = str(returns_df.index[0].date())
         absolute_date_end   = str(returns_df.index[-1].date())
 
@@ -227,12 +235,12 @@ def portfolio():
                     "label": scenarios["diy_momentum"]["label"],
                     "values": scenarios["diy_momentum"]["values"],
                     "stats": scenarios["diy_momentum"]["stats"],
-                },
+                } if "diy_momentum" in scenarios else None,
                 "active_momentum": {
                     "label": scenarios["active_momentum"]["label"],
                     "values": scenarios["active_momentum"]["values"],
                     "stats": scenarios["active_momentum"]["stats"],
-                },
+                } if "active_momentum" in scenarios else None,
             },
             "fee_drag": fee_drag,
             "active_fund_set": {

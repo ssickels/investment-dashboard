@@ -43,7 +43,7 @@ function getDataExtremes(data) {
     ...data.scenarios.active.values,
     ...data.scenarios.active_managed.values,
   ];
-  if (document.getElementById("showMomentum").checked) {
+  if (document.getElementById("showMomentum").checked && data.scenarios.diy_momentum && data.scenarios.active_momentum) {
     allVals.push(...data.scenarios.diy_momentum.values);
     allVals.push(...data.scenarios.active_momentum.values);
   }
@@ -72,9 +72,10 @@ function buildChart(data) {
   const managedVals        = data.scenarios.managed.values;
   const activeVals         = data.scenarios.active.values;
   const activeManagedVals  = data.scenarios.active_managed.values;
-  const diyMomentumVals    = data.scenarios.diy_momentum.values;
-  const activeMomentumVals = data.scenarios.active_momentum.values;
-  const momentumVisible    = document.getElementById("showMomentum").checked;
+  const momentumAvailable  = !!(data.scenarios.diy_momentum && data.scenarios.active_momentum);
+  const diyMomentumVals    = momentumAvailable ? data.scenarios.diy_momentum.values : [];
+  const activeMomentumVals = momentumAvailable ? data.scenarios.active_momentum.values : [];
+  const momentumVisible    = momentumAvailable && document.getElementById("showMomentum").checked;
 
   const initialAmount  = parseFloat(document.getElementById("initialAmount").value) || 0;
   const monthlyContrib = parseFloat(document.getElementById("monthlyContrib").value) || 0;
@@ -178,7 +179,7 @@ function buildChart(data) {
       fill: { target: 2, above: "rgba(37,99,235,0.07)", below: "rgba(22,163,74,0.07)" },
     },
     {
-      label: data.scenarios.diy_momentum.label,
+      label: momentumAvailable ? data.scenarios.diy_momentum.label : "Index Momentum",
       data: diyMomentumVals,
       borderColor: "#7c3aed",
       backgroundColor: "rgba(124,58,237,0.06)",
@@ -190,7 +191,7 @@ function buildChart(data) {
       hidden: !momentumVisible,
     },
     {
-      label: data.scenarios.active_momentum.label,
+      label: momentumAvailable ? data.scenarios.active_momentum.label : "Active Momentum",
       data: activeMomentumVals,
       borderColor: "#0891b2",
       backgroundColor: "rgba(8,145,178,0.06)",
@@ -322,20 +323,20 @@ function updateStats(data) {
   fill("managed",        s.managed.stats);
   fill("active",         s.active.stats);
   fill("activeManaged",  s.active_managed.stats);
-  fill("diyMomentum",    s.diy_momentum.stats);
-  fill("activeMomentum", s.active_momentum.stats);
+  if (s.diy_momentum)    fill("diyMomentum",    s.diy_momentum.stats);
+  if (s.active_momentum) fill("activeMomentum", s.active_momentum.stats);
 
   // Update DIY and managed card subtitles
   const diyDesc = data.diy_portfolio.description;
   document.getElementById("diyCardSub").textContent          = diyDesc;
   document.getElementById("managedCardSub").textContent      = `${diyDesc} + advisor fees`;
-  document.getElementById("diyMomentumCardSub").textContent  = `${diyDesc} · annual momentum rotation`;
+  if (s.diy_momentum) document.getElementById("diyMomentumCardSub").textContent  = `${diyDesc} · annual momentum rotation`;
 
   // Update active card subtitles to reflect selected fund family
   const desc = data.active_fund_set.description;
   document.getElementById("activeCardSub").textContent             = desc;
   document.getElementById("activeManagedCardSub").textContent      = `${desc} + advisor fees`;
-  document.getElementById("activeMomentumCardSub").textContent     = "AGTHX / ANWPX / ABNDX · annual momentum rotation";
+  if (s.active_momentum) document.getElementById("activeMomentumCardSub").textContent = "AGTHX / ANWPX / ABNDX · annual momentum rotation";
 
   // Update weighted expense ratio display
   const wer = data.active_fund_set.weighted_expense_ratio;
