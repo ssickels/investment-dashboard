@@ -1,6 +1,8 @@
 """
 Data fetching module: yfinance prices + FRED CPI.
 All date indexes normalized to month-end for alignment.
+
+Cache: Redis if REDIS_URL is set, otherwise local file cache.
 """
 import os
 import json
@@ -14,6 +16,28 @@ load_dotenv()
 
 CACHE_DIR = os.path.join(os.path.dirname(__file__), "cache")
 CACHE_TTL_HOURS = 24
+CACHE_TTL_SECONDS = CACHE_TTL_HOURS * 3600
+
+# --------------- Redis (optional) ---------------
+
+_redis_client = None
+
+def _get_redis():
+    global _redis_client
+    if _redis_client is not None:
+        return _redis_client
+    url = os.getenv("REDIS_URL")
+    if not url:
+        return None
+    try:
+        import redis
+        r = redis.from_url(url)
+        r.ping()
+        _redis_client = r
+        return r
+    except Exception as e:
+        print(f"Warning: Redis unavailable ({e}), falling back to file cache")
+        return None
 
 DIY_TICKERS = ["VTI", "VXUS", "BND"]
 ACTIVE_TICKERS = ["AGTHX", "DODFX", "PTTAX"]
@@ -26,13 +50,19 @@ ALL_ACTIVE_TICKERS = [
 ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 
 
-def _cache_path(key: str) -> str:
-    os.makedirs(CACHE_DIR, exist_ok=True)
-    return os.path.join(CACHE_DIR, f"{key}.json")
-
+# --------------- Cache interface ---------------
 
 def _load_cache(key: str):
-    path = _cache_path(key)
+    r = _get_redis()
+    if r:
+        val = r.get(f"cache:{key}")
+        if val is None:
+            return None
+        # Redis TTL handles freshness; return with a current timestamp so
+        # _cache_is_fresh() always passes for Redis-loaded data.
+        return {"fetched_at": datetime.datetime.utcnow().isoformat(), "data": json.loads(val)}
+
+    path = os.path.join(CACHE_DIR, f"{key}.json")
     if not os.path.exists(path):
         return None
     with open(path) as f:
@@ -40,7 +70,13 @@ def _load_cache(key: str):
 
 
 def _save_cache(key: str, data: dict):
-    path = _cache_path(key)
+    r = _get_redis()
+    if r:
+        r.setex(f"cache:{key}", CACHE_TTL_SECONDS, json.dumps(data))
+        return
+
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    path = os.path.join(CACHE_DIR, f"{key}.json")
     payload = {
         "fetched_at": datetime.datetime.utcnow().isoformat(),
         "data": data,
@@ -52,7 +88,7 @@ def _save_cache(key: str, data: dict):
 def _cache_is_fresh(cached: dict) -> bool:
     fetched = datetime.datetime.fromisoformat(cached["fetched_at"])
     age = datetime.datetime.utcnow() - fetched
-    return age.total_seconds() < CACHE_TTL_HOURS * 3600
+    return age.total_seconds() < CACHE_TTL_SECONDS
 
 
 def _normalize_to_month_end(idx: pd.DatetimeIndex) -> pd.DatetimeIndex:
