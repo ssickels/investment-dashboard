@@ -104,7 +104,16 @@
     <!-- MAIN CONTENT -->
     <main class="chart-area">
       <div class="chart-header">
-        <h2>Portfolio Growth Over Time</h2>
+        <div class="chart-header-row">
+          <h2>Portfolio Growth Over Time</h2>
+          <div class="chart-header-controls">
+            <label class="scale-lock-label">
+              <input type="checkbox" id="lockScale" />
+              Fix Y-axis scale
+            </label>
+            <button id="rescaleBtn" class="rescale-btn" style="display:none;">Rescale</button>
+          </div>
+        </div>
         <div id="errorBanner" class="error-banner" style="display:none;"></div>
       </div>
 

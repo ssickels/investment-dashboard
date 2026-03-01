@@ -214,10 +214,58 @@ input[type="range"] {
   min-width: 0;
 }
 
+.chart-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .chart-header h2 {
   font-size: 20px;
   font-weight: 700;
   color: var(--gray-800);
+}
+
+.chart-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.scale-lock-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gray-600);
+  cursor: pointer;
+  white-space: nowrap;
+  font-weight: 400;
+}
+
+.scale-lock-label input[type="checkbox"] {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--blue);
+  cursor: pointer;
+}
+
+.rescale-btn {
+  font-size: 12px;
+  padding: 5px 12px;
+  border: 1px solid var(--blue);
+  border-radius: 5px;
+  background: white;
+  color: var(--blue);
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.rescale-btn:hover {
+  background: var(--blue-bg);
 }
 
 .error-banner {

@@ -31,6 +31,32 @@ function snapDate(target, dates) {
 // ==================== CHART SETUP ====================
 
 let chart = null;
+let scaleLocked = false;
+let lockedYMin  = null;
+let lockedYMax  = null;
+
+function getDataExtremes(data) {
+  const allVals = [
+    ...data.scenarios.diy.values,
+    ...data.scenarios.managed.values,
+    ...data.scenarios.active.values,
+    ...data.scenarios.active_managed.values,
+  ];
+  return { min: Math.min(...allVals), max: Math.max(...allVals) };
+}
+
+function handleScaleAfterRender(data) {
+  if (!chart) return;
+  const rescaleBtn = document.getElementById("rescaleBtn");
+  if (!scaleLocked) {
+    lockedYMin = chart.scales.y.min;
+    lockedYMax = chart.scales.y.max;
+    rescaleBtn.style.display = "none";
+    return;
+  }
+  const { min, max } = getDataExtremes(data);
+  rescaleBtn.style.display = (max > lockedYMax || min < lockedYMin) ? "inline-block" : "none";
+}
 
 function buildChart(data) {
   const ctx = document.getElementById("mainChart").getContext("2d");
@@ -186,6 +212,13 @@ function buildChart(data) {
       }
     });
     chart.options.plugins.annotation.annotations = annotations;
+    if (scaleLocked && lockedYMin !== null) {
+      chart.options.scales.y.min = lockedYMin;
+      chart.options.scales.y.max = lockedYMax;
+    } else {
+      chart.options.scales.y.min = undefined;
+      chart.options.scales.y.max = undefined;
+    }
     chart.update();
   } else {
     chart = new Chart(ctx, config);
@@ -301,6 +334,7 @@ async function fetchAndRender() {
     }
 
     buildChart(data);
+    handleScaleAfterRender(data);
     updateStats(data);
     updateFeeDrag(data);
 
@@ -326,6 +360,37 @@ function wireInputs() {
     document.getElementById(id).addEventListener("input", debouncedFetch);
     document.getElementById(id).addEventListener("change", debouncedFetch);
   }
+
+  // Scale lock checkbox
+  document.getElementById("lockScale").addEventListener("change", (e) => {
+    scaleLocked = e.target.checked;
+    if (!chart) return;
+    if (scaleLocked) {
+      lockedYMin = chart.scales.y.min;
+      lockedYMax = chart.scales.y.max;
+      chart.options.scales.y.min = lockedYMin;
+      chart.options.scales.y.max = lockedYMax;
+    } else {
+      chart.options.scales.y.min = undefined;
+      chart.options.scales.y.max = undefined;
+      document.getElementById("rescaleBtn").style.display = "none";
+    }
+    chart.update("none");
+  });
+
+  // Rescale button: auto-scale then re-lock at new bounds
+  document.getElementById("rescaleBtn").addEventListener("click", () => {
+    if (!chart) return;
+    chart.options.scales.y.min = undefined;
+    chart.options.scales.y.max = undefined;
+    chart.update("none");
+    lockedYMin = chart.scales.y.min;
+    lockedYMax = chart.scales.y.max;
+    chart.options.scales.y.min = lockedYMin;
+    chart.options.scales.y.max = lockedYMax;
+    chart.update("none");
+    document.getElementById("rescaleBtn").style.display = "none";
+  });
 
   // Slider display updates (instant, no debounce)
   document.getElementById("years").addEventListener("input", (e) => {
