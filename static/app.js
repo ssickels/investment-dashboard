@@ -297,12 +297,13 @@ function buildChart(data) {
     chart.update();
   } else {
     chart = new Chart(ctx, config);
-    // Hide contrib line on initial render if checkbox is unchecked
+    // Apply initial visibility for all toggleable lines
+    document.querySelectorAll(".stat-card-toggle").forEach(cb => {
+      chart.getDatasetMeta(parseInt(cb.dataset.datasetIdx)).hidden = !cb.checked;
+    });
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
-    if (contribIdx !== -1) {
-      chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
-      chart.update("none");
-    }
+    if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
+    chart.update("none");
   }
 }
 
