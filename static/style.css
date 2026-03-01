@@ -705,6 +705,20 @@ input[type="range"] {
   cursor: default;
 }
 
+.picker-reset {
+  display: none;  /* shown via JS only when end date is not at max */
+  font-size: 11px;
+  color: var(--gray-400);
+  margin-left: 4px;
+  padding: 2px 6px;
+  border: 1px solid var(--gray-200) !important;
+  border-radius: 4px;
+}
+.picker-reset:hover:not(:disabled) {
+  color: var(--gray-700);
+  background: var(--gray-100) !important;
+}
+
 .picker-val {
   font-size: 13px;
   font-weight: 600;

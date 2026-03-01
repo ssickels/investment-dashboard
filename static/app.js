@@ -895,6 +895,7 @@ function updateEndPickerDisplay() {
   document.getElementById("endPickerNextYear").disabled  = endPickerYear  >= pickerMaxYear;
   document.getElementById("endPickerPrevMonth").disabled = endSeq         <= effMinSeq;
   document.getElementById("endPickerNextMonth").disabled = endSeq         >= maxSeq;
+  document.getElementById("endPickerReset").style.display = endSeq < maxSeq ? "inline-block" : "none";
 
   // Only send end_date to backend when it's before the absolute maximum
   const val = endSeq < maxSeq ? pickerToYYYYMM(endPickerYear, endPickerMonth) : "";
@@ -1018,6 +1019,13 @@ function wireInputs() {
   document.getElementById("endPickerNextYear").addEventListener("click",  () => moveEndPickerYear(+1));
   document.getElementById("endPickerPrevMonth").addEventListener("click", () => moveEndPickerMonth(-1));
   document.getElementById("endPickerNextMonth").addEventListener("click", () => moveEndPickerMonth(+1));
+  document.getElementById("endPickerReset").addEventListener("click", () => {
+    endPickerYear  = pickerMaxYear;
+    endPickerMonth = pickerMaxMonth;
+    clampEndPicker();
+    updateEndPickerDisplay();
+    updatePickerDisplay();
+  });
 
   // Stat card visibility toggles
   document.querySelectorAll(".stat-card-toggle").forEach(cb => {
