@@ -56,7 +56,19 @@
         </select>
       </div>
 
-      <div class="section-header">Managed Fund Costs (Scenario 2)</div>
+      <div class="section-header">Active Fund Selection</div>
+
+      <div class="control-group">
+        <label for="activeFundSet">Active Fund Family</label>
+        <select id="activeFundSet">
+          <option value="american_dodge">American/Dodge — AGTHX / DODFX / PTTAX</option>
+          <option value="fidelity">Fidelity — FCNTX / FIEUX / FTBFX</option>
+          <option value="t_rowe_price">T. Rowe Price — PRGFX / PRITX / PRFIX</option>
+          <option value="vanguard_active">Vanguard Active — VWUSX / VWILX / VBTLX</option>
+        </select>
+      </div>
+
+      <div class="section-header">Managed Fund Costs (Scenarios 2 &amp; 4)</div>
 
       <div class="control-group">
         <label for="aumFee">
@@ -147,7 +159,7 @@
 
         <div class="stat-card active" id="statsActive">
           <div class="stat-card-title">Actively Managed</div>
-          <div class="stat-card-sub">AGTHX / DODFX / PTTAX</div>
+          <div class="stat-card-sub" id="activeCardSub">AGTHX / DODFX / PTTAX</div>
           <dl>
             <dt>Final Value</dt>
             <dd id="activeFinal">—</dd>
@@ -161,6 +173,25 @@
             <dd id="activeCagr">—</dd>
             <dt>Fees Paid</dt>
             <dd id="activeFees">—</dd>
+          </dl>
+        </div>
+
+        <div class="stat-card active-managed" id="statsActiveManaged">
+          <div class="stat-card-title">Fee-Adjusted Active</div>
+          <div class="stat-card-sub" id="activeManagedCardSub">Active funds + advisor fees</div>
+          <dl>
+            <dt>Final Value</dt>
+            <dd id="activeManagedFinal">—</dd>
+            <dt>Total Contributed</dt>
+            <dd id="activeManagedContrib">—</dd>
+            <dt>Total Gain</dt>
+            <dd id="activeManagedGain">—</dd>
+            <dt>
+              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+            </dt>
+            <dd id="activeManagedCagr">—</dd>
+            <dt>Fees Paid</dt>
+            <dd id="activeManagedFees">—</dd>
           </dl>
         </div>
       </div>

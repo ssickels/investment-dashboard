@@ -37,9 +37,10 @@ function buildChart(data) {
 
   const labels = data.dates;
 
-  const diyVals     = data.scenarios.diy.values;
-  const managedVals = data.scenarios.managed.values;
-  const activeVals  = data.scenarios.active.values;
+  const diyVals           = data.scenarios.diy.values;
+  const managedVals       = data.scenarios.managed.values;
+  const activeVals        = data.scenarios.active.values;
+  const activeManagedVals = data.scenarios.active_managed.values;
 
   // Crash annotation dates — snapped to available labels
   const CRASHES = [
@@ -100,6 +101,17 @@ function buildChart(data) {
       data: activeVals,
       borderColor: "#16a34a",
       backgroundColor: "rgba(22,163,74,0.06)",
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      borderDash: [2, 2],
+      fill: false,
+    },
+    {
+      label: data.scenarios.active_managed.label,
+      data: activeManagedVals,
+      borderColor: "#d97706",
+      backgroundColor: "rgba(217,119,6,0.06)",
       borderWidth: 2,
       pointRadius: 0,
       tension: 0.3,
@@ -168,7 +180,10 @@ function buildChart(data) {
   if (chart) {
     chart.data.labels = labels;
     chart.data.datasets.forEach((ds, i) => {
-      ds.data = datasets[i].data;
+      if (datasets[i]) {
+        ds.data  = datasets[i].data;
+        ds.label = datasets[i].label;
+      }
     });
     chart.options.plugins.annotation.annotations = annotations;
     chart.update();
@@ -190,9 +205,15 @@ function updateStats(data) {
     document.getElementById(`${prefix}Fees`).textContent    = fmt$.format(stats.total_fees_paid);
   }
 
-  fill("diy",     s.diy.stats);
-  fill("managed", s.managed.stats);
-  fill("active",  s.active.stats);
+  fill("diy",           s.diy.stats);
+  fill("managed",       s.managed.stats);
+  fill("active",        s.active.stats);
+  fill("activeManaged", s.active_managed.stats);
+
+  // Update active card subtitles to reflect selected fund family
+  const desc = data.active_fund_set.description;
+  document.getElementById("activeCardSub").textContent        = desc;
+  document.getElementById("activeManagedCardSub").textContent = `${desc} + advisor fees`;
 }
 
 function updateFeeDrag(data) {
@@ -215,6 +236,13 @@ function updateFeeDrag(data) {
     lines.push(`Actively Managed outperformed DIY by <strong>${fmt$.format(Math.abs(fd.diy_vs_active))}</strong> — active management added value in this period.`);
   }
 
+  // Active vs Fee-Adjusted Active
+  if (fd.active_vs_active_managed >= 0) {
+    lines.push(`Applying advisor fees to the active portfolio cost <strong>${fmt$.format(fd.active_vs_active_managed)}</strong> versus the no-fee active baseline.`);
+  } else {
+    lines.push(`Fee-Adjusted Active outperformed no-fee Active by <strong>${fmt$.format(Math.abs(fd.active_vs_active_managed))}</strong> (unexpected in this period).`);
+  }
+
   el.innerHTML = lines.join("<br />");
 }
 
@@ -230,6 +258,7 @@ function getParams() {
     aum_fee:         document.getElementById("aumFee").value,
     expense_ratio:   document.getElementById("expenseRatio").value,
     inflation_adj:   document.getElementById("inflationAdj").checked ? "true" : "false",
+    active_fund_set: document.getElementById("activeFundSet").value,
   };
 }
 
@@ -287,7 +316,7 @@ const debouncedFetch = debounce(fetchAndRender, 400);
 function wireInputs() {
   const ids = [
     "initialAmount", "monthlyContrib", "years", "stockPct",
-    "rebalance", "aumFee", "expenseRatio", "inflationAdj",
+    "rebalance", "aumFee", "expenseRatio", "inflationAdj", "activeFundSet",
   ];
 
   for (const id of ids) {

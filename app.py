@@ -10,6 +10,29 @@ from simulator import SimParams, run_all_scenarios
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
+ACTIVE_FUND_SETS = {
+    "american_dodge": {
+        "label": "American/Dodge",
+        "tickers": ["AGTHX", "DODFX", "PTTAX"],
+        "description": "AGTHX / DODFX / PTTAX",
+    },
+    "fidelity": {
+        "label": "Fidelity",
+        "tickers": ["FCNTX", "FIEUX", "FTBFX"],
+        "description": "FCNTX / FIEUX / FTBFX",
+    },
+    "t_rowe_price": {
+        "label": "T. Rowe Price",
+        "tickers": ["PRGFX", "PRITX", "PRFIX"],
+        "description": "PRGFX / PRITX / PRFIX",
+    },
+    "vanguard_active": {
+        "label": "Vanguard Active",
+        "tickers": ["VWUSX", "VWILX", "VBTLX"],
+        "description": "VWUSX / VWILX / VBTLX",
+    },
+}
+
 
 @app.route("/")
 def index():
@@ -28,6 +51,11 @@ def portfolio():
         aum_fee = float(request.args.get("aum_fee", 1.0))
         expense_ratio = float(request.args.get("expense_ratio", 0.5))
         inflation_adj = request.args.get("inflation_adj", "false").lower() == "true"
+        active_fund_set_key = request.args.get("active_fund_set", "american_dodge")
+        if active_fund_set_key not in ACTIVE_FUND_SETS:
+            active_fund_set_key = "american_dodge"
+        active_fund_set = ACTIVE_FUND_SETS[active_fund_set_key]
+        active_tickers = active_fund_set["tickers"]
 
         # Validate
         initial_amount = max(1.0, initial_amount)
@@ -38,8 +66,10 @@ def portfolio():
         if rebalance not in ("never", "annually", "quarterly"):
             rebalance = "annually"
 
-        # Load returns data
-        returns_df = data_module.load_all_returns()
+        # Load returns data for DIY + selected active tickers
+        returns_df = data_module.load_returns_for_tickers(
+            data_module.DIY_TICKERS + active_tickers
+        )
         months_available = len(returns_df)
         years_available = months_available // 12
         date_range_start = str(returns_df.index[0].date())
@@ -78,7 +108,7 @@ def portfolio():
             inflation_adj=inflation_adj,
         )
 
-        scenarios = run_all_scenarios(returns_df, deflator, params)
+        scenarios = run_all_scenarios(returns_df, deflator, params, active_tickers=active_tickers)
 
         # Use dates from DIY scenario (all same length)
         dates = scenarios["diy"]["dates"]
@@ -87,10 +117,12 @@ def portfolio():
         diy_final = scenarios["diy"]["stats"]["final_value"]
         managed_final = scenarios["managed"]["stats"]["final_value"]
         active_final = scenarios["active"]["stats"]["final_value"]
+        active_managed_final = scenarios["active_managed"]["stats"]["final_value"]
 
         fee_drag = {
             "diy_vs_managed": round(diy_final - managed_final, 2),
             "diy_vs_active": round(diy_final - active_final, 2),
+            "active_vs_active_managed": round(active_final - active_managed_final, 2),
         }
 
         response = {
@@ -119,8 +151,18 @@ def portfolio():
                     "values": scenarios["active"]["values"],
                     "stats": scenarios["active"]["stats"],
                 },
+                "active_managed": {
+                    "label": scenarios["active_managed"]["label"],
+                    "values": scenarios["active_managed"]["values"],
+                    "stats": scenarios["active_managed"]["stats"],
+                },
             },
             "fee_drag": fee_drag,
+            "active_fund_set": {
+                "key": active_fund_set_key,
+                "label": active_fund_set["label"],
+                "description": active_fund_set["description"],
+            },
             "error": warning,
         }
 

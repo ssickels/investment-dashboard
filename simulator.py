@@ -146,6 +146,7 @@ def run_all_scenarios(
     returns_df: pd.DataFrame,
     deflator: Optional[pd.Series],
     params: SimParams,
+    active_tickers: list = None,
 ) -> dict:
     """
     Run all 3 investment scenarios.
@@ -161,12 +162,14 @@ def run_all_scenarios(
     monthly_fee_rate = (1.0 + annual_fee_total) ** (1.0 / 12.0) - 1.0
 
     # Active fund weights: same stock/bond ratio but different tickers
+    if active_tickers is None:
+        active_tickers = ["AGTHX", "DODFX", "PTTAX"]
     s = params.stock_pct / 100.0
     b = 1.0 - s
     active_weights = {
-        "AGTHX": 0.8 * s,
-        "DODFX": 0.2 * s,
-        "PTTAX": b,
+        active_tickers[0]: 0.8 * s,
+        active_tickers[1]: 0.2 * s,
+        active_tickers[2]: b,
     }
 
     diy = simulate(
@@ -189,15 +192,26 @@ def run_all_scenarios(
 
     active = simulate(
         returns_df=returns_df,
-        tickers=["AGTHX", "DODFX", "PTTAX"],
+        tickers=active_tickers,
         weights=active_weights,
         params=params,
         monthly_fee_rate=0.0,
         deflator=deflator,
     )
 
+    active_managed = simulate(
+        returns_df=returns_df,
+        tickers=active_tickers,
+        weights=active_weights,
+        params=params,
+        monthly_fee_rate=monthly_fee_rate,
+        deflator=deflator,
+    )
+
+    ticker_str = " / ".join(active_tickers)
     return {
         "diy": {**diy, "label": "DIY Index (VTI/VXUS/BND)"},
         "managed": {**managed, "label": "Fee-Adjusted Managed"},
-        "active": {**active, "label": "Actively Managed (AGTHX/DODFX/PTTAX)"},
+        "active": {**active, "label": f"Actively Managed ({ticker_str})"},
+        "active_managed": {**active_managed, "label": f"Fee-Adjusted Active ({ticker_str})"},
     }

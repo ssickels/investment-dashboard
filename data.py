@@ -17,7 +17,13 @@ CACHE_TTL_HOURS = 24
 
 DIY_TICKERS = ["VTI", "VXUS", "BND"]
 ACTIVE_TICKERS = ["AGTHX", "DODFX", "PTTAX"]
-ALL_TICKERS = DIY_TICKERS + ACTIVE_TICKERS
+ALL_ACTIVE_TICKERS = [
+    "AGTHX", "DODFX", "PTTAX",   # American / Dodge
+    "FCNTX", "FIEUX", "FTBFX",   # Fidelity
+    "PRGFX", "PRITX", "PRFIX",   # T. Rowe Price
+    "VWUSX", "VWILX", "VBTLX",   # Vanguard Active
+]
+ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 
 
 def _cache_path(key: str) -> str:
@@ -106,19 +112,21 @@ def load_monthly_returns(ticker: str) -> pd.Series:
     return returns
 
 
-def load_all_returns() -> pd.DataFrame:
-    """
-    Load all 6 tickers, concat, inner join (dropna).
-    Common start is approximately 2011-09 due to VXUS inception.
-    """
-    series = {}
-    for ticker in ALL_TICKERS:
-        series[ticker] = load_monthly_returns(ticker)
-
+def load_returns_for_tickers(tickers: list) -> pd.DataFrame:
+    """Load and inner-join monthly returns for a specific set of tickers."""
+    series = {t: load_monthly_returns(t) for t in tickers}
     df = pd.concat(series, axis=1)
     df = df.dropna()
     df.index = _normalize_to_month_end(df.index)
     return df
+
+
+def load_all_returns() -> pd.DataFrame:
+    """
+    Load DIY + default active tickers, inner join (dropna).
+    Common start is approximately 2011-09 due to VXUS inception.
+    """
+    return load_returns_for_tickers(DIY_TICKERS + ACTIVE_TICKERS)
 
 
 def get_common_date_range() -> tuple[str, str]:
