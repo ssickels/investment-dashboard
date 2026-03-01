@@ -375,6 +375,60 @@ async function fetchAndRender() {
 
 const debouncedFetch = debounce(fetchAndRender, 400);
 
+// ==================== ERA SELECTION ====================
+
+const ERA_CONFIG = {
+  etf: {
+    diyDisplay: "VTI / VXUS / BND",
+    activeFunds: [
+      { value: "american_dodge",  label: "American/Dodge — AGTHX / DODFX / PTTAX" },
+      { value: "fidelity",        label: "Fidelity — FCNTX / FIEUX / FTBFX" },
+      { value: "vanguard_active", label: "Vanguard Active — VWUSX / VWILX / VBTLX" },
+      { value: "t_rowe_price",    label: "T. Rowe Price — PRGFX / PRITX / PRTIX" },
+    ],
+  },
+  pre_etf: {
+    diyDisplay: "VFINX / VWIGX / VBMFX",
+    activeFunds: [
+      { value: "fidelity_classic", label: "Fidelity Classic — FMAGX / FOSFX / FBNDX" },
+      { value: "american_funds",   label: "American Funds — AGTHX / ANWPX / ABNDX" },
+      { value: "t_rowe_price",     label: "T. Rowe Price — PRGFX / PRITX / PRTIX (1989+)" },
+    ],
+  },
+};
+
+function setEra(era) {
+  const config = ERA_CONFIG[era];
+
+  // Update hidden input
+  document.getElementById("diyPortfolio").value = era;
+
+  // Update DIY fund display
+  document.getElementById("diyFundDisplay").textContent = config.diyDisplay;
+
+  // Check the matching radio button and style the labels
+  document.querySelectorAll("input[name='era']").forEach(radio => {
+    radio.checked = (radio.value === era);
+  });
+  document.querySelectorAll(".era-option").forEach(el => {
+    el.classList.toggle("era-option--selected", el.querySelector("input[name='era']").value === era);
+  });
+
+  // Rebuild active fund dropdown, preserving selection if it exists in new era
+  const sel = document.getElementById("activeFundSet");
+  const prev = sel.value;
+  sel.innerHTML = "";
+  for (const { value, label } of config.activeFunds) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    sel.appendChild(opt);
+  }
+  if (config.activeFunds.some(f => f.value === prev)) {
+    sel.value = prev;
+  }
+}
+
 // ==================== DATE PICKER ====================
 
 let pickerYear  = null;
@@ -461,13 +515,21 @@ function movePickerMonth(delta) {
 function wireInputs() {
   const ids = [
     "initialAmount", "monthlyContrib", "stockPct",
-    "rebalance", "aumFee", "inflationAdj", "activeFundSet", "diyPortfolio",
+    "rebalance", "aumFee", "inflationAdj", "activeFundSet",
   ];
 
   for (const id of ids) {
     document.getElementById(id).addEventListener("input", debouncedFetch);
     document.getElementById(id).addEventListener("change", debouncedFetch);
   }
+
+  // Era radio buttons
+  document.querySelectorAll("input[name='era']").forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      setEra(e.target.value);
+      debouncedFetch();
+    });
+  });
 
   // Date picker arrow buttons
   document.getElementById("pickerPrevYear").addEventListener("click",  () => movePickerYear(-1));
@@ -523,5 +585,6 @@ function wireInputs() {
 
 // ==================== INIT ====================
 
+setEra("etf");
 wireInputs();
 fetchAndRender();

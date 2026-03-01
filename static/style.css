@@ -464,6 +464,53 @@ input[type="range"] {
   transform: none;
 }
 
+/* ==================== ERA TOGGLE ==================== */
+.era-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.era-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  cursor: pointer;
+  background: #fff;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.era-option--selected {
+  border-color: var(--blue);
+  background: var(--blue-bg);
+}
+
+.era-option input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--blue);
+  flex-shrink: 0;
+}
+
+.era-option-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.era-option-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
+.era-option-sub {
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
 /* ==================== DATE PICKER ==================== */
 .date-picker {
   display: flex;

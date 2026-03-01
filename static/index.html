@@ -65,27 +65,35 @@
       <div class="section-header">Portfolio Configuration</div>
 
       <div class="control-group">
-        <label for="diyPortfolio">DIY Portfolio</label>
-        <select id="diyPortfolio">
-          <option value="etf">Modern ETFs — VTI / VXUS / BND (2011+)</option>
-          <option value="pre_etf">Pre-ETF Index Funds — VFINX / VWIGX / VBMFX (1987+)</option>
-        </select>
+        <label>Investment Era</label>
+        <div class="era-toggle">
+          <label class="era-option" id="eraEtfLabel">
+            <input type="radio" name="era" id="eraEtf" value="etf" />
+            <span class="era-option-text">
+              <span class="era-option-name">Modern</span>
+              <span class="era-option-sub">ETFs · 2011+</span>
+            </span>
+          </label>
+          <label class="era-option" id="eraPreEtfLabel">
+            <input type="radio" name="era" id="eraPreEtf" value="pre_etf" />
+            <span class="era-option-text">
+              <span class="era-option-name">Pre-ETF</span>
+              <span class="era-option-sub">Mutual funds · 1987+</span>
+            </span>
+          </label>
+        </div>
+      </div>
+
+      <input type="hidden" id="diyPortfolio" value="etf" />
+
+      <div class="control-group">
+        <label>Low-Cost Index Funds</label>
+        <div class="er-display" id="diyFundDisplay">—</div>
       </div>
 
       <div class="control-group">
-        <label for="activeFundSet">Active Fund Family</label>
-        <select id="activeFundSet">
-          <optgroup label="Modern (ETF era, 2011+)">
-            <option value="american_dodge">American/Dodge — AGTHX / DODFX / PTTAX</option>
-            <option value="fidelity">Fidelity — FCNTX / FIEUX / FTBFX</option>
-            <option value="vanguard_active">Vanguard Active — VWUSX / VWILX / VBTLX</option>
-          </optgroup>
-          <optgroup label="Classic (pre-ETF era, 1987+)">
-            <option value="fidelity_classic">Fidelity Classic — FMAGX / FOSFX / FBNDX</option>
-            <option value="american_funds">American Funds — AGTHX / ANWPX / ABNDX</option>
-            <option value="t_rowe_price">T. Rowe Price — PRGFX / PRITX / PRTIX (1989+)</option>
-          </optgroup>
-        </select>
+        <label for="activeFundSet">Actively Managed Funds</label>
+        <select id="activeFundSet"></select>
       </div>
 
       <div class="section-header">Advisor Costs (&#8220;With Advisor&#8221; Scenarios)</div>
