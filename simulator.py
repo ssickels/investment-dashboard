@@ -142,6 +142,104 @@ def simulate(
     }
 
 
+def simulate_momentum(
+    returns_df: pd.DataFrame,
+    tickers: list,
+    params: SimParams,
+    monthly_fee_rate: float = 0.0,
+    deflator: Optional[pd.Series] = None,
+) -> dict:
+    """
+    Simulate an annual momentum-rotation portfolio over the given 3-ticker universe.
+
+    Weights are updated once per year based on trailing 12-month cumulative return:
+      rank 1 (worst) → 1/6, rank 2 → 2/6, rank 3 (best) → 3/6
+    Cold start: equal weights (1/3 each) for the first 12 months.
+    No look-ahead: at month i, only returns[i-12 .. i-1] are used.
+    AUM fee and CPI deflation applied identically to simulate().
+    """
+    months = params.years * 12
+    slice_df = returns_df[tickers].iloc[:months]
+
+    if len(slice_df) == 0:
+        raise ValueError("No data available for momentum simulation")
+
+    n_tickers = len(tickers)
+    equal_w = 1.0 / n_tickers
+    current_weights = {t: equal_w for t in tickers}
+    holdings = {t: params.initial_amount * current_weights[t] for t in tickers}
+    total_fees_paid = 0.0
+    values = []
+    dates = []
+
+    for i, (date, row) in enumerate(slice_df.iterrows()):
+        # Apply monthly returns
+        for t in tickers:
+            holdings[t] *= (1.0 + float(row[t]))
+
+        portfolio_value = sum(holdings.values())
+
+        # Apply AUM fee before contribution
+        if monthly_fee_rate > 0:
+            fee = portfolio_value * monthly_fee_rate
+            total_fees_paid += fee
+            ratio = (portfolio_value - fee) / portfolio_value
+            for t in tickers:
+                holdings[t] *= ratio
+            portfolio_value -= fee
+
+        # Annual momentum rebalance + contribution
+        if i > 0 and i % 12 == 0:
+            # Trailing 12-month cumulative return (no look-ahead)
+            lookback = slice_df.iloc[i - 12:i]
+            cum_ret = (1 + lookback).prod() - 1
+            ranks = cum_ret.rank()  # worst=1, best=n_tickers
+            current_weights = (ranks / ranks.sum()).to_dict()
+
+            # Add contribution then rebalance to new weights
+            portfolio_value += params.monthly_contrib
+            holdings = {t: portfolio_value * current_weights[t] for t in tickers}
+
+        elif i > 0:
+            # Between rebalances: add contribution proportional to drifted weights
+            cur_total = sum(holdings.values())
+            if cur_total > 0:
+                for t in tickers:
+                    holdings[t] += params.monthly_contrib * (holdings[t] / cur_total)
+
+        values.append(sum(holdings.values()))
+        dates.append(str(date.date()))
+
+    # CPI deflation
+    if deflator is not None and params.inflation_adj:
+        deflator_aligned = deflator.reindex(slice_df.index, method="ffill")
+        for i, date in enumerate(slice_df.index):
+            if date in deflator_aligned.index and not pd.isna(deflator_aligned[date]):
+                values[i] *= float(deflator_aligned[date])
+
+    n = len(values)
+    total_contributions = params.initial_amount + params.monthly_contrib * max(0, n - 1)
+    final_value = values[-1] if values else 0.0
+    total_gain = final_value - total_contributions
+
+    if n > 0 and total_contributions > 0 and final_value > 0:
+        cagr = (final_value / total_contributions) ** (12.0 / n) - 1.0
+    else:
+        cagr = 0.0
+
+    return {
+        "values": [round(v, 2) for v in values],
+        "dates": dates,
+        "stats": {
+            "final_value": round(final_value, 2),
+            "total_contributions": round(total_contributions, 2),
+            "total_gain": round(total_gain, 2),
+            "cagr": round(cagr * 100, 4),
+            "total_fees_paid": round(total_fees_paid, 2),
+        },
+    }
+
+
 def run_all_scenarios(
     returns_df: pd.DataFrame,
     deflator: Optional[pd.Series],
@@ -150,6 +248,9 @@ def run_all_scenarios(
     active_tickers: list = None,
     monthly_managed_fee_rate: float = 0.0,
     monthly_active_managed_fee_rate: float = 0.0,
+    diy_momentum_tickers: list = None,
+    active_momentum_tickers: list = None,
+    monthly_momentum_fee_rate: float = 0.0,
 ) -> dict:
     """
     Run all 4 investment scenarios.
@@ -212,9 +313,37 @@ def run_all_scenarios(
 
     diy_str    = " / ".join(diy_tickers)
     ticker_str = " / ".join(active_tickers)
-    return {
+    result = {
         "diy": {**diy, "label": f"Low-Cost Index ({diy_str})"},
         "managed": {**managed, "label": f"Fee-Adjusted Index ({diy_str})"},
         "active": {**active, "label": f"Actively Managed ({ticker_str})"},
         "active_managed": {**active_managed, "label": f"Fee-Adjusted Active ({ticker_str})"},
     }
+
+    if diy_momentum_tickers:
+        mom_str = " / ".join(diy_momentum_tickers)
+        result["diy_momentum"] = {
+            **simulate_momentum(
+                returns_df=returns_df,
+                tickers=diy_momentum_tickers,
+                params=params,
+                monthly_fee_rate=monthly_momentum_fee_rate,
+                deflator=deflator,
+            ),
+            "label": f"Index Momentum ({mom_str})",
+        }
+
+    if active_momentum_tickers:
+        amom_str = " / ".join(active_momentum_tickers)
+        result["active_momentum"] = {
+            **simulate_momentum(
+                returns_df=returns_df,
+                tickers=active_momentum_tickers,
+                params=params,
+                monthly_fee_rate=monthly_momentum_fee_rate,
+                deflator=deflator,
+            ),
+            "label": f"Active Momentum ({amom_str})",
+        }
+
+    return result

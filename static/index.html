@@ -131,6 +131,13 @@
         </label>
       </div>
 
+      <div class="control-group checkbox-group">
+        <label>
+          <input type="checkbox" id="showMomentum" />
+          <span>Show momentum rotation</span>
+        </label>
+      </div>
+
       <div class="data-note">
         Data source: Yahoo Finance (VTI, VXUS, BND, AGTHX, DODFX, PTTAX) &amp; FRED CPI.<br />
         <span id="dateRangeNote">Loading…</span>
@@ -250,6 +257,61 @@
           </div>
         </div>
 
+      </div>
+
+      <!-- MOMENTUM STATS (hidden until checkbox checked) -->
+      <div id="momentumStats" style="display:none;">
+        <div class="stats-grid">
+
+          <div class="stat-group stat-group-diy-momentum">
+            <div class="stat-group-label">Index Momentum (With Advisor)</div>
+            <div class="stat-group-cards">
+              <div class="stat-card diy-momentum" id="statsDiyMomentum">
+                <div class="stat-card-title">Momentum Rotation</div>
+                <div class="stat-card-sub" id="diyMomentumCardSub">Rank-based annual rotation</div>
+                <dl>
+                  <dt>Final Value</dt>
+                  <dd id="diyMomentumFinal">—</dd>
+                  <dt>Total Contributed</dt>
+                  <dd id="diyMomentumContrib">—</dd>
+                  <dt>Total Gain</dt>
+                  <dd id="diyMomentumGain">—</dd>
+                  <dt>
+                    <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+                  </dt>
+                  <dd id="diyMomentumCagr">—</dd>
+                  <dt>Fees Paid</dt>
+                  <dd id="diyMomentumFees">—</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+          <div class="stat-group stat-group-active-momentum">
+            <div class="stat-group-label">Active Momentum — AGTHX / ANWPX / ABNDX (With Advisor)</div>
+            <div class="stat-group-cards">
+              <div class="stat-card active-momentum" id="statsActiveMomentum">
+                <div class="stat-card-title">Momentum Rotation</div>
+                <div class="stat-card-sub" id="activeMomentumCardSub">Rank-based annual rotation</div>
+                <dl>
+                  <dt>Final Value</dt>
+                  <dd id="activeMomentumFinal">—</dd>
+                  <dt>Total Contributed</dt>
+                  <dd id="activeMomentumContrib">—</dd>
+                  <dt>Total Gain</dt>
+                  <dd id="activeMomentumGain">—</dd>
+                  <dt>
+                    <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+                  </dt>
+                  <dd id="activeMomentumCagr">—</dd>
+                  <dt>Fees Paid</dt>
+                  <dd id="activeMomentumFees">—</dd>
+                </dl>
+              </div>
+            </div>
+          </div>
+
+        </div>
       </div>
 
       <!-- FEE DRAG CALLOUT -->

@@ -46,6 +46,7 @@ ALL_ACTIVE_TICKERS = [
     "FCNTX", "FIEUX", "FTBFX",   # Fidelity
     "PRGFX", "PRITX", "PRFIX",   # T. Rowe Price
     "VWUSX", "VWILX", "VBTLX",   # Vanguard Active
+    "ANWPX", "ABNDX",            # American Funds (momentum universe)
 ]
 ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 

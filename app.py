@@ -113,10 +113,13 @@ def portfolio():
         # Scenario 4: AUM fee only (active fund ER already embedded in historical returns)
         monthly_active_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
 
-        # Load returns data for selected DIY + active tickers
-        returns_df = data_module.load_returns_for_tickers(
-            diy_tickers + active_tickers
-        )
+        # Momentum universes (fixed, era-independent for active)
+        active_momentum_tickers = ACTIVE_FUND_SETS["american_funds"]["tickers"]
+        diy_momentum_tickers = diy_tickers  # same universe, momentum-rotated
+
+        # Load returns data for all needed tickers (deduplicated)
+        all_tickers = list(dict.fromkeys(diy_tickers + active_tickers + active_momentum_tickers))
+        returns_df = data_module.load_returns_for_tickers(all_tickers)
         absolute_date_start = str(returns_df.index[0].date())
         absolute_date_end   = str(returns_df.index[-1].date())
 
@@ -167,6 +170,9 @@ def portfolio():
             active_tickers=active_tickers,
             monthly_managed_fee_rate=monthly_managed_fee,
             monthly_active_managed_fee_rate=monthly_active_managed_fee,
+            diy_momentum_tickers=diy_momentum_tickers,
+            active_momentum_tickers=active_momentum_tickers,
+            monthly_momentum_fee_rate=monthly_active_managed_fee,
         )
 
         # Use dates from DIY scenario (all same length)
@@ -216,6 +222,16 @@ def portfolio():
                     "label": scenarios["active_managed"]["label"],
                     "values": scenarios["active_managed"]["values"],
                     "stats": scenarios["active_managed"]["stats"],
+                },
+                "diy_momentum": {
+                    "label": scenarios["diy_momentum"]["label"],
+                    "values": scenarios["diy_momentum"]["values"],
+                    "stats": scenarios["diy_momentum"]["stats"],
+                },
+                "active_momentum": {
+                    "label": scenarios["active_momentum"]["label"],
+                    "values": scenarios["active_momentum"]["values"],
+                    "stats": scenarios["active_momentum"]["stats"],
                 },
             },
             "fee_drag": fee_drag,

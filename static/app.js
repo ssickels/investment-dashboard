@@ -42,6 +42,10 @@ function getDataExtremes(data) {
     ...data.scenarios.active.values,
     ...data.scenarios.active_managed.values,
   ];
+  if (document.getElementById("showMomentum").checked) {
+    allVals.push(...data.scenarios.diy_momentum.values);
+    allVals.push(...data.scenarios.active_momentum.values);
+  }
   return { min: Math.min(...allVals), max: Math.max(...allVals) };
 }
 
@@ -63,10 +67,13 @@ function buildChart(data) {
 
   const labels = data.dates;
 
-  const diyVals           = data.scenarios.diy.values;
-  const managedVals       = data.scenarios.managed.values;
-  const activeVals        = data.scenarios.active.values;
-  const activeManagedVals = data.scenarios.active_managed.values;
+  const diyVals            = data.scenarios.diy.values;
+  const managedVals        = data.scenarios.managed.values;
+  const activeVals         = data.scenarios.active.values;
+  const activeManagedVals  = data.scenarios.active_managed.values;
+  const diyMomentumVals    = data.scenarios.diy_momentum.values;
+  const activeMomentumVals = data.scenarios.active_momentum.values;
+  const momentumVisible    = document.getElementById("showMomentum").checked;
 
   const initialAmount  = parseFloat(document.getElementById("initialAmount").value) || 0;
   const monthlyContrib = parseFloat(document.getElementById("monthlyContrib").value) || 0;
@@ -169,6 +176,30 @@ function buildChart(data) {
       tension: 0.3,
       fill: { target: 2, above: "rgba(37,99,235,0.07)", below: "rgba(22,163,74,0.07)" },
     },
+    {
+      label: data.scenarios.diy_momentum.label,
+      data: diyMomentumVals,
+      borderColor: "#7c3aed",
+      backgroundColor: "rgba(124,58,237,0.06)",
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      borderDash: [5, 3],
+      fill: false,
+      hidden: !momentumVisible,
+    },
+    {
+      label: data.scenarios.active_momentum.label,
+      data: activeMomentumVals,
+      borderColor: "#0891b2",
+      backgroundColor: "rgba(8,145,178,0.06)",
+      borderWidth: 2,
+      pointRadius: 0,
+      tension: 0.3,
+      borderDash: [5, 3],
+      fill: false,
+      hidden: !momentumVisible,
+    },
   ];
 
   const config = {
@@ -181,8 +212,13 @@ function buildChart(data) {
       plugins: {
         legend: {
           labels: {
-            filter: (item) => item.text !== "_fill" &&
-            (item.text !== "Total Invested" || document.getElementById("showContrib").checked),
+            filter: (item) => {
+              if (item.text === "_fill") return false;
+              if (item.text === "Total Invested") return document.getElementById("showContrib").checked;
+              const momentumLabels = [data.scenarios.diy_momentum.label, data.scenarios.active_momentum.label];
+              if (momentumLabels.includes(item.text)) return document.getElementById("showMomentum").checked;
+              return true;
+            },
             font: { size: 12 },
             boxWidth: 20,
             usePointStyle: true,
@@ -236,9 +272,13 @@ function buildChart(data) {
       chart.options.scales.y.min = undefined;
       chart.options.scales.y.max = undefined;
     }
-    // Sync contrib visibility
+    // Sync visibility toggles
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
+    const diyMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[6].label);
+    if (diyMomIdx !== -1) chart.getDatasetMeta(diyMomIdx).hidden = !momentumVisible;
+    const actMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[7].label);
+    if (actMomIdx !== -1) chart.getDatasetMeta(actMomIdx).hidden = !momentumVisible;
     chart.update();
   } else {
     chart = new Chart(ctx, config);
@@ -264,20 +304,24 @@ function updateStats(data) {
     document.getElementById(`${prefix}Fees`).textContent    = fmt$.format(stats.total_fees_paid);
   }
 
-  fill("diy",           s.diy.stats);
-  fill("managed",       s.managed.stats);
-  fill("active",        s.active.stats);
-  fill("activeManaged", s.active_managed.stats);
+  fill("diy",            s.diy.stats);
+  fill("managed",        s.managed.stats);
+  fill("active",         s.active.stats);
+  fill("activeManaged",  s.active_managed.stats);
+  fill("diyMomentum",    s.diy_momentum.stats);
+  fill("activeMomentum", s.active_momentum.stats);
 
   // Update DIY and managed card subtitles
   const diyDesc = data.diy_portfolio.description;
-  document.getElementById("diyCardSub").textContent     = diyDesc;
-  document.getElementById("managedCardSub").textContent = `${diyDesc} + advisor fees`;
+  document.getElementById("diyCardSub").textContent          = diyDesc;
+  document.getElementById("managedCardSub").textContent      = `${diyDesc} + advisor fees`;
+  document.getElementById("diyMomentumCardSub").textContent  = `${diyDesc} · annual momentum rotation`;
 
   // Update active card subtitles to reflect selected fund family
   const desc = data.active_fund_set.description;
-  document.getElementById("activeCardSub").textContent        = desc;
-  document.getElementById("activeManagedCardSub").textContent = `${desc} + advisor fees`;
+  document.getElementById("activeCardSub").textContent             = desc;
+  document.getElementById("activeManagedCardSub").textContent      = `${desc} + advisor fees`;
+  document.getElementById("activeMomentumCardSub").textContent     = "AGTHX / ANWPX / ABNDX · annual momentum rotation";
 
   // Update weighted expense ratio display
   const wer = data.active_fund_set.weighted_expense_ratio;
@@ -543,6 +587,18 @@ function wireInputs() {
     const idx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (idx === -1) return;
     chart.getDatasetMeta(idx).hidden = !e.target.checked;
+    chart.update();
+  });
+
+  // Show momentum rotation checkbox
+  document.getElementById("showMomentum").addEventListener("change", (e) => {
+    document.getElementById("momentumStats").style.display = e.target.checked ? "block" : "none";
+    if (!chart) return;
+    chart.data.datasets.forEach((ds) => {
+      if (ds.label && (ds.label.includes("Momentum") || ds.label.includes("momentum"))) {
+        chart.getDatasetMeta(chart.data.datasets.indexOf(ds)).hidden = !e.target.checked;
+      }
+    });
     chart.update();
   });
 
