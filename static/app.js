@@ -285,6 +285,10 @@ function buildChart(data) {
     // Sync visibility toggles
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
+    // Respect stat card toggle states
+    document.querySelectorAll(".stat-card-toggle").forEach(cb => {
+      chart.getDatasetMeta(parseInt(cb.dataset.datasetIdx)).hidden = !cb.checked;
+    });
     const diyMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[6].label);
     if (diyMomIdx !== -1) chart.getDatasetMeta(diyMomIdx).hidden = !momentumVisible;
     const actMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[7].label);
@@ -591,6 +595,17 @@ function wireInputs() {
   document.getElementById("pickerNextYear").addEventListener("click",  () => movePickerYear(+1));
   document.getElementById("pickerPrevMonth").addEventListener("click", () => movePickerMonth(-1));
   document.getElementById("pickerNextMonth").addEventListener("click", () => movePickerMonth(+1));
+
+  // Stat card visibility toggles
+  document.querySelectorAll(".stat-card-toggle").forEach(cb => {
+    cb.addEventListener("change", (e) => {
+      if (!chart) return;
+      const idx = parseInt(e.target.dataset.datasetIdx);
+      chart.getDatasetMeta(idx).hidden = !e.target.checked;
+      e.target.title = e.target.checked ? "Uncheck to hide this line on the chart" : "Check to show this line on the chart";
+      chart.update();
+    });
+  });
 
   // Show total invested checkbox
   document.getElementById("showContrib").addEventListener("change", (e) => {

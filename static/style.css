@@ -411,6 +411,7 @@ input[type="range"] {
 .stat-card {
   background: #fff;
   border: 2px solid var(--gray-200);
+  position: relative;
   border-radius: 10px;
   padding: 16px;
 }
@@ -419,6 +420,20 @@ input[type="range"] {
 .stat-card.managed        { border-top: 4px solid var(--red);    }
 .stat-card.active         { border-top: 4px solid var(--green);  }
 .stat-card.active-managed { border-top: 4px solid var(--orange); }
+
+.stat-card-toggle {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  margin: 0;
+}
+.stat-card.diy            .stat-card-toggle { accent-color: var(--blue);   }
+.stat-card.managed        .stat-card-toggle { accent-color: var(--red);    }
+.stat-card.active         .stat-card-toggle { accent-color: var(--green);  }
+.stat-card.active-managed .stat-card-toggle { accent-color: var(--orange); }
 
 .stat-card-title {
   font-size: 14px;
