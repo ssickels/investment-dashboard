@@ -27,9 +27,9 @@ ACTIVE_FUND_SETS = {
     },
     "t_rowe_price": {
         "label": "T. Rowe Price",
-        "tickers": ["PRGFX", "PRITX", "PRFIX"],
-        "description": "PRGFX / PRITX / PRFIX",
-        "expense_ratios": [0.52, 0.82, 0.44],
+        "tickers": ["PRGFX", "PRITX", "PRTIX"],
+        "description": "PRGFX / PRITX / PRTIX",
+        "expense_ratios": [0.52, 0.82, 0.45],
     },
     "vanguard_active": {
         "label": "Vanguard Active",
