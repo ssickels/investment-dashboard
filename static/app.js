@@ -605,16 +605,22 @@ function updateStats(data) {
     );
   }
 
-  // Sidebar: "Show momentum rotation" label → both universes
-  if (mu) {
+  // Sidebar: "Show momentum rotation" label → description tooltip
+  const momentumTipEl = document.getElementById("showMomentumTip");
+  if (momentumTipEl) {
     wireFundHover(
-      document.getElementById("showMomentumTip"),
-      fundTable([
-        { heading: "Index rotation universe — Equity", tickers: mu.diy_equity },
-        { heading: "Bond", tickers: mu.diy_bond },
-        { heading: "Active rotation universe — Equity", tickers: mu.active_equity },
-        { heading: "Bond", tickers: mu.active_bond },
-      ])
+      momentumTipEl,
+      `<strong>Momentum Rotation</strong><br><br>
+Reveals two additional "With Advisor" scenarios that rebalance annually
+using 12-month trailing momentum. Funds that performed best over the
+prior year receive the largest allocation (≈50%); the worst performer
+receives the smallest (≈17%).<br><br>
+<em>No look-ahead:</em> weights at each rebalancing date use only returns
+available up to the prior month. The first year uses equal weights while
+momentum history accumulates.<br><br>
+The <strong>Aggressiveness</strong> setting controls a yield-curve tactical
+overlay: in Aggressive mode, equity is shifted toward bonds when the
+10Y–2Y spread was negative in the prior year.`
     );
   }
 
