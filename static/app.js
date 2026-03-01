@@ -216,8 +216,7 @@ function buildChart(data) {
             filter: (item) => {
               if (item.text === "_fill") return false;
               if (item.text === "Total Invested") return document.getElementById("showContrib").checked;
-              const momentumLabels = [data.scenarios.diy_momentum.label, data.scenarios.active_momentum.label];
-              if (momentumLabels.includes(item.text)) return document.getElementById("showMomentum").checked;
+              if (item.text.includes("Momentum")) return document.getElementById("showMomentum").checked;
               return true;
             },
             font: { size: 12 },
