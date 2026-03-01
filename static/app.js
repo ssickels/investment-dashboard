@@ -68,6 +68,10 @@ function buildChart(data) {
   const activeVals        = data.scenarios.active.values;
   const activeManagedVals = data.scenarios.active_managed.values;
 
+  const initialAmount  = parseFloat(document.getElementById("initialAmount").value) || 0;
+  const monthlyContrib = parseFloat(document.getElementById("monthlyContrib").value) || 0;
+  const contribVals    = data.dates.map((_, i) => initialAmount + i * monthlyContrib);
+
   // Crash annotation dates — snapped to available labels
   const CRASHES = [
     { label: "Dot-com\nPeak",         target: "2001-03-31" },
@@ -144,6 +148,16 @@ function buildChart(data) {
       borderDash: [2, 2],
       fill: false,
     },
+    {
+      label: "Total Invested",
+      data: contribVals,
+      borderColor: "#6b7280",
+      borderWidth: 1.5,
+      pointRadius: 0,
+      tension: 0,
+      borderDash: [6, 3],
+      fill: false,
+    },
     // Invisible fill dataset between DIY (idx 0) and Active (idx 2)
     {
       label: "_fill",
@@ -203,6 +217,8 @@ function buildChart(data) {
     },
   };
 
+  const contribVisible = document.getElementById("showContrib").checked;
+
   if (chart) {
     chart.data.labels = labels;
     chart.data.datasets.forEach((ds, i) => {
@@ -219,9 +235,18 @@ function buildChart(data) {
       chart.options.scales.y.min = undefined;
       chart.options.scales.y.max = undefined;
     }
+    // Sync contrib visibility
+    const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
+    if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
     chart.update();
   } else {
     chart = new Chart(ctx, config);
+    // Hide contrib line on initial render if checkbox is unchecked
+    const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
+    if (contribIdx !== -1) {
+      chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
+      chart.update("none");
+    }
   }
 }
 
@@ -360,6 +385,15 @@ function wireInputs() {
     document.getElementById(id).addEventListener("input", debouncedFetch);
     document.getElementById(id).addEventListener("change", debouncedFetch);
   }
+
+  // Show total invested checkbox
+  document.getElementById("showContrib").addEventListener("change", (e) => {
+    if (!chart) return;
+    const idx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
+    if (idx === -1) return;
+    chart.getDatasetMeta(idx).hidden = !e.target.checked;
+    chart.update();
+  });
 
   // Scale lock checkbox
   document.getElementById("lockScale").addEventListener("change", (e) => {
