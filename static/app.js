@@ -225,6 +225,7 @@ function buildChart(data) {
           },
         },
         tooltip: {
+          itemSort: (a, b) => b.parsed.y - a.parsed.y,
           callbacks: {
             label: (ctx) => {
               if (ctx.dataset.label === "_fill") return null;
@@ -240,6 +241,15 @@ function buildChart(data) {
             maxTicksLimit: 10,
             font: { size: 11 },
             maxRotation: 0,
+            callback: function(value, index, ticks) {
+              const label = this.getLabelForValue(value);
+              const date = new Date(label + "T00:00:00");
+              const totalMonths = this.chart.data.labels.length;
+              if (totalMonths > 48) {
+                return String(date.getFullYear());
+              }
+              return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
+            },
           },
           grid: { color: "rgba(0,0,0,0.04)" },
         },
