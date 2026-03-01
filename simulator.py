@@ -152,9 +152,11 @@ def simulate_momentum(
     """
     Simulate an annual momentum-rotation portfolio over the given 3-ticker universe.
 
-    Weights are updated once per year based on trailing 12-month cumulative return:
-      rank 1 (worst) → 1/6, rank 2 → 2/6, rank 3 (best) → 3/6
-    Cold start: equal weights (1/3 each) for the first 12 months.
+    tickers = [equity_us, equity_intl, bond]
+    Bond is always held at the target weight (params.stock_pct). The two equity
+    funds are ranked annually by trailing 12-month return; the top-ranked equity
+    gets 2/3 of the equity allocation, the bottom gets 1/3.
+    Cold start: standard 80/20 US/intl equity split for the first 12 months.
     No look-ahead: at month i, only returns[i-12 .. i-1] are used.
     AUM fee and CPI deflation applied identically to simulate().
     """
@@ -164,9 +166,10 @@ def simulate_momentum(
     if len(slice_df) == 0:
         raise ValueError("No data available for momentum simulation")
 
-    n_tickers = len(tickers)
-    equal_w = 1.0 / n_tickers
-    current_weights = {t: equal_w for t in tickers}
+    s = params.stock_pct / 100.0
+    b = 1.0 - s
+    # Cold start: standard equity split, bond at target
+    current_weights = {tickers[0]: 0.8 * s, tickers[1]: 0.2 * s, tickers[2]: b}
     holdings = {t: params.initial_amount * current_weights[t] for t in tickers}
     total_fees_paid = 0.0
     values = []
@@ -190,11 +193,16 @@ def simulate_momentum(
 
         # Annual momentum rebalance + contribution
         if i > 0 and i % 12 == 0:
-            # Trailing 12-month cumulative return (no look-ahead)
+            # Rank only the 2 equity funds by trailing 12-month return (no look-ahead)
             lookback = slice_df.iloc[i - 12:i]
             cum_ret = (1 + lookback).prod() - 1
-            ranks = cum_ret.rank()  # worst=1, best=n_tickers
-            current_weights = (ranks / ranks.sum()).to_dict()
+            eq_ranks = cum_ret[[tickers[0], tickers[1]]].rank()  # worst=1, best=2
+            eq_weights = eq_ranks / eq_ranks.sum()  # → 1/3 and 2/3 of equity portion
+            current_weights = {
+                tickers[0]: s * float(eq_weights[tickers[0]]),
+                tickers[1]: s * float(eq_weights[tickers[1]]),
+                tickers[2]: b,
+            }
 
             # Add contribution then rebalance to new weights
             portfolio_value += params.monthly_contrib
