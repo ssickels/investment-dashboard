@@ -785,6 +785,15 @@ function setAggressiveness(value) {
   });
 }
 
+function setAggEnabled(enabled) {
+  const toggle = document.getElementById("aggToggle");
+  if (!toggle) return;
+  toggle.classList.toggle("agg-toggle--disabled", !enabled);
+  document.querySelectorAll("input[name='aggressiveness']").forEach(r => {
+    r.disabled = !enabled;
+  });
+}
+
 // ==================== ERA SELECTION ====================
 
 const ERA_CONFIG = {
@@ -1053,8 +1062,9 @@ function wireInputs() {
     buildChart(lastData);
   });
 
-  // Show momentum rotation checkbox
+  // Show momentum rotation checkbox — also enables/disables aggressiveness
   document.getElementById("showMomentum").addEventListener("change", (e) => {
+    setAggEnabled(e.target.checked);
     document.getElementById("momentumStats").style.display = e.target.checked ? "block" : "none";
     if (!chart || !lastData) return;
     buildChart(lastData);

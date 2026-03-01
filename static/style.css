@@ -669,6 +669,38 @@ input[type="range"] {
   font-weight: 600;
 }
 
+.agg-toggle--disabled {
+  opacity: 0.38;
+  pointer-events: none;
+}
+
+/* Momentum checkbox + aggressiveness grouped card */
+.momentum-group {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 10px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.momentum-group .checkbox-group {
+  margin: 0;
+}
+.agg-sub {
+  padding-left: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.agg-sub-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-400);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* ==================== DATE PICKER ==================== */
 .date-picker {
   display: flex;

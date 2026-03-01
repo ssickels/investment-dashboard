@@ -131,25 +131,6 @@
         <div class="er-display" id="erDisplay">—</div>
       </div>
 
-      <div class="control-group">
-        <label>
-          <span class="tooltip-term" data-tooltip="Applies only to 'With Advisor' momentum scenarios. Conservative: shifts 10% of equity to bonds during yield curve inversions, less concentrated momentum bets (40/60 equity split). Moderate: 20% tactical shift, standard 1/3-2/3 split. Aggressive: 35% tactical shift, highly concentrated 25/75 split.">Advisor Aggressiveness</span>
-        </label>
-        <div class="agg-toggle">
-          <label class="agg-option" id="aggConservativeLabel">
-            <input type="radio" name="aggressiveness" value="conservative" />
-            <span>Conservative</span>
-          </label>
-          <label class="agg-option agg-option--selected" id="aggModerateLabel">
-            <input type="radio" name="aggressiveness" value="moderate" checked />
-            <span>Moderate</span>
-          </label>
-          <label class="agg-option" id="aggAggressiveLabel">
-            <input type="radio" name="aggressiveness" value="aggressive" />
-            <span>Aggressive</span>
-          </label>
-        </div>
-      </div>
 
       <div class="control-group">
         <label>
@@ -193,13 +174,34 @@
         </label>
       </div>
 
-      <div class="control-group checkbox-group">
-        <label>
-          <input type="checkbox" id="showMomentum" />
-          <span>
-            <span id="showMomentumTip">Show momentum rotation</span>
-          </span>
-        </label>
+      <div class="momentum-group">
+        <div class="control-group checkbox-group">
+          <label>
+            <input type="checkbox" id="showMomentum" />
+            <span>
+              <span id="showMomentumTip">Show momentum rotation</span>
+            </span>
+          </label>
+        </div>
+        <div class="agg-sub">
+          <div class="agg-sub-label">
+            <span class="tooltip-term" data-tooltip="Applies only to momentum scenarios. Conservative: shifts 10% of equity to bonds during yield curve inversions, less concentrated momentum bets. Moderate: 20% tactical shift, standard rank weighting. Aggressive: 35% tactical shift, highly concentrated in top performers.">Aggressiveness</span>
+          </div>
+          <div class="agg-toggle agg-toggle--disabled" id="aggToggle">
+            <label class="agg-option" id="aggConservativeLabel">
+              <input type="radio" name="aggressiveness" value="conservative" disabled />
+              <span>Conservative</span>
+            </label>
+            <label class="agg-option agg-option--selected" id="aggModerateLabel">
+              <input type="radio" name="aggressiveness" value="moderate" checked disabled />
+              <span>Moderate</span>
+            </label>
+            <label class="agg-option" id="aggAggressiveLabel">
+              <input type="radio" name="aggressiveness" value="aggressive" disabled />
+              <span>Aggressive</span>
+            </label>
+          </div>
+        </div>
       </div>
 
       <div class="data-note">
