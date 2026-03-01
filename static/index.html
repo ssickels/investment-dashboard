@@ -30,16 +30,17 @@
       </div>
 
       <div class="control-group">
-        <label for="startDate">Start Date</label>
-        <input type="month" id="startDate" />
-      </div>
-
-      <div class="control-group">
-        <label for="years">
-          Time Horizon: <span id="yearsDisplay">10</span> years
-        </label>
-        <input type="range" id="years" min="1" max="14" value="10" step="1" />
-        <div class="range-labels"><span>1 yr</span><span id="yearsMax">14 yrs</span></div>
+        <label>Start Date <span class="pct-label">(simulation runs to latest available)</span></label>
+        <input type="hidden" id="startDate" />
+        <div class="date-picker" id="datePicker">
+          <button class="picker-btn" id="pickerPrevYear"  title="Previous year"  disabled>&#8249;&#8249;</button>
+          <span   class="picker-val" id="pickerYear">—</span>
+          <button class="picker-btn" id="pickerNextYear"  title="Next year">&#8250;&#8250;</button>
+          <div class="picker-sep"></div>
+          <button class="picker-btn" id="pickerPrevMonth" title="Previous month" disabled>&#8249;</button>
+          <span   class="picker-val" id="pickerMonth">—</span>
+          <button class="picker-btn" id="pickerNextMonth" title="Next month">&#8250;</button>
+        </div>
       </div>
 
       <div class="control-group">
@@ -153,81 +154,93 @@
 
       <!-- STATS GRID -->
       <div class="stats-grid">
-        <div class="stat-card diy" id="statsDiy">
-          <div class="stat-card-title">DIY Index</div>
-          <div class="stat-card-sub" id="diyCardSub">VTI / VXUS / BND</div>
-          <dl>
-            <dt>Final Value</dt>
-            <dd id="diyFinal">—</dd>
-            <dt>Total Contributed</dt>
-            <dd id="diyContrib">—</dd>
-            <dt>Total Gain</dt>
-            <dd id="diyGain">—</dd>
-            <dt>
-              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
-            </dt>
-            <dd id="diyCagr">—</dd>
-            <dt>Fees Paid</dt>
-            <dd id="diyFees">—</dd>
-          </dl>
+
+        <div class="stat-group stat-group-diy">
+          <div class="stat-group-label">DIY Index Funds</div>
+          <div class="stat-group-cards">
+            <div class="stat-card diy" id="statsDiy">
+              <div class="stat-card-title">No Advisor</div>
+              <div class="stat-card-sub" id="diyCardSub">VTI / VXUS / BND</div>
+              <dl>
+                <dt>Final Value</dt>
+                <dd id="diyFinal">—</dd>
+                <dt>Total Contributed</dt>
+                <dd id="diyContrib">—</dd>
+                <dt>Total Gain</dt>
+                <dd id="diyGain">—</dd>
+                <dt>
+                  <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+                </dt>
+                <dd id="diyCagr">—</dd>
+                <dt>Fees Paid</dt>
+                <dd id="diyFees">—</dd>
+              </dl>
+            </div>
+
+            <div class="stat-card managed" id="statsManaged">
+              <div class="stat-card-title">With Advisor</div>
+              <div class="stat-card-sub" id="managedCardSub">Same funds + advisor fees</div>
+              <dl>
+                <dt>Final Value</dt>
+                <dd id="managedFinal">—</dd>
+                <dt>Total Contributed</dt>
+                <dd id="managedContrib">—</dd>
+                <dt>Total Gain</dt>
+                <dd id="managedGain">—</dd>
+                <dt>
+                  <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+                </dt>
+                <dd id="managedCagr">—</dd>
+                <dt>Fees Paid</dt>
+                <dd id="managedFees">—</dd>
+              </dl>
+            </div>
+          </div>
         </div>
 
-        <div class="stat-card managed" id="statsManaged">
-          <div class="stat-card-title">Fee-Adjusted</div>
-          <div class="stat-card-sub" id="managedCardSub">Same funds + advisor fees</div>
-          <dl>
-            <dt>Final Value</dt>
-            <dd id="managedFinal">—</dd>
-            <dt>Total Contributed</dt>
-            <dd id="managedContrib">—</dd>
-            <dt>Total Gain</dt>
-            <dd id="managedGain">—</dd>
-            <dt>
-              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
-            </dt>
-            <dd id="managedCagr">—</dd>
-            <dt>Fees Paid</dt>
-            <dd id="managedFees">—</dd>
-          </dl>
+        <div class="stat-group stat-group-active">
+          <div class="stat-group-label">Actively Managed Funds</div>
+          <div class="stat-group-cards">
+            <div class="stat-card active" id="statsActive">
+              <div class="stat-card-title">No Advisor</div>
+              <div class="stat-card-sub" id="activeCardSub">AGTHX / DODFX / PTTAX</div>
+              <dl>
+                <dt>Final Value</dt>
+                <dd id="activeFinal">—</dd>
+                <dt>Total Contributed</dt>
+                <dd id="activeContrib">—</dd>
+                <dt>Total Gain</dt>
+                <dd id="activeGain">—</dd>
+                <dt>
+                  <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+                </dt>
+                <dd id="activeCagr">—</dd>
+                <dt>Fees Paid</dt>
+                <dd id="activeFees">—</dd>
+              </dl>
+            </div>
+
+            <div class="stat-card active-managed" id="statsActiveManaged">
+              <div class="stat-card-title">With Advisor</div>
+              <div class="stat-card-sub" id="activeManagedCardSub">Active funds + advisor fees</div>
+              <dl>
+                <dt>Final Value</dt>
+                <dd id="activeManagedFinal">—</dd>
+                <dt>Total Contributed</dt>
+                <dd id="activeManagedContrib">—</dd>
+                <dt>Total Gain</dt>
+                <dd id="activeManagedGain">—</dd>
+                <dt>
+                  <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+                </dt>
+                <dd id="activeManagedCagr">—</dd>
+                <dt>Fees Paid</dt>
+                <dd id="activeManagedFees">—</dd>
+              </dl>
+            </div>
+          </div>
         </div>
 
-        <div class="stat-card active" id="statsActive">
-          <div class="stat-card-title">Actively Managed</div>
-          <div class="stat-card-sub" id="activeCardSub">AGTHX / DODFX / PTTAX</div>
-          <dl>
-            <dt>Final Value</dt>
-            <dd id="activeFinal">—</dd>
-            <dt>Total Contributed</dt>
-            <dd id="activeContrib">—</dd>
-            <dt>Total Gain</dt>
-            <dd id="activeGain">—</dd>
-            <dt>
-              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
-            </dt>
-            <dd id="activeCagr">—</dd>
-            <dt>Fees Paid</dt>
-            <dd id="activeFees">—</dd>
-          </dl>
-        </div>
-
-        <div class="stat-card active-managed" id="statsActiveManaged">
-          <div class="stat-card-title">Fee-Adjusted Active</div>
-          <div class="stat-card-sub" id="activeManagedCardSub">Active funds + advisor fees</div>
-          <dl>
-            <dt>Final Value</dt>
-            <dd id="activeManagedFinal">—</dd>
-            <dt>Total Contributed</dt>
-            <dd id="activeManagedContrib">—</dd>
-            <dt>Total Gain</dt>
-            <dd id="activeManagedGain">—</dd>
-            <dt>
-              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
-            </dt>
-            <dd id="activeManagedCagr">—</dd>
-            <dt>Fees Paid</dt>
-            <dd id="activeManagedFees">—</dd>
-          </dl>
-        </div>
       </div>
 
       <!-- FEE DRAG CALLOUT -->
