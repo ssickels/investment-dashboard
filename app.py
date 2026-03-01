@@ -78,7 +78,6 @@ def portfolio():
         # Parse query params with defaults
         initial_amount = float(request.args.get("initial_amount", 10000))
         monthly_contrib = float(request.args.get("monthly_contrib", 500))
-        years = int(request.args.get("years", 10))
         stock_pct = float(request.args.get("stock_pct", 80))
         rebalance = request.args.get("rebalance", "annually")
         aum_fee = float(request.args.get("aum_fee", 1.0))
@@ -137,16 +136,9 @@ def portfolio():
         date_range_start = str(returns_df.index[0].date())
         date_range_end = str(returns_df.index[-1].date())
 
-        # Soft cap years
+        # Always simulate the full available range from the chosen start date
+        years = max(1, years_available)
         warning = None
-        if years > years_available:
-            warning = (
-                f"Only {years_available} years of data available "
-                f"(requested {years}). Showing {years_available} years."
-            )
-            years = years_available
-
-        years = max(1, years)
 
         # Load CPI / deflator
         deflator = None
