@@ -174,6 +174,13 @@ function buildLegendTooltips(data) {
     (mu.active_equity && mu.active_equity.length)
       ? fundTable([{ heading: "Equity universe", tickers: mu.active_equity }, { heading: "Bond universe", tickers: mu.active_bond }])
       : null,
+    // Yield curve inversion shading entry (index 8)
+    `<strong>Yield Curve Inversion</strong><br>` +
+    `<span style="color:#9ca3af;font-size:10px;line-height:1.6">` +
+    `Periods when the 10-year Treasury yield fell below the 2-year yield.<br>` +
+    `An inverted yield curve has historically preceded recessions by 6–24 months.<br>` +
+    `Shading is approximate; not all inversions lead to recessions.<br>` +
+    `Source: FRED T10Y2Y series.</span>`,
   ];
 }
 
@@ -342,6 +349,18 @@ function buildChart(data) {
       fill: false,
       hidden: !momentumVisible,
     },
+    // Index 8 — legend-only entry for yield curve inversion shading (no data points)
+    {
+      label: "Yield Curve Inversion",
+      data: [],
+      backgroundColor: "rgba(220,38,38,0.18)",
+      borderColor: "rgba(220,38,38,0.45)",
+      borderWidth: 1,
+      pointRadius: 0,
+      pointStyle: "rect",
+      fill: false,
+      hidden: !(data.yield_curve_inversions && data.yield_curve_inversions.length > 0),
+    },
   ];
 
   const config = {
@@ -365,6 +384,8 @@ function buildChart(data) {
             document.getElementById("legendTooltip").style.display = "none";
           },
           onClick: (e, legendItem, legend) => {
+            // Yield curve entry is informational only — clicking does nothing
+            if (legendItem.text === "Yield Curve Inversion") return;
             // Default Chart.js toggle
             const idx = legendItem.datasetIndex;
             const ci = legend.chart;
@@ -475,6 +496,8 @@ function buildChart(data) {
     if (diyMomIdx !== -1) chart.getDatasetMeta(diyMomIdx).hidden = !momentumVisible;
     const actMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[7].label);
     if (actMomIdx !== -1) chart.getDatasetMeta(actMomIdx).hidden = !momentumVisible;
+    const ycInvIdx = chart.data.datasets.findIndex(ds => ds.label === "Yield Curve Inversion");
+    if (ycInvIdx !== -1) chart.getDatasetMeta(ycInvIdx).hidden = !(data.yield_curve_inversions && data.yield_curve_inversions.length > 0);
     chart.update();
   } else {
     chart = new Chart(ctx, config);
