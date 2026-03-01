@@ -144,7 +144,8 @@ def simulate(
 
 def simulate_momentum(
     returns_df: pd.DataFrame,
-    tickers: list,
+    equity_tickers: list,
+    bond_tickers: list,
     params: SimParams,
     monthly_fee_rate: float = 0.0,
     deflator: Optional[pd.Series] = None,
@@ -152,45 +153,35 @@ def simulate_momentum(
     aggressiveness: str = "moderate",
 ) -> dict:
     """
-    Simulate an annual momentum-rotation portfolio over the given 3-ticker universe.
+    Full advisor momentum simulation supporting a variable-size universe.
 
-    tickers = [equity_us, equity_intl, bond]
-    Bond is held at the target weight; the two equity funds are ranked annually by
-    trailing 12-month return.  No look-ahead: at month i, only returns[i-12..i-1] used.
+    Weighting: rank-based N-point system — best fund gets N points, next N-1, ..., worst 1.
+    Inception handling: at each annual rebalance, only funds with full 12-month trailing
+    history are eligible (no look-ahead).
+    Tactical overlay: if the yield curve (T10Y2Y) was negative at any point during the
+    prior 12 months, reduce equity by the aggressiveness-determined shift and redirect
+    all bond allocation to the best-performing bond fund.
+    Bond allocation always goes to the best-performing bond fund.
 
-    aggressiveness controls two behaviours at each annual rebalance:
-      - Momentum concentration:
-          conservative  → bottom 40% / top 60% of equity (+ 5% portfolio floor)
-          moderate      → bottom 1/3 / top 2/3  (current default)
-          aggressive    → bottom 25% / top 75%
-      - Tactical yield-curve shift (when spread < 0 at rebalance date):
-          conservative  → move 10% of equity allocation to bonds
-          moderate      → move 20%
-          aggressive    → move 35%
+    aggressiveness modifies equity concentration:
+      conservative → N-point weights + 5%-of-equity-allocation floor per fund
+      moderate     → standard N-point weights
+      aggressive   → double the top-3 funds' points before normalising
     """
-    months = params.years * 12
-    slice_df = returns_df[tickers].iloc[:months]
+    all_tickers = equity_tickers + bond_tickers
+    avail_cols = [t for t in all_tickers if t in returns_df.columns]
+    if not avail_cols:
+        raise ValueError("None of the universe tickers found in returns data")
 
+    months = params.years * 12
+    slice_df = returns_df[avail_cols].iloc[:months]
     if len(slice_df) == 0:
         raise ValueError("No data available for momentum simulation")
 
     s = params.stock_pct / 100.0
     b = 1.0 - s
 
-    # Equity concentration: (bottom_fraction, top_fraction) of equity allocation
-    EQ_SPLITS = {
-        "conservative": (2 / 5, 3 / 5),
-        "moderate":     (1 / 3, 2 / 3),
-        "aggressive":   (1 / 4, 3 / 4),
-    }
-    # Tactical shift: fraction of equity moved to bonds during inversion
-    TACTICAL_SHIFTS = {
-        "conservative": 0.10,
-        "moderate":     0.20,
-        "aggressive":   0.35,
-    }
-    CONSERVATIVE_FLOOR = 0.05   # min 5% of total portfolio per equity fund (conservative)
-    bot_frac, top_frac = EQ_SPLITS.get(aggressiveness, EQ_SPLITS["moderate"])
+    TACTICAL_SHIFTS = {"conservative": 0.10, "moderate": 0.20, "aggressive": 0.35}
     tactical_shift = TACTICAL_SHIFTS.get(aggressiveness, 0.20)
 
     # Pre-align yield curve to simulation dates
@@ -198,69 +189,108 @@ def simulate_momentum(
     if yield_curve_spread is not None:
         yc_aligned = yield_curve_spread.reindex(slice_df.index, method="ffill")
 
-    # Cold start: standard 80/20 equity split, bond at target
-    current_weights = {tickers[0]: 0.8 * s, tickers[1]: 0.2 * s, tickers[2]: b}
-    holdings = {t: params.initial_amount * current_weights[t] for t in tickers}
+    # --- Cold start: equal-weight available funds ---
+    first_row = slice_df.iloc[0]
+    avail_eq_0 = [t for t in equity_tickers if t in avail_cols and not pd.isna(first_row[t])]
+    avail_bond_0 = [t for t in bond_tickers if t in avail_cols and not pd.isna(first_row[t])]
+    if not avail_eq_0:
+        avail_eq_0 = [t for t in equity_tickers if t in avail_cols][:2]
+    if not avail_bond_0:
+        avail_bond_0 = [t for t in bond_tickers if t in avail_cols][:1]
+
+    holdings = {t: 0.0 for t in avail_cols}
+    for t in avail_eq_0:
+        holdings[t] = params.initial_amount * s / len(avail_eq_0)
+    for t in avail_bond_0:
+        holdings[t] += params.initial_amount * b / len(avail_bond_0)
+
     total_fees_paid = 0.0
     values = []
     dates = []
 
     for i, (date, row) in enumerate(slice_df.iterrows()):
-        # Apply monthly returns
-        for t in tickers:
-            holdings[t] *= (1.0 + float(row[t]))
+        # Apply monthly returns (NaN → 0 for pre-inception positions, which have 0 holdings)
+        for t in avail_cols:
+            ret = float(row[t]) if not pd.isna(row[t]) else 0.0
+            holdings[t] *= (1.0 + ret)
 
         portfolio_value = sum(holdings.values())
 
         # Apply AUM fee before contribution
-        if monthly_fee_rate > 0:
+        if monthly_fee_rate > 0 and portfolio_value > 0:
             fee = portfolio_value * monthly_fee_rate
             total_fees_paid += fee
             ratio = (portfolio_value - fee) / portfolio_value
-            for t in tickers:
+            for t in avail_cols:
                 holdings[t] *= ratio
             portfolio_value -= fee
 
-        # Annual momentum rebalance + contribution
+        # Annual momentum rebalance
         if i > 0 and i % 12 == 0:
-            # Compute effective stock/bond split (tactical shift during inversion)
-            effective_s = s
-            effective_b = b
-            if yc_aligned is not None and date in yc_aligned.index:
-                spread_val = yc_aligned[date]
-                if not pd.isna(spread_val) and spread_val < 0:
+            lookback = slice_df.iloc[i - 12:i]
+
+            # Eligible funds: full 12 months of non-NaN returns (no look-ahead)
+            avail_eq = [t for t in equity_tickers
+                        if t in lookback.columns and lookback[t].notna().all()]
+            avail_bond = [t for t in bond_tickers
+                          if t in lookback.columns and lookback[t].notna().all()]
+            if not avail_eq:
+                avail_eq = avail_eq_0
+            if not avail_bond:
+                avail_bond = avail_bond_0
+
+            cum_ret = (1 + lookback[avail_eq + avail_bond]).prod() - 1
+
+            # --- Tactical overlay: was curve inverted during prior 12 months? ---
+            effective_s, effective_b = s, b
+            if yc_aligned is not None:
+                yc_window = yc_aligned.iloc[i - 12:i].dropna()
+                if len(yc_window) > 0 and (yc_window < 0).any():
                     shift = min(tactical_shift, effective_s)
                     effective_s -= shift
                     effective_b += shift
 
-            # Rank equity funds by trailing 12-month return (no look-ahead)
-            lookback = slice_df.iloc[i - 12:i]
-            cum_ret = (1 + lookback).prod() - 1
-            eq_cum = cum_ret[[tickers[0], tickers[1]]]
-            sorted_eq = eq_cum.sort_values()   # index[0]=bottom, index[1]=top
+            # Best-performing bond fund receives all bond allocation
+            best_bond = cum_ret[avail_bond].idxmax()
 
-            # Apply concentration fractions with optional conservative floor
-            b_f, t_f = bot_frac, top_frac
-            if aggressiveness == "conservative" and effective_s > 0:
-                min_frac = CONSERVATIVE_FLOOR / effective_s
-                b_f = max(b_f, min_frac)
-                t_f = 1.0 - b_f
+            # --- N-point momentum ranking for equity ---
+            sorted_eq = cum_ret[avail_eq].sort_values()  # ascending: worst first
+            n_eq = len(sorted_eq)
+            rank_pts = {t: (rank + 1) for rank, t in enumerate(sorted_eq.index)}
 
-            current_weights = {
-                sorted_eq.index[0]: effective_s * b_f,
-                sorted_eq.index[1]: effective_s * t_f,
-                tickers[2]: effective_b,
-            }
+            # Aggressive: double points of top 3
+            if aggressiveness == "aggressive" and n_eq >= 3:
+                for t in list(sorted_eq.index[-3:]):
+                    rank_pts[t] *= 2
 
-            # Add contribution then rebalance to new weights
+            total_pts = sum(rank_pts.values())
+            new_weights = {t: 0.0 for t in avail_cols}
+            for t, pts in rank_pts.items():
+                new_weights[t] = effective_s * pts / total_pts
+
+            # Conservative: 5%-of-equity-allocation floor per fund, then renormalise
+            if aggressiveness == "conservative":
+                floor_w = 0.05 * effective_s
+                for t in rank_pts:
+                    new_weights[t] = max(new_weights[t], floor_w)
+                eq_sum = sum(new_weights[t] for t in rank_pts)
+                if eq_sum > 0:
+                    for t in rank_pts:
+                        new_weights[t] = new_weights[t] / eq_sum * effective_s
+
+            new_weights[best_bond] = effective_b
+
+            # Rebalance + add contribution
             portfolio_value += params.monthly_contrib
-            holdings = {t: portfolio_value * current_weights[t] for t in tickers}
+            holdings = {t: 0.0 for t in avail_cols}
+            for t, w in new_weights.items():
+                if w > 0:
+                    holdings[t] = portfolio_value * w
 
         elif i > 0:
-            # Between rebalances: add contribution proportional to drifted weights
             cur_total = sum(holdings.values())
             if cur_total > 0:
-                for t in tickers:
+                for t in avail_cols:
                     holdings[t] += params.monthly_contrib * (holdings[t] / cur_total)
 
         values.append(sum(holdings.values()))
@@ -273,15 +303,15 @@ def simulate_momentum(
             if date in deflator_aligned.index and not pd.isna(deflator_aligned[date]):
                 values[i] *= float(deflator_aligned[date])
 
-    n = len(values)
-    total_contributions = params.initial_amount + params.monthly_contrib * max(0, n - 1)
+    n_m = len(values)
+    total_contributions = params.initial_amount + params.monthly_contrib * max(0, n_m - 1)
     final_value = values[-1] if values else 0.0
     total_gain = final_value - total_contributions
-
-    if n > 0 and total_contributions > 0 and final_value > 0:
-        cagr = (final_value / total_contributions) ** (12.0 / n) - 1.0
-    else:
-        cagr = 0.0
+    cagr = (
+        (final_value / total_contributions) ** (12.0 / n_m) - 1.0
+        if n_m > 0 and total_contributions > 0 and final_value > 0
+        else 0.0
+    )
 
     return {
         "values": [round(v, 2) for v in values],
@@ -304,8 +334,12 @@ def run_all_scenarios(
     active_tickers: list = None,
     monthly_managed_fee_rate: float = 0.0,
     monthly_active_managed_fee_rate: float = 0.0,
-    diy_momentum_tickers: list = None,
-    active_momentum_tickers: list = None,
+    # Momentum params
+    diy_equity_tickers: list = None,
+    diy_bond_tickers: list = None,
+    active_equity_tickers: list = None,
+    active_bond_tickers: list = None,
+    expanded_returns_df: Optional[pd.DataFrame] = None,
     monthly_momentum_fee_rate: float = 0.0,
     yield_curve_spread: Optional[pd.Series] = None,
     aggressiveness: str = "moderate",
@@ -378,34 +412,45 @@ def run_all_scenarios(
         "active_managed": {**active_managed, "label": f"Fee-Adjusted Active ({ticker_str})"},
     }
 
-    if diy_momentum_tickers:
-        mom_str = " / ".join(diy_momentum_tickers)
-        result["diy_momentum"] = {
-            **simulate_momentum(
-                returns_df=returns_df,
-                tickers=diy_momentum_tickers,
-                params=params,
-                monthly_fee_rate=monthly_momentum_fee_rate,
-                deflator=deflator,
-                yield_curve_spread=yield_curve_spread,
-                aggressiveness=aggressiveness,
-            ),
-            "label": f"Index Momentum ({mom_str})",
-        }
+    # DIY momentum: uses main returns_df (3-fund universe, always available)
+    if diy_equity_tickers and diy_bond_tickers:
+        try:
+            mom_str = " / ".join(diy_equity_tickers + diy_bond_tickers)
+            result["diy_momentum"] = {
+                **simulate_momentum(
+                    returns_df=returns_df,
+                    equity_tickers=diy_equity_tickers,
+                    bond_tickers=diy_bond_tickers,
+                    params=params,
+                    monthly_fee_rate=monthly_momentum_fee_rate,
+                    deflator=deflator,
+                    yield_curve_spread=yield_curve_spread,
+                    aggressiveness=aggressiveness,
+                ),
+                "label": f"Index Momentum ({mom_str})",
+            }
+        except Exception as e:
+            print(f"Warning: DIY momentum failed: {e}")
 
-    if active_momentum_tickers:
-        amom_str = " / ".join(active_momentum_tickers)
-        result["active_momentum"] = {
-            **simulate_momentum(
-                returns_df=returns_df,
-                tickers=active_momentum_tickers,
-                params=params,
-                monthly_fee_rate=monthly_momentum_fee_rate,
-                deflator=deflator,
-                yield_curve_spread=yield_curve_spread,
-                aggressiveness=aggressiveness,
-            ),
-            "label": f"Active Momentum ({amom_str})",
-        }
+    # Active momentum: uses expanded outer-join df with full advisor universe
+    if active_equity_tickers and active_bond_tickers and expanded_returns_df is not None:
+        try:
+            n_eq = len(active_equity_tickers)
+            n_b = len(active_bond_tickers)
+            result["active_momentum"] = {
+                **simulate_momentum(
+                    returns_df=expanded_returns_df,
+                    equity_tickers=active_equity_tickers,
+                    bond_tickers=active_bond_tickers,
+                    params=params,
+                    monthly_fee_rate=monthly_momentum_fee_rate,
+                    deflator=deflator,
+                    yield_curve_spread=yield_curve_spread,
+                    aggressiveness=aggressiveness,
+                ),
+                "label": f"Active Momentum ({n_eq} equity + {n_b} bond funds)",
+            }
+        except Exception as e:
+            print(f"Warning: Active momentum failed: {e}")
 
     return result

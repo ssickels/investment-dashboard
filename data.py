@@ -42,11 +42,18 @@ def _get_redis():
 DIY_TICKERS = ["VTI", "VXUS", "BND"]
 ACTIVE_TICKERS = ["AGTHX", "DODFX", "PTTAX"]
 ALL_ACTIVE_TICKERS = [
-    "AGTHX", "DODFX", "PTTAX",   # American / Dodge
-    "FCNTX", "FIEUX", "FTBFX",   # Fidelity
-    "PRGFX", "PRITX", "PRFIX",   # T. Rowe Price
-    "VWUSX", "VWILX", "VBTLX",   # Vanguard Active
-    "ANWPX", "ABNDX",            # American Funds (momentum universe)
+    # Core active (modern)
+    "AGTHX", "DODFX", "PTTAX",
+    "FCNTX", "FIEUX", "FTBFX",
+    "PRGFX", "PRITX", "PRTIX",
+    "VWUSX", "VWILX", "VBTLX",
+    # Core active (pre-ETF)
+    "FMAGX", "FOSFX", "FBNDX",
+    "ANWPX", "ABNDX",
+    # Sector — pre-ETF
+    "FRESX", "FSENX", "FSPHX", "VGSIX",
+    # Sector ETFs — modern
+    "VNQ", "XLE", "XLV", "XLK",
 ]
 ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 
@@ -154,6 +161,25 @@ def load_returns_for_tickers(tickers: list) -> pd.DataFrame:
     series = {t: load_monthly_returns(t) for t in tickers}
     df = pd.concat(series, axis=1)
     df = df.dropna()
+    df.index = _normalize_to_month_end(df.index)
+    return df
+
+
+def load_returns_for_tickers_outer(tickers: list) -> pd.DataFrame:
+    """
+    Load monthly returns with outer-join: NaN where a fund wasn't yet trading.
+    Per-ticker failures are skipped with a warning rather than raising.
+    Used for the expanded momentum universe where funds have staggered inception dates.
+    """
+    series = {}
+    for t in tickers:
+        try:
+            series[t] = load_monthly_returns(t)
+        except Exception as e:
+            print(f"Warning: skipping {t} for expanded universe ({e})")
+    if not series:
+        return pd.DataFrame()
+    df = pd.concat(series, axis=1)
     df.index = _normalize_to_month_end(df.index)
     return df
 

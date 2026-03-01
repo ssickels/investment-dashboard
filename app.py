@@ -25,6 +25,26 @@ DIY_PORTFOLIO_SETS = {
     },
 }
 
+# Expanded momentum universe by era (equity and bond funds)
+# Bonds identified per spec; all other funds treated as equity.
+# Funds without sufficient history at a given rebalance date are automatically excluded.
+ACTIVE_MOMENTUM_UNIVERSE = {
+    "etf": {
+        "equity": [
+            "AGTHX", "DODFX", "FCNTX", "FIEUX", "VWUSX", "VWILX",
+            "PRGFX", "PRITX", "PRTIX", "VNQ", "XLE", "XLV", "XLK",
+        ],
+        "bond": ["PTTAX", "FTBFX", "VBTLX"],
+    },
+    "pre_etf": {
+        "equity": [
+            "FMAGX", "FOSFX", "AGTHX", "ANWPX", "PRGFX", "PRITX",
+            "FRESX", "FSENX", "FSPHX", "VGSIX",
+        ],
+        "bond": ["FBNDX", "ABNDX", "PRTIX"],
+    },
+}
+
 ACTIVE_FUND_SETS = {
     "american_dodge": {
         "label": "American/Dodge",
@@ -117,20 +137,29 @@ def portfolio():
         # Scenario 4: AUM fee only (active fund ER already embedded in historical returns)
         monthly_active_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
 
-        # Momentum universes (fixed, era-independent for active)
-        diy_momentum_tickers = diy_tickers  # same universe, momentum-rotated
-        active_momentum_tickers = ACTIVE_FUND_SETS["american_funds"]["tickers"]
+        # DIY momentum: split DIY tickers into equity (first 2) and bond (last 1)
+        diy_eq_tickers   = diy_tickers[:2]   # e.g. [VTI, VXUS] or [VFINX, VWIGX]
+        diy_bond_tickers = diy_tickers[2:]   # e.g. [BND] or [VBMFX]
 
-        # Load core tickers first; then attempt to add momentum-specific tickers
+        # Active momentum: expanded universe based on era
+        mom_universe = ACTIVE_MOMENTUM_UNIVERSE.get(
+            diy_portfolio_key, ACTIVE_MOMENTUM_UNIVERSE["etf"]
+        )
+        active_eq_tickers   = mom_universe["equity"]
+        active_bond_tickers = mom_universe["bond"]
+
+        # Load standard inner-join returns (for the 4 base scenarios)
         core_tickers = list(dict.fromkeys(diy_tickers + active_tickers))
+        returns_df = data_module.load_returns_for_tickers(core_tickers)
+
+        # Load expanded outer-join returns for active momentum (graceful per-fund failure)
+        expanded_returns_df = None
         try:
-            all_tickers = list(dict.fromkeys(core_tickers + active_momentum_tickers))
-            returns_df = data_module.load_returns_for_tickers(all_tickers)
-        except Exception as mom_err:
-            # Momentum-specific tickers unavailable; fall back to core only
-            active_momentum_tickers = None
-            returns_df = data_module.load_returns_for_tickers(core_tickers)
-            print(f"Warning: active momentum tickers unavailable ({mom_err}), skipping")
+            expanded_returns_df = data_module.load_returns_for_tickers_outer(
+                active_eq_tickers + active_bond_tickers
+            )
+        except Exception as exp_err:
+            print(f"Warning: could not load expanded universe ({exp_err})")
 
         absolute_date_start = str(returns_df.index[0].date())
         absolute_date_end   = str(returns_df.index[-1].date())
@@ -143,6 +172,10 @@ def portfolio():
                 mask = returns_df.index >= start_ts
                 if mask.any():
                     returns_df = returns_df[mask]
+                if expanded_returns_df is not None:
+                    emask = expanded_returns_df.index >= start_ts
+                    if emask.any():
+                        expanded_returns_df = expanded_returns_df[emask]
             except Exception:
                 pass  # invalid date, use full range
 
@@ -192,8 +225,11 @@ def portfolio():
             active_tickers=active_tickers,
             monthly_managed_fee_rate=monthly_managed_fee,
             monthly_active_managed_fee_rate=monthly_active_managed_fee,
-            diy_momentum_tickers=diy_momentum_tickers,
-            active_momentum_tickers=active_momentum_tickers,
+            diy_equity_tickers=diy_eq_tickers,
+            diy_bond_tickers=diy_bond_tickers,
+            active_equity_tickers=active_eq_tickers,
+            active_bond_tickers=active_bond_tickers,
+            expanded_returns_df=expanded_returns_df,
             monthly_momentum_fee_rate=monthly_active_managed_fee,
             yield_curve_spread=yield_curve_spread,
             aggressiveness=aggressiveness,
