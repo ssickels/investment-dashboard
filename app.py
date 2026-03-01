@@ -180,6 +180,21 @@ def portfolio():
             except Exception:
                 pass  # invalid date, use full range
 
+        # Apply optional end date (YYYY-MM from month input)
+        end_date_str = request.args.get("end_date", "")
+        if end_date_str:
+            try:
+                end_ts = pd.Timestamp(end_date_str).to_period("M").to_timestamp("M")
+                mask = returns_df.index <= end_ts
+                if mask.any():
+                    returns_df = returns_df[mask]
+                if expanded_returns_df is not None:
+                    emask = expanded_returns_df.index <= end_ts
+                    if emask.any():
+                        expanded_returns_df = expanded_returns_df[emask]
+            except Exception:
+                pass  # invalid date, use full range
+
         months_available = len(returns_df)
         years_available = months_available // 12
         date_range_start = str(returns_df.index[0].date())

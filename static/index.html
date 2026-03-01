@@ -33,7 +33,7 @@
       </div>
 
       <div class="control-group">
-        <label>Start Date <span class="pct-label">(simulation runs to latest available)</span></label>
+        <label>Start Date</label>
         <input type="hidden" id="startDate" />
         <div class="date-picker" id="datePicker">
           <button class="picker-btn" id="pickerPrevYear"  title="Previous year"  disabled>&#8249;&#8249;</button>
@@ -43,6 +43,20 @@
           <button class="picker-btn" id="pickerPrevMonth" title="Previous month" disabled>&#8249;</button>
           <span   class="picker-val" id="pickerMonth">—</span>
           <button class="picker-btn" id="pickerNextMonth" title="Next month">&#8250;</button>
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label>End Date <span class="pct-label">(defaults to latest available)</span></label>
+        <input type="hidden" id="endDate" />
+        <div class="date-picker" id="endDatePicker">
+          <button class="picker-btn" id="endPickerPrevYear"  title="Previous year">&#8249;&#8249;</button>
+          <span   class="picker-val" id="endPickerYear">—</span>
+          <button class="picker-btn" id="endPickerNextYear"  title="Next year">&#8250;&#8250;</button>
+          <div class="picker-sep"></div>
+          <button class="picker-btn" id="endPickerPrevMonth" title="Previous month">&#8249;</button>
+          <span   class="picker-val" id="endPickerMonth">—</span>
+          <button class="picker-btn" id="endPickerNextMonth" title="Next month" disabled>&#8250;</button>
         </div>
       </div>
 

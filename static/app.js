@@ -636,13 +636,13 @@ function updateFeeDrag(data) {
   // Scenario name with tooltip showing its final value and what costs are included
   function scen(label, finalVal, note) {
     const tt = `${label}  ·  Final value: ${fmt$.format(finalVal)}  ·  ${note}`;
-    return `<span class="tooltip-term" data-tooltip="${tt.replace(/"/g, "&quot;")}">${label}</span>`;
+    return `<span class="tooltip-term tooltip-term--wide" data-tooltip="${tt.replace(/"/g, "&quot;")}">${label}</span>`;
   }
 
   // Dollar difference with tooltip showing the explicit subtraction formula
   function diff(amount, a, b) {
     const tt = `How this is calculated: ${fmt$.format(a)} − ${fmt$.format(b)} = ${fmt$.format(Math.abs(amount))}`;
-    return `<span class="tooltip-term" data-tooltip="${tt}"><strong>${fmt$.format(Math.abs(amount))}</strong></span>`;
+    return `<span class="tooltip-term tooltip-term--wide" data-tooltip="${tt}"><strong>${fmt$.format(Math.abs(amount))}</strong></span>`;
   }
 
   const lines = [];
@@ -704,6 +704,7 @@ function getParams() {
     initial_amount:  document.getElementById("initialAmount").value,
     monthly_contrib: document.getElementById("monthlyContrib").value,
     start_date:      document.getElementById("startDate").value,
+    end_date:        document.getElementById("endDate").value,
     stock_pct:       document.getElementById("stockPct").value,
     rebalance:       document.getElementById("rebalance").value,
     aum_fee:         document.getElementById("aumFee").value,
@@ -844,6 +845,8 @@ function setEra(era) {
 
 let pickerYear  = null;
 let pickerMonth = null;  // 1-based
+let endPickerYear  = null;
+let endPickerMonth = null;
 let pickerMinYear  = null;
 let pickerMinMonth = null;
 let pickerMaxYear  = null;
@@ -855,38 +858,66 @@ function pickerToYYYYMM(y, m) {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
+// Convert year/month to a comparable integer sequence
+function toSeq(y, m) { return y * 12 + m; }
+
 function updatePickerDisplay() {
-  const atMin = pickerYear === pickerMinYear && pickerMonth <= pickerMinMonth;
-  const atMax = pickerYear === pickerMaxYear && pickerMonth >= pickerMaxMonth;
-  const atMinYear = pickerYear <= pickerMinYear;
-  const atMaxYear = pickerYear >= pickerMaxYear;
+  const startSeq = toSeq(pickerYear, pickerMonth);
+  const minSeq   = toSeq(pickerMinYear, pickerMinMonth);
+  // Start can advance up to one month before end
+  const endSeq   = toSeq(endPickerYear ?? pickerMaxYear, endPickerMonth ?? pickerMaxMonth);
+  const effMaxSeq = endSeq - 1;
 
   document.getElementById("pickerYear").textContent  = pickerYear  ?? "—";
   document.getElementById("pickerMonth").textContent = pickerMonth ? MONTH_NAMES[pickerMonth - 1] : "—";
 
-  document.getElementById("pickerPrevYear").disabled  = atMinYear;
-  document.getElementById("pickerNextYear").disabled  = atMaxYear;
-  document.getElementById("pickerPrevMonth").disabled = atMin;
-  document.getElementById("pickerNextMonth").disabled = atMax;
+  document.getElementById("pickerPrevYear").disabled  = pickerYear  <= pickerMinYear;
+  document.getElementById("pickerNextYear").disabled  = pickerYear  >= Math.floor((effMaxSeq - 1) / 12);
+  document.getElementById("pickerPrevMonth").disabled = startSeq   <= minSeq;
+  document.getElementById("pickerNextMonth").disabled = startSeq   >= effMaxSeq;
 
-  // Write hidden input and trigger fetch
-  const val = (pickerYear && pickerMonth) ? pickerToYYYYMM(pickerYear, pickerMonth) : "";
+  const val = pickerToYYYYMM(pickerYear, pickerMonth);
   const input = document.getElementById("startDate");
-  if (input.value !== val) {
-    input.value = val;
-    debouncedFetch();
-  }
+  if (input.value !== val) { input.value = val; debouncedFetch(); }
+}
+
+function updateEndPickerDisplay() {
+  const endSeq   = toSeq(endPickerYear, endPickerMonth);
+  const maxSeq   = toSeq(pickerMaxYear, pickerMaxMonth);
+  // End can retreat down to one month after start
+  const startSeq = toSeq(pickerYear ?? pickerMinYear, pickerMonth ?? pickerMinMonth);
+  const effMinSeq = startSeq + 1;
+
+  document.getElementById("endPickerYear").textContent  = endPickerYear  ?? "—";
+  document.getElementById("endPickerMonth").textContent = endPickerMonth ? MONTH_NAMES[endPickerMonth - 1] : "—";
+
+  document.getElementById("endPickerPrevYear").disabled  = endPickerYear  <= Math.ceil(effMinSeq / 12);
+  document.getElementById("endPickerNextYear").disabled  = endPickerYear  >= pickerMaxYear;
+  document.getElementById("endPickerPrevMonth").disabled = endSeq         <= effMinSeq;
+  document.getElementById("endPickerNextMonth").disabled = endSeq         >= maxSeq;
+
+  // Only send end_date to backend when it's before the absolute maximum
+  const val = endSeq < maxSeq ? pickerToYYYYMM(endPickerYear, endPickerMonth) : "";
+  const input = document.getElementById("endDate");
+  if (input.value !== val) { input.value = val; debouncedFetch(); }
 }
 
 function clampPicker() {
-  if (pickerYear < pickerMinYear || (pickerYear === pickerMinYear && pickerMonth < pickerMinMonth)) {
-    pickerYear  = pickerMinYear;
-    pickerMonth = pickerMinMonth;
-  }
-  if (pickerYear > pickerMaxYear || (pickerYear === pickerMaxYear && pickerMonth > pickerMaxMonth)) {
-    pickerYear  = pickerMaxYear;
-    pickerMonth = pickerMaxMonth;
-  }
+  const minSeq = toSeq(pickerMinYear, pickerMinMonth);
+  const endSeq = toSeq(endPickerYear ?? pickerMaxYear, endPickerMonth ?? pickerMaxMonth);
+  let seq = toSeq(pickerYear, pickerMonth);
+  seq = Math.max(minSeq, Math.min(endSeq - 1, seq));
+  pickerYear  = Math.floor((seq - 1) / 12);
+  pickerMonth = seq - pickerYear * 12;
+}
+
+function clampEndPicker() {
+  const maxSeq   = toSeq(pickerMaxYear, pickerMaxMonth);
+  const startSeq = toSeq(pickerYear ?? pickerMinYear, pickerMonth ?? pickerMinMonth);
+  let seq = toSeq(endPickerYear, endPickerMonth);
+  seq = Math.max(startSeq + 1, Math.min(maxSeq, seq));
+  endPickerYear  = Math.floor((seq - 1) / 12);
+  endPickerMonth = seq - endPickerYear * 12;
 }
 
 function initDatePicker(absStart, absEnd) {
@@ -898,19 +929,20 @@ function initDatePicker(absStart, absEnd) {
   pickerMaxYear  = ey;
   pickerMaxMonth = em;
 
-  // Default to earliest available on first load only
-  if (pickerYear === null) {
-    pickerYear  = sy;
-    pickerMonth = sm;
-  }
+  if (pickerYear    === null) { pickerYear  = sy; pickerMonth  = sm; }  // first load: default to earliest
+  if (endPickerYear === null) { endPickerYear = ey; endPickerMonth = em; }  // first load: default to latest
+
   clampPicker();
+  clampEndPicker();
   updatePickerDisplay();
+  updateEndPickerDisplay();
 }
 
 function movePickerYear(delta) {
   pickerYear += delta;
   clampPicker();
   updatePickerDisplay();
+  updateEndPickerDisplay();  // refresh end picker disabled states
 }
 
 function movePickerMonth(delta) {
@@ -918,6 +950,23 @@ function movePickerMonth(delta) {
   if (pickerMonth < 1)  { pickerYear -= 1; pickerMonth = 12; }
   if (pickerMonth > 12) { pickerYear += 1; pickerMonth = 1;  }
   clampPicker();
+  updatePickerDisplay();
+  updateEndPickerDisplay();
+}
+
+function moveEndPickerYear(delta) {
+  endPickerYear += delta;
+  clampEndPicker();
+  updateEndPickerDisplay();
+  updatePickerDisplay();  // refresh start picker disabled states
+}
+
+function moveEndPickerMonth(delta) {
+  endPickerMonth += delta;
+  if (endPickerMonth < 1)  { endPickerYear -= 1; endPickerMonth = 12; }
+  if (endPickerMonth > 12) { endPickerYear += 1; endPickerMonth = 1;  }
+  clampEndPicker();
+  updateEndPickerDisplay();
   updatePickerDisplay();
 }
 
@@ -958,11 +1007,17 @@ function wireInputs() {
     });
   });
 
-  // Date picker arrow buttons
+  // Start date picker arrow buttons
   document.getElementById("pickerPrevYear").addEventListener("click",  () => movePickerYear(-1));
   document.getElementById("pickerNextYear").addEventListener("click",  () => movePickerYear(+1));
   document.getElementById("pickerPrevMonth").addEventListener("click", () => movePickerMonth(-1));
   document.getElementById("pickerNextMonth").addEventListener("click", () => movePickerMonth(+1));
+
+  // End date picker arrow buttons
+  document.getElementById("endPickerPrevYear").addEventListener("click",  () => moveEndPickerYear(-1));
+  document.getElementById("endPickerNextYear").addEventListener("click",  () => moveEndPickerYear(+1));
+  document.getElementById("endPickerPrevMonth").addEventListener("click", () => moveEndPickerMonth(-1));
+  document.getElementById("endPickerNextMonth").addEventListener("click", () => moveEndPickerMonth(+1));
 
   // Stat card visibility toggles
   document.querySelectorAll(".stat-card-toggle").forEach(cb => {
