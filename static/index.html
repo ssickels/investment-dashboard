@@ -10,7 +10,9 @@
 <body>
   <div class="layout">
     <!-- SIDEBAR -->
-    <aside class="sidebar">
+    <aside class="sidebar" id="sidebar">
+      <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">&#8249;</button>
+      <div class="sidebar-content" id="sidebarContent">
       <h1 class="sidebar-title">Investment Simulator</h1>
       <p class="sidebar-subtitle">Compare three real-world investment strategies using historical data.</p>
 
@@ -144,6 +146,7 @@
         Data source: Yahoo Finance (VTI, VXUS, BND, AGTHX, DODFX, PTTAX) &amp; FRED CPI.<br />
         <span id="dateRangeNote">Loading…</span>
       </div>
+      </div><!-- end sidebar-content -->
     </aside>
 
     <!-- MAIN CONTENT -->

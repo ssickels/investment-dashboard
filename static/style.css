@@ -45,9 +45,63 @@ html, body {
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
   position: sticky;
   top: 0;
   height: 100vh;
+  transition: width 0.25s ease, min-width 0.25s ease, padding 0.25s ease;
+  position: relative;
+}
+
+.sidebar--collapsed {
+  width: 36px;
+  min-width: 36px;
+  padding: 24px 0;
+  overflow: hidden;
+}
+
+.sidebar-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  opacity: 1;
+  transition: opacity 0.15s ease;
+  min-width: calc(var(--sidebar-w) - 40px);
+}
+
+.sidebar--collapsed .sidebar-content {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  top: 20px;
+  right: 8px;
+  background: none;
+  border: 1px solid var(--gray-200);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--gray-400);
+  font-size: 13px;
+  padding: 0;
+  flex-shrink: 0;
+  transition: color 0.15s, border-color 0.15s;
+  z-index: 10;
+}
+
+.sidebar-toggle:hover {
+  color: var(--gray-800);
+  border-color: var(--gray-400);
+}
+
+.sidebar--collapsed .sidebar-toggle {
+  right: 7px;
 }
 
 .sidebar-title {

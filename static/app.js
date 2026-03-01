@@ -645,6 +645,18 @@ function wireInputs() {
   });
 }
 
+// ==================== SIDEBAR TOGGLE ====================
+
+document.getElementById("sidebarToggle").addEventListener("click", () => {
+  const sidebar = document.getElementById("sidebar");
+  const btn     = document.getElementById("sidebarToggle");
+  const collapsed = sidebar.classList.toggle("sidebar--collapsed");
+  btn.innerHTML  = collapsed ? "&#8250;" : "&#8249;";
+  btn.title      = collapsed ? "Expand sidebar" : "Collapse sidebar";
+  // Let the CSS transition finish before resizing the chart
+  setTimeout(() => { if (chart) chart.resize(); }, 260);
+});
+
 // ==================== INIT ====================
 
 setEra("etf");
