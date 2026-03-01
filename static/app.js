@@ -321,7 +321,6 @@ function getParams() {
     initial_amount: document.getElementById("initialAmount").value,
     monthly_contrib: document.getElementById("monthlyContrib").value,
     start_date:      document.getElementById("startDate").value,
-    years:           document.getElementById("years").value,
     stock_pct:       document.getElementById("stockPct").value,
     rebalance:       document.getElementById("rebalance").value,
     aum_fee:         document.getElementById("aumFee").value,
@@ -348,21 +347,8 @@ async function fetchAndRender() {
       throw new Error(data.error || `Server error ${resp.status}`);
     }
 
-    // Update year slider max
-    const yearsSlider = document.getElementById("years");
-    const yearsAvail  = data.meta.years_available;
-    if (yearsAvail && parseInt(yearsSlider.max) !== yearsAvail) {
-      yearsSlider.max = yearsAvail;
-      document.getElementById("yearsMax").textContent = `${yearsAvail} yrs`;
-    }
-
-    // Set start date picker bounds and default (once, on first load)
-    const startInput = document.getElementById("startDate");
-    const absStart = data.meta.absolute_date_start.substring(0, 7);
-    const absEnd   = data.meta.absolute_date_end.substring(0, 7);
-    startInput.min = absStart;
-    startInput.max = absEnd;
-    if (!startInput.value) startInput.value = absStart;
+    // Initialize / update date picker bounds
+    initDatePicker(data.meta.absolute_date_start, data.meta.absolute_date_end);
 
     // Date range note
     document.getElementById("dateRangeNote").textContent =
@@ -389,11 +375,92 @@ async function fetchAndRender() {
 
 const debouncedFetch = debounce(fetchAndRender, 400);
 
+// ==================== DATE PICKER ====================
+
+let pickerYear  = null;
+let pickerMonth = null;  // 1-based
+let pickerMinYear  = null;
+let pickerMinMonth = null;
+let pickerMaxYear  = null;
+let pickerMaxMonth = null;
+
+const MONTH_NAMES = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+function pickerToYYYYMM(y, m) {
+  return `${y}-${String(m).padStart(2, "0")}`;
+}
+
+function updatePickerDisplay() {
+  const atMin = pickerYear === pickerMinYear && pickerMonth <= pickerMinMonth;
+  const atMax = pickerYear === pickerMaxYear && pickerMonth >= pickerMaxMonth;
+  const atMinYear = pickerYear <= pickerMinYear;
+  const atMaxYear = pickerYear >= pickerMaxYear;
+
+  document.getElementById("pickerYear").textContent  = pickerYear  ?? "—";
+  document.getElementById("pickerMonth").textContent = pickerMonth ? MONTH_NAMES[pickerMonth - 1] : "—";
+
+  document.getElementById("pickerPrevYear").disabled  = atMinYear;
+  document.getElementById("pickerNextYear").disabled  = atMaxYear;
+  document.getElementById("pickerPrevMonth").disabled = atMin;
+  document.getElementById("pickerNextMonth").disabled = atMax;
+
+  // Write hidden input and trigger fetch
+  const val = (pickerYear && pickerMonth) ? pickerToYYYYMM(pickerYear, pickerMonth) : "";
+  const input = document.getElementById("startDate");
+  if (input.value !== val) {
+    input.value = val;
+    debouncedFetch();
+  }
+}
+
+function clampPicker() {
+  if (pickerYear < pickerMinYear || (pickerYear === pickerMinYear && pickerMonth < pickerMinMonth)) {
+    pickerYear  = pickerMinYear;
+    pickerMonth = pickerMinMonth;
+  }
+  if (pickerYear > pickerMaxYear || (pickerYear === pickerMaxYear && pickerMonth > pickerMaxMonth)) {
+    pickerYear  = pickerMaxYear;
+    pickerMonth = pickerMaxMonth;
+  }
+}
+
+function initDatePicker(absStart, absEnd) {
+  // absStart / absEnd are "YYYY-MM-DD" strings
+  const [sy, sm] = absStart.split("-").map(Number);
+  const [ey, em] = absEnd.split("-").map(Number);
+  pickerMinYear  = sy;
+  pickerMinMonth = sm;
+  pickerMaxYear  = ey;
+  pickerMaxMonth = em;
+
+  // Default to earliest available on first load only
+  if (pickerYear === null) {
+    pickerYear  = sy;
+    pickerMonth = sm;
+  }
+  clampPicker();
+  updatePickerDisplay();
+}
+
+function movePickerYear(delta) {
+  pickerYear += delta;
+  clampPicker();
+  updatePickerDisplay();
+}
+
+function movePickerMonth(delta) {
+  pickerMonth += delta;
+  if (pickerMonth < 1)  { pickerYear -= 1; pickerMonth = 12; }
+  if (pickerMonth > 12) { pickerYear += 1; pickerMonth = 1;  }
+  clampPicker();
+  updatePickerDisplay();
+}
+
 // ==================== WIRE UP INPUTS ====================
 
 function wireInputs() {
   const ids = [
-    "initialAmount", "monthlyContrib", "startDate", "years", "stockPct",
+    "initialAmount", "monthlyContrib", "stockPct",
     "rebalance", "aumFee", "inflationAdj", "activeFundSet", "diyPortfolio",
   ];
 
@@ -401,6 +468,12 @@ function wireInputs() {
     document.getElementById(id).addEventListener("input", debouncedFetch);
     document.getElementById(id).addEventListener("change", debouncedFetch);
   }
+
+  // Date picker arrow buttons
+  document.getElementById("pickerPrevYear").addEventListener("click",  () => movePickerYear(-1));
+  document.getElementById("pickerNextYear").addEventListener("click",  () => movePickerYear(+1));
+  document.getElementById("pickerPrevMonth").addEventListener("click", () => movePickerMonth(-1));
+  document.getElementById("pickerNextMonth").addEventListener("click", () => movePickerMonth(+1));
 
   // Show total invested checkbox
   document.getElementById("showContrib").addEventListener("change", (e) => {
@@ -442,10 +515,7 @@ function wireInputs() {
     document.getElementById("rescaleBtn").style.display = "none";
   });
 
-  // Slider display updates (instant, no debounce)
-  document.getElementById("years").addEventListener("input", (e) => {
-    document.getElementById("yearsDisplay").textContent = e.target.value;
-  });
+  // Slider display update (instant, no debounce)
   document.getElementById("stockPct").addEventListener("input", (e) => {
     document.getElementById("stockPctDisplay").textContent = e.target.value;
   });
