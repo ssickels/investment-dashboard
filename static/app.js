@@ -74,51 +74,38 @@ const FUND_INFO = {
   XLK:   { name: "Technology Select Sector SPDR Fund",            cat: "Technology" },
 };
 
-/** Single ticker wrapped in a CSS tooltip span. */
-function fundTip(ticker) {
-  const info = FUND_INFO[ticker];
-  if (!info) return ticker;
-  const tt = `${ticker} — ${info.name}\n${info.cat}`;
-  return `<span class="tooltip-term" data-tooltip="${tt}">${ticker}</span>`;
-}
-
-/** "VTI / VXUS / BND" with each ticker individually tipped. */
-function tickersHtml(tickers) {
-  return tickers.map(fundTip).join(" / ");
+/**
+ * Build a 3-column HTML table (Ticker / Name / Class) for one or more fund groups.
+ * sections: [{heading, tickers}]  — heading may be null/falsy to omit the group header row.
+ */
+function fundTable(sections) {
+  let html = '<table class="fund-tbl"><tr><th>Ticker</th><th>Name</th><th>Class</th></tr>';
+  for (const { heading, tickers } of sections) {
+    if (heading) {
+      html += `<tr><td colspan="3" class="fund-tbl-head">${heading}</td></tr>`;
+    }
+    for (const t of tickers) {
+      const info = FUND_INFO[t] || { name: t, cat: "—" };
+      html += `<tr><td><strong>${t}</strong></td><td>${info.name}</td><td class="fund-tbl-cat">${info.cat}</td></tr>`;
+    }
+  }
+  return html + '</table>';
 }
 
 /**
- * Build HTML rows for a list of tickers (used in the floating legend tooltip).
- * Returns an HTML string.
+ * Wire a floating fund-table tooltip to an element.
+ * Assigns onmouse* properties so repeated calls on the same element overwrite cleanly.
  */
-function fundRows(tickers) {
-  return tickers.map(t => {
-    const info = FUND_INFO[t] || { name: t, cat: "—" };
-    return `<strong>${t}</strong> ${info.name} <span class="tt-cat">${info.cat}</span>`;
-  }).join("<br>");
-}
-
-/**
- * Build plain-text lines listing all funds in a universe (for data-tooltip attributes).
- * Returns an array of strings; join with "\n" to use as a tooltip value.
- */
-function universeTooltipLines(eqTickers, bondTickers) {
-  const line = t => { const i = FUND_INFO[t] || {}; return `  ${t} — ${i.name || t} (${i.cat || "—"})`; };
-  return [
-    `Equity (${eqTickers.length}):`,
-    ...eqTickers.map(line),
-    `Bond (${bondTickers.length}):`,
-    ...bondTickers.map(line),
-  ];
-}
-
-/** Build a one-liner tooltip for a universe displayed as compact text in a stat card. */
-function universeSubHtml(eqTickers, bondTickers) {
-  const eqLines  = eqTickers.map(t => { const i = FUND_INFO[t] || {}; return `${t} — ${i.name || t} (${i.cat || "—"})`; });
-  const bndLines = bondTickers.map(t => { const i = FUND_INFO[t] || {}; return `${t} — ${i.name || t} (${i.cat || "—"})`; });
-  const tip = ["── Equity ──", ...eqLines, "── Bond ──", ...bndLines].join("\n");
-  const label = `${eqTickers.length} equity · ${bondTickers.length} bond`;
-  return `<span class="tooltip-term" data-tooltip="${tip.replace(/"/g, "&quot;")}">${label}</span> · annual rotation`;
+function wireFundHover(el, html) {
+  if (!el) return;
+  el.style.cursor = "help";
+  el.style.textDecorationLine  = "underline";
+  el.style.textDecorationStyle = "dotted";
+  el.style.textDecorationColor = "#9ca3af";
+  const tip = document.getElementById("legendTooltip");
+  el.onmouseenter = (e) => { tip.innerHTML = html; tip.style.left = (e.clientX + 14) + "px"; tip.style.top = (e.clientY + 14) + "px"; tip.style.display = "block"; };
+  el.onmousemove  = (e) => { tip.style.left = (e.clientX + 14) + "px"; tip.style.top  = (e.clientY + 14) + "px"; };
+  el.onmouseleave = ()  => { tip.style.display = "none"; };
 }
 
 // ==================== CHART SETUP ====================
@@ -159,25 +146,21 @@ function handleScaleAfterRender(data) {
 
 function buildLegendTooltips(data) {
   const mu  = data.momentum_universe || {};
-  const diy = data.diy_portfolio.tickers    || [];
-  const act = data.active_fund_set.tickers  || [];
-
-  function block(heading, tickers) {
-    return `<div class="tt-head">${heading}</div>${fundRows(tickers)}`;
-  }
+  const diy = data.diy_portfolio.tickers   || [];
+  const act = data.active_fund_set.tickers || [];
 
   return [
-    block("No-advisor · index funds · no fees", diy),
-    block("Index funds + AUM fee + active fund expense ratios", diy),
-    block("No-advisor · actively managed funds", act),
-    block("Active funds + AUM fee", act),
-    `<div class="tt-head">Total contributed over time</div>Initial investment + monthly contributions`,
+    fundTable([{ heading: "No Advisor · Index funds · No fees", tickers: diy }]),
+    fundTable([{ heading: "Index funds + AUM fee + fund expense ratio", tickers: diy }]),
+    fundTable([{ heading: "No Advisor · Actively Managed", tickers: act }]),
+    fundTable([{ heading: "Active funds + AUM fee", tickers: act }]),
+    `<em>Total Invested</em><br><span style="color:#9ca3af;font-size:10px">Initial investment + monthly contributions</span>`,
     null,  // _fill dataset (hidden)
     (mu.diy_equity && mu.diy_equity.length)
-      ? block("Index Momentum · Equity", mu.diy_equity) + "<br>" + block("Bond", mu.diy_bond)
+      ? fundTable([{ heading: "Equity universe", tickers: mu.diy_equity }, { heading: "Bond universe", tickers: mu.diy_bond }])
       : null,
     (mu.active_equity && mu.active_equity.length)
-      ? block("Active Momentum · Equity universe", mu.active_equity) + "<br>" + block("Bond universe", mu.active_bond)
+      ? fundTable([{ heading: "Equity universe", tickers: mu.active_equity }, { heading: "Bond universe", tickers: mu.active_bond }])
       : null,
   ];
 }
@@ -534,56 +517,71 @@ function updateStats(data) {
     atCb.disabled = false;
   }
 
-  // Update DIY and managed card subtitles
+  // Build fund tables for hover tooltips
   const diyTickers = data.diy_portfolio.tickers;
   const actTickers = data.active_fund_set.tickers;
   const mu = data.momentum_universe;
-  document.getElementById("diyCardSub").innerHTML     = tickersHtml(diyTickers);
-  document.getElementById("managedCardSub").innerHTML = tickersHtml(diyTickers) + " + advisor fees";
+
+  const diyTbl = fundTable([{ heading: null, tickers: diyTickers }]);
+  const actTbl = fundTable([{ heading: null, tickers: actTickers }]);
+
+  // Stat card subtitles — plain text + hover table
+  const diySubEl = document.getElementById("diyCardSub");
+  diySubEl.textContent = diyTickers.join(" / ");
+  wireFundHover(diySubEl, diyTbl);
+
+  const mgdSubEl = document.getElementById("managedCardSub");
+  mgdSubEl.textContent = diyTickers.join(" / ") + " + advisor fees";
+  wireFundHover(mgdSubEl, diyTbl);
+
+  const actSubEl = document.getElementById("activeCardSub");
+  actSubEl.textContent = actTickers.join(" / ");
+  wireFundHover(actSubEl, actTbl);
+
+  const actMgdSubEl = document.getElementById("activeManagedCardSub");
+  actMgdSubEl.textContent = actTickers.join(" / ") + " + advisor fees";
+  wireFundHover(actMgdSubEl, actTbl);
+
+  // Momentum card subtitles + group labels
   if (s.diy_momentum && mu) {
-    document.getElementById("diyMomentumCardSub").innerHTML = universeSubHtml(mu.diy_equity, mu.diy_bond);
+    const diyMomTbl = fundTable([{ heading: "Equity", tickers: mu.diy_equity }, { heading: "Bond", tickers: mu.diy_bond }]);
+    const diyMomSubEl = document.getElementById("diyMomentumCardSub");
+    diyMomSubEl.textContent = `${mu.diy_equity.length} equity · ${mu.diy_bond.length} bond · annual rotation`;
+    wireFundHover(diyMomSubEl, diyMomTbl);
     const diyMomLabel = document.getElementById("diyMomentumGroupLabel");
-    if (diyMomLabel) diyMomLabel.innerHTML = "Index Momentum (With Advisor) · " + tickersHtml(mu.diy_equity.concat(mu.diy_bond));
+    if (diyMomLabel) { diyMomLabel.textContent = "Index Momentum (With Advisor)"; wireFundHover(diyMomLabel, diyMomTbl); }
   }
-
-  // Update active card subtitles to reflect selected fund family
-  document.getElementById("activeCardSub").innerHTML        = tickersHtml(actTickers);
-  document.getElementById("activeManagedCardSub").innerHTML = tickersHtml(actTickers) + " + advisor fees";
   if (s.active_momentum && mu) {
-    document.getElementById("activeMomentumCardSub").innerHTML = universeSubHtml(mu.active_equity, mu.active_bond);
+    const actMomTbl = fundTable([{ heading: "Equity", tickers: mu.active_equity }, { heading: "Bond", tickers: mu.active_bond }]);
+    const actMomSubEl = document.getElementById("activeMomentumCardSub");
+    actMomSubEl.textContent = `${mu.active_equity.length} equity · ${mu.active_bond.length} bond · annual rotation`;
+    wireFundHover(actMomSubEl, actMomTbl);
     const actMomLabel = document.getElementById("activeMomentumGroupLabel");
-    if (actMomLabel) actMomLabel.innerHTML = "Active Momentum (With Advisor) · " + tickersHtml(mu.active_equity.concat(mu.active_bond));
+    if (actMomLabel) { actMomLabel.textContent = "Active Momentum (With Advisor)"; wireFundHover(actMomLabel, actMomTbl); }
   }
 
-  // Update "Actively Managed Funds" dropdown tooltip to show momentum universe
-  const activeFundLabelEl = document.getElementById("activeFundSetLabel");
-  if (activeFundLabelEl && mu) {
-    const tip = [
-      "Selects the 3-fund family used for the Buy & Hold Actively Managed scenarios.",
-      "",
-      "When momentum rotation is on, the advisor picks annually",
-      "from a broader universe of potential selections:",
-      ...universeTooltipLines(mu.active_equity, mu.active_bond),
-    ].join("\n");
-    activeFundLabelEl.dataset.tooltip = tip;
+  // Sidebar: DIY fund display
+  wireFundHover(document.getElementById("diyFundDisplay"), diyTbl);
+
+  // Sidebar: "Actively Managed Funds" dropdown label → active momentum universe
+  if (mu) {
+    wireFundHover(
+      document.getElementById("activeFundSetLabel"),
+      fundTable([{ heading: "Momentum rotation universe — Equity", tickers: mu.active_equity }, { heading: "Bond", tickers: mu.active_bond }])
+    );
   }
 
-  // Update "Show momentum rotation" checkbox tooltip to list both universes
-  const showMomTipEl = document.getElementById("showMomentumTip");
-  if (showMomTipEl && mu) {
-    const tip = [
-      "Each year, ranks equity funds by trailing 12-month return.",
-      "Top-ranked: 2/3 of equity allocation; bottom: 1/3.",
-      "Bond allocation fixed. Equal weights in year one.",
-      "Advisor AUM fee applies. No look-ahead.",
-      "",
-      "Index fund rotation universe:",
-      ...universeTooltipLines(mu.diy_equity, mu.diy_bond),
-      "",
-      "Active fund rotation universe:",
-      ...universeTooltipLines(mu.active_equity, mu.active_bond),
-    ].join("\n");
-    showMomTipEl.dataset.tooltip = tip;
+  // Sidebar: "Show momentum rotation" label → both universes
+  if (mu) {
+    wireFundHover(
+      document.getElementById("showMomentumTip"),
+      fundTable([
+        { heading: "Index rotation universe — Equity", tickers: mu.diy_equity },
+        { heading: "Bond", tickers: mu.diy_bond },
+        { heading: "Active rotation universe — Equity", tickers: mu.active_equity },
+        { heading: "Bond", tickers: mu.active_bond },
+      ])
+    );
   }
 
   // Update weighted expense ratio display
@@ -782,8 +780,8 @@ function setEra(era) {
   // Update hidden input
   document.getElementById("diyPortfolio").value = era;
 
-  // Update DIY fund display
-  document.getElementById("diyFundDisplay").innerHTML = tickersHtml(config.diyTickers);
+  // Update DIY fund display (hover wired after fetch in updateStats)
+  document.getElementById("diyFundDisplay").textContent = config.diyTickers.join(" / ");
 
   // Check the matching radio button and style the labels
   document.querySelectorAll("input[name='era']").forEach(radio => {
