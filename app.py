@@ -11,6 +11,20 @@ from simulator import SimParams, run_all_scenarios
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
+DIY_PORTFOLIO_SETS = {
+    "etf": {
+        "label": "Modern ETFs",
+        "tickers": ["VTI", "VXUS", "BND"],
+        "description": "VTI / VXUS / BND",
+    },
+    "pre_etf": {
+        "label": "Pre-ETF Index Funds",
+        "tickers": ["VFINX", "VWIGX", "VBMFX"],
+        "description": "VFINX / VWIGX / VBMFX",
+        "note": "VWIGX (Vanguard Intl Growth) is actively managed — oldest available intl proxy",
+    },
+}
+
 ACTIVE_FUND_SETS = {
     "american_dodge": {
         "label": "American/Dodge",
@@ -37,6 +51,19 @@ ACTIVE_FUND_SETS = {
         "description": "VWUSX / VWILX / VBTLX",
         "expense_ratios": [0.38, 0.32, 0.05],
     },
+    # Vintage families — work with Pre-ETF DIY, extend history to ~1987
+    "fidelity_classic": {
+        "label": "Fidelity Classic",
+        "tickers": ["FMAGX", "FOSFX", "FBNDX"],
+        "description": "FMAGX / FOSFX / FBNDX",
+        "expense_ratios": [0.64, 1.01, 0.45],
+    },
+    "american_funds": {
+        "label": "American Funds",
+        "tickers": ["AGTHX", "ANWPX", "ABNDX"],
+        "description": "AGTHX / ANWPX / ABNDX",
+        "expense_ratios": [0.61, 0.45, 0.59],
+    },
 }
 
 
@@ -62,6 +89,12 @@ def portfolio():
         active_fund_set = ACTIVE_FUND_SETS[active_fund_set_key]
         active_tickers = active_fund_set["tickers"]
 
+        diy_portfolio_key = request.args.get("diy_portfolio", "etf")
+        if diy_portfolio_key not in DIY_PORTFOLIO_SETS:
+            diy_portfolio_key = "etf"
+        diy_portfolio = DIY_PORTFOLIO_SETS[diy_portfolio_key]
+        diy_tickers = diy_portfolio["tickers"]
+
         # Validate
         initial_amount = max(1.0, initial_amount)
         monthly_contrib = max(0.0, monthly_contrib)
@@ -81,9 +114,9 @@ def portfolio():
         # Scenario 4: AUM fee only (active fund ER already embedded in historical returns)
         monthly_active_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
 
-        # Load returns data for DIY + selected active tickers
+        # Load returns data for selected DIY + active tickers
         returns_df = data_module.load_returns_for_tickers(
-            data_module.DIY_TICKERS + active_tickers
+            diy_tickers + active_tickers
         )
         absolute_date_start = str(returns_df.index[0].date())
         absolute_date_end   = str(returns_df.index[-1].date())
@@ -138,6 +171,7 @@ def portfolio():
 
         scenarios = run_all_scenarios(
             returns_df, deflator, params,
+            diy_tickers=diy_tickers,
             active_tickers=active_tickers,
             monthly_managed_fee_rate=monthly_managed_fee,
             monthly_active_managed_fee_rate=monthly_active_managed_fee,
@@ -199,6 +233,11 @@ def portfolio():
                 "description": active_fund_set["description"],
                 "expense_ratios": active_fund_set["expense_ratios"],
                 "weighted_expense_ratio": weighted_er,
+            },
+            "diy_portfolio": {
+                "key": diy_portfolio_key,
+                "label": diy_portfolio["label"],
+                "description": diy_portfolio["description"],
             },
             "error": warning,
         }

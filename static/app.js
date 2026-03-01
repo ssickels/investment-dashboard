@@ -269,6 +269,11 @@ function updateStats(data) {
   fill("active",        s.active.stats);
   fill("activeManaged", s.active_managed.stats);
 
+  // Update DIY and managed card subtitles
+  const diyDesc = data.diy_portfolio.description;
+  document.getElementById("diyCardSub").textContent     = diyDesc;
+  document.getElementById("managedCardSub").textContent = `${diyDesc} + advisor fees`;
+
   // Update active card subtitles to reflect selected fund family
   const desc = data.active_fund_set.description;
   document.getElementById("activeCardSub").textContent        = desc;
@@ -322,6 +327,7 @@ function getParams() {
     aum_fee:         document.getElementById("aumFee").value,
     inflation_adj:   document.getElementById("inflationAdj").checked ? "true" : "false",
     active_fund_set: document.getElementById("activeFundSet").value,
+    diy_portfolio:   document.getElementById("diyPortfolio").value,
   };
 }
 
@@ -388,7 +394,7 @@ const debouncedFetch = debounce(fetchAndRender, 400);
 function wireInputs() {
   const ids = [
     "initialAmount", "monthlyContrib", "startDate", "years", "stockPct",
-    "rebalance", "aumFee", "inflationAdj", "activeFundSet",
+    "rebalance", "aumFee", "inflationAdj", "activeFundSet", "diyPortfolio",
   ];
 
   for (const id of ids) {

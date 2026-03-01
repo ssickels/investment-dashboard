@@ -18,17 +18,18 @@ class SimParams:
     inflation_adj: bool = False
 
 
-def compute_weights(stock_pct: float) -> dict:
+def compute_weights(stock_pct: float, tickers: list) -> dict:
     """
-    VTI = 80% of equity, VXUS = 20% of equity, BND = bonds.
+    tickers = [equity_us, equity_intl, bond]
+    equity_us = 80% of equity, equity_intl = 20% of equity, bond = remainder.
     Returns weights summing to 1.0.
     """
     s = stock_pct / 100.0
     b = 1.0 - s
     return {
-        "VTI": 0.8 * s,
-        "VXUS": 0.2 * s,
-        "BND": b,
+        tickers[0]: 0.8 * s,
+        tickers[1]: 0.2 * s,
+        tickers[2]: b,
     }
 
 
@@ -145,6 +146,7 @@ def run_all_scenarios(
     returns_df: pd.DataFrame,
     deflator: Optional[pd.Series],
     params: SimParams,
+    diy_tickers: list = None,
     active_tickers: list = None,
     monthly_managed_fee_rate: float = 0.0,
     monthly_active_managed_fee_rate: float = 0.0,
@@ -152,12 +154,14 @@ def run_all_scenarios(
     """
     Run all 4 investment scenarios.
 
-    Scenario 1 (DIY): VTI/VXUS/BND, no extra fees
+    Scenario 1 (DIY): diy_tickers, no extra fees
     Scenario 2 (Fee-Adjusted Managed): same weights, AUM + active fund expense ratio
     Scenario 3 (Actively Managed): active tickers, expense ratio already in returns
     Scenario 4 (Fee-Adjusted Active): active tickers, AUM fee only (ER already in returns)
     """
-    weights = compute_weights(params.stock_pct)
+    if diy_tickers is None:
+        diy_tickers = ["VTI", "VXUS", "BND"]
+    weights = compute_weights(params.stock_pct, diy_tickers)
 
     # Active fund weights: same stock/bond ratio but different tickers
     if active_tickers is None:
@@ -172,7 +176,7 @@ def run_all_scenarios(
 
     diy = simulate(
         returns_df=returns_df,
-        tickers=["VTI", "VXUS", "BND"],
+        tickers=diy_tickers,
         weights=weights,
         params=params,
         monthly_fee_rate=0.0,
@@ -181,7 +185,7 @@ def run_all_scenarios(
 
     managed = simulate(
         returns_df=returns_df,
-        tickers=["VTI", "VXUS", "BND"],
+        tickers=diy_tickers,
         weights=weights,
         params=params,
         monthly_fee_rate=monthly_managed_fee_rate,
@@ -206,10 +210,11 @@ def run_all_scenarios(
         deflator=deflator,
     )
 
+    diy_str    = " / ".join(diy_tickers)
     ticker_str = " / ".join(active_tickers)
     return {
-        "diy": {**diy, "label": "DIY Index (VTI/VXUS/BND)"},
-        "managed": {**managed, "label": "Fee-Adjusted Managed"},
+        "diy": {**diy, "label": f"DIY Index ({diy_str})"},
+        "managed": {**managed, "label": f"Fee-Adjusted Managed ({diy_str})"},
         "active": {**active, "label": f"Actively Managed ({ticker_str})"},
         "active_managed": {**active_managed, "label": f"Fee-Adjusted Active ({ticker_str})"},
     }

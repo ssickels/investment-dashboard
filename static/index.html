@@ -61,15 +61,29 @@
         </select>
       </div>
 
-      <div class="section-header">Active Fund Selection</div>
+      <div class="section-header">Portfolio Configuration</div>
+
+      <div class="control-group">
+        <label for="diyPortfolio">DIY Portfolio</label>
+        <select id="diyPortfolio">
+          <option value="etf">Modern ETFs — VTI / VXUS / BND (2011+)</option>
+          <option value="pre_etf">Pre-ETF Index Funds — VFINX / VWIGX / VBMFX (1987+)</option>
+        </select>
+      </div>
 
       <div class="control-group">
         <label for="activeFundSet">Active Fund Family</label>
         <select id="activeFundSet">
-          <option value="american_dodge">American/Dodge — AGTHX / DODFX / PTTAX</option>
-          <option value="fidelity">Fidelity — FCNTX / FIEUX / FTBFX</option>
-          <option value="t_rowe_price">T. Rowe Price — PRGFX / PRITX / PRTIX</option>
-          <option value="vanguard_active">Vanguard Active — VWUSX / VWILX / VBTLX</option>
+          <optgroup label="Modern (ETF era, 2011+)">
+            <option value="american_dodge">American/Dodge — AGTHX / DODFX / PTTAX</option>
+            <option value="fidelity">Fidelity — FCNTX / FIEUX / FTBFX</option>
+            <option value="vanguard_active">Vanguard Active — VWUSX / VWILX / VBTLX</option>
+          </optgroup>
+          <optgroup label="Classic (pre-ETF era, 1987+)">
+            <option value="fidelity_classic">Fidelity Classic — FMAGX / FOSFX / FBNDX</option>
+            <option value="american_funds">American Funds — AGTHX / ANWPX / ABNDX</option>
+            <option value="t_rowe_price">T. Rowe Price — PRGFX / PRITX / PRTIX (1989+)</option>
+          </optgroup>
         </select>
       </div>
 
@@ -141,7 +155,7 @@
       <div class="stats-grid">
         <div class="stat-card diy" id="statsDiy">
           <div class="stat-card-title">DIY Index</div>
-          <div class="stat-card-sub">VTI / VXUS / BND</div>
+          <div class="stat-card-sub" id="diyCardSub">VTI / VXUS / BND</div>
           <dl>
             <dt>Final Value</dt>
             <dd id="diyFinal">—</dd>
@@ -160,7 +174,7 @@
 
         <div class="stat-card managed" id="statsManaged">
           <div class="stat-card-title">Fee-Adjusted</div>
-          <div class="stat-card-sub">Same funds + advisor fees</div>
+          <div class="stat-card-sub" id="managedCardSub">Same funds + advisor fees</div>
           <dl>
             <dt>Final Value</dt>
             <dd id="managedFinal">—</dd>
