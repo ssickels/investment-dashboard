@@ -3,6 +3,7 @@ Flask server for the Investment Strategy Comparison Dashboard.
 Single API route: GET /api/portfolio
 """
 import os
+import pandas as pd
 from flask import Flask, jsonify, request, send_from_directory
 
 import data as data_module
@@ -84,6 +85,20 @@ def portfolio():
         returns_df = data_module.load_returns_for_tickers(
             data_module.DIY_TICKERS + active_tickers
         )
+        absolute_date_start = str(returns_df.index[0].date())
+        absolute_date_end   = str(returns_df.index[-1].date())
+
+        # Apply optional start date (YYYY-MM from month input)
+        start_date_str = request.args.get("start_date", "")
+        if start_date_str:
+            try:
+                start_ts = pd.Timestamp(start_date_str).to_period("M").to_timestamp("M")
+                mask = returns_df.index >= start_ts
+                if mask.any():
+                    returns_df = returns_df[mask]
+            except Exception:
+                pass  # invalid date, use full range
+
         months_available = len(returns_df)
         years_available = months_available // 12
         date_range_start = str(returns_df.index[0].date())
@@ -151,6 +166,8 @@ def portfolio():
                 "years_available": years_available,
                 "years_simulated": years,
                 "inflation_adjusted": inflation_adj,
+                "absolute_date_start": absolute_date_start,
+                "absolute_date_end": absolute_date_end,
             },
             "dates": dates,
             "scenarios": {

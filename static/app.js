@@ -315,6 +315,7 @@ function getParams() {
   return {
     initial_amount: document.getElementById("initialAmount").value,
     monthly_contrib: document.getElementById("monthlyContrib").value,
+    start_date:      document.getElementById("startDate").value,
     years:           document.getElementById("years").value,
     stock_pct:       document.getElementById("stockPct").value,
     rebalance:       document.getElementById("rebalance").value,
@@ -349,6 +350,14 @@ async function fetchAndRender() {
       document.getElementById("yearsMax").textContent = `${yearsAvail} yrs`;
     }
 
+    // Set start date picker bounds and default (once, on first load)
+    const startInput = document.getElementById("startDate");
+    const absStart = data.meta.absolute_date_start.substring(0, 7);
+    const absEnd   = data.meta.absolute_date_end.substring(0, 7);
+    startInput.min = absStart;
+    startInput.max = absEnd;
+    if (!startInput.value) startInput.value = absStart;
+
     // Date range note
     document.getElementById("dateRangeNote").textContent =
       `Common history: ${data.meta.date_range_start} → ${data.meta.date_range_end} (${data.meta.months_available} months)`;
@@ -378,7 +387,7 @@ const debouncedFetch = debounce(fetchAndRender, 400);
 
 function wireInputs() {
   const ids = [
-    "initialAmount", "monthlyContrib", "years", "stockPct",
+    "initialAmount", "monthlyContrib", "startDate", "years", "stockPct",
     "rebalance", "aumFee", "inflationAdj", "activeFundSet",
   ];
 
