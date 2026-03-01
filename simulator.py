@@ -14,8 +14,7 @@ class SimParams:
     years: int = 10
     stock_pct: float = 80.0          # 0-100
     rebalance: str = "annually"      # never | annually | quarterly
-    aum_fee_pct: float = 1.0         # % per year, Scenario 2 only
-    expense_ratio_pct: float = 0.5   # % per year, Scenario 2 only
+    aum_fee_pct: float = 1.0         # % per year, applied to Scenarios 2 & 4
     inflation_adj: bool = False
 
 
@@ -147,19 +146,18 @@ def run_all_scenarios(
     deflator: Optional[pd.Series],
     params: SimParams,
     active_tickers: list = None,
+    monthly_managed_fee_rate: float = 0.0,
+    monthly_active_managed_fee_rate: float = 0.0,
 ) -> dict:
     """
-    Run all 3 investment scenarios.
+    Run all 4 investment scenarios.
 
     Scenario 1 (DIY): VTI/VXUS/BND, no extra fees
-    Scenario 2 (Fee-Adjusted Managed): same weights, with AUM + expense ratio
-    Scenario 3 (Actively Managed): AGTHX/DODFX/PTTAX, same stock/bond split
+    Scenario 2 (Fee-Adjusted Managed): same weights, AUM + active fund expense ratio
+    Scenario 3 (Actively Managed): active tickers, expense ratio already in returns
+    Scenario 4 (Fee-Adjusted Active): active tickers, AUM fee only (ER already in returns)
     """
     weights = compute_weights(params.stock_pct)
-
-    # Monthly fee equivalent: (1 + annual_rate)^(1/12) - 1
-    annual_fee_total = (params.aum_fee_pct + params.expense_ratio_pct) / 100.0
-    monthly_fee_rate = (1.0 + annual_fee_total) ** (1.0 / 12.0) - 1.0
 
     # Active fund weights: same stock/bond ratio but different tickers
     if active_tickers is None:
@@ -186,7 +184,7 @@ def run_all_scenarios(
         tickers=["VTI", "VXUS", "BND"],
         weights=weights,
         params=params,
-        monthly_fee_rate=monthly_fee_rate,
+        monthly_fee_rate=monthly_managed_fee_rate,
         deflator=deflator,
     )
 
@@ -204,7 +202,7 @@ def run_all_scenarios(
         tickers=active_tickers,
         weights=active_weights,
         params=params,
-        monthly_fee_rate=monthly_fee_rate,
+        monthly_fee_rate=monthly_active_managed_fee_rate,
         deflator=deflator,
     )
 

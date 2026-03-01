@@ -185,6 +185,16 @@ input[type="range"] {
   flex-shrink: 0;
 }
 
+.er-display {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray-800);
+}
+
 .data-note {
   font-size: 11px;
   color: var(--gray-400);

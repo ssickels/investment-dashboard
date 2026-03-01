@@ -15,21 +15,26 @@ ACTIVE_FUND_SETS = {
         "label": "American/Dodge",
         "tickers": ["AGTHX", "DODFX", "PTTAX"],
         "description": "AGTHX / DODFX / PTTAX",
+        # Expense ratios: [equity_large, equity_intl, bond]
+        "expense_ratios": [0.61, 0.63, 0.75],
     },
     "fidelity": {
         "label": "Fidelity",
         "tickers": ["FCNTX", "FIEUX", "FTBFX"],
         "description": "FCNTX / FIEUX / FTBFX",
+        "expense_ratios": [0.39, 1.00, 0.45],
     },
     "t_rowe_price": {
         "label": "T. Rowe Price",
         "tickers": ["PRGFX", "PRITX", "PRFIX"],
         "description": "PRGFX / PRITX / PRFIX",
+        "expense_ratios": [0.52, 0.82, 0.44],
     },
     "vanguard_active": {
         "label": "Vanguard Active",
         "tickers": ["VWUSX", "VWILX", "VBTLX"],
         "description": "VWUSX / VWILX / VBTLX",
+        "expense_ratios": [0.38, 0.32, 0.05],
     },
 }
 
@@ -49,7 +54,6 @@ def portfolio():
         stock_pct = float(request.args.get("stock_pct", 80))
         rebalance = request.args.get("rebalance", "annually")
         aum_fee = float(request.args.get("aum_fee", 1.0))
-        expense_ratio = float(request.args.get("expense_ratio", 0.5))
         inflation_adj = request.args.get("inflation_adj", "false").lower() == "true"
         active_fund_set_key = request.args.get("active_fund_set", "american_dodge")
         if active_fund_set_key not in ACTIVE_FUND_SETS:
@@ -62,9 +66,19 @@ def portfolio():
         monthly_contrib = max(0.0, monthly_contrib)
         stock_pct = max(0.0, min(100.0, stock_pct))
         aum_fee = max(0.0, aum_fee)
-        expense_ratio = max(0.0, expense_ratio)
         if rebalance not in ("never", "annually", "quarterly"):
             rebalance = "annually"
+
+        # Weighted expense ratio based on stock/bond split
+        er = active_fund_set["expense_ratios"]
+        s = stock_pct / 100.0
+        b = 1.0 - s
+        weighted_er = round(0.8 * s * er[0] + 0.2 * s * er[1] + b * er[2], 4)
+
+        # Scenario 2: AUM fee + active fund weighted ER (applied to DIY-fund returns)
+        monthly_managed_fee = (1.0 + (aum_fee + weighted_er) / 100.0) ** (1.0 / 12.0) - 1.0
+        # Scenario 4: AUM fee only (active fund ER already embedded in historical returns)
+        monthly_active_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
 
         # Load returns data for DIY + selected active tickers
         returns_df = data_module.load_returns_for_tickers(
@@ -104,11 +118,15 @@ def portfolio():
             stock_pct=stock_pct,
             rebalance=rebalance,
             aum_fee_pct=aum_fee,
-            expense_ratio_pct=expense_ratio,
             inflation_adj=inflation_adj,
         )
 
-        scenarios = run_all_scenarios(returns_df, deflator, params, active_tickers=active_tickers)
+        scenarios = run_all_scenarios(
+            returns_df, deflator, params,
+            active_tickers=active_tickers,
+            monthly_managed_fee_rate=monthly_managed_fee,
+            monthly_active_managed_fee_rate=monthly_active_managed_fee,
+        )
 
         # Use dates from DIY scenario (all same length)
         dates = scenarios["diy"]["dates"]
@@ -162,6 +180,8 @@ def portfolio():
                 "key": active_fund_set_key,
                 "label": active_fund_set["label"],
                 "description": active_fund_set["description"],
+                "expense_ratios": active_fund_set["expense_ratios"],
+                "weighted_expense_ratio": weighted_er,
             },
             "error": warning,
         }

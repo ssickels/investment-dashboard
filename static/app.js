@@ -214,6 +214,10 @@ function updateStats(data) {
   const desc = data.active_fund_set.description;
   document.getElementById("activeCardSub").textContent        = desc;
   document.getElementById("activeManagedCardSub").textContent = `${desc} + advisor fees`;
+
+  // Update weighted expense ratio display
+  const wer = data.active_fund_set.weighted_expense_ratio;
+  document.getElementById("erDisplay").textContent = `${wer.toFixed(2)}% / yr`;
 }
 
 function updateFeeDrag(data) {
@@ -256,7 +260,6 @@ function getParams() {
     stock_pct:       document.getElementById("stockPct").value,
     rebalance:       document.getElementById("rebalance").value,
     aum_fee:         document.getElementById("aumFee").value,
-    expense_ratio:   document.getElementById("expenseRatio").value,
     inflation_adj:   document.getElementById("inflationAdj").checked ? "true" : "false",
     active_fund_set: document.getElementById("activeFundSet").value,
   };
@@ -316,7 +319,7 @@ const debouncedFetch = debounce(fetchAndRender, 400);
 function wireInputs() {
   const ids = [
     "initialAmount", "monthlyContrib", "years", "stockPct",
-    "rebalance", "aumFee", "expenseRatio", "inflationAdj", "activeFundSet",
+    "rebalance", "aumFee", "inflationAdj", "activeFundSet",
   ];
 
   for (const id of ids) {
