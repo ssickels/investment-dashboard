@@ -233,6 +233,36 @@ function buildChart(data) {
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: {
+          onClick: (e, legendItem, legend) => {
+            // Default Chart.js toggle
+            const idx = legendItem.datasetIndex;
+            const ci = legend.chart;
+            if (ci.isDatasetVisible(idx)) { ci.hide(idx); } else { ci.show(idx); }
+            const nowVisible = ci.isDatasetVisible(idx);
+
+            // Sync stat card checkbox (datasets 0–3)
+            const cb = document.querySelector(`.stat-card-toggle[data-dataset-idx="${idx}"]`);
+            if (cb) {
+              cb.checked = nowVisible;
+              cb.title = nowVisible
+                ? "Uncheck to hide this line on the chart"
+                : "Check to show this line on the chart";
+            }
+
+            // Sync "Show total invested" checkbox
+            if (legendItem.text === "Total Invested") {
+              document.getElementById("showContrib").checked = nowVisible;
+            }
+
+            // Sync "Show momentum" checkbox — uncheck only when both momentum lines are hidden
+            if (legendItem.text.includes("Momentum")) {
+              const anyMom = ci.data.datasets.some((ds, i) =>
+                ds.label && ds.label.includes("Momentum") && ci.isDatasetVisible(i)
+              );
+              document.getElementById("showMomentum").checked = anyMom;
+              document.getElementById("momentumStats").style.display = anyMom ? "block" : "none";
+            }
+          },
           labels: {
             filter: (item) => {
               if (item.text === "_fill") return false;
