@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investment Simulator — User Guide</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:       #2563eb;
+      --blue-bg:    #eff6ff;
+      --blue-muted: #93c5fd;
+      --red:        #dc2626;
+      --red-bg:     #fef2f2;
+      --green:      #16a34a;
+      --green-bg:   #f0fdf4;
+      --orange:     #d97706;
+      --orange-bg:  #fffbeb;
+      --violet:     #7c3aed;
+      --violet-bg:  #f5f3ff;
+      --cyan:       #0891b2;
+      --cyan-bg:    #ecfeff;
+      --gray-50:    #f9fafb;
+      --gray-100:   #f3f4f6;
+      --gray-200:   #e5e7eb;
+      --gray-400:   #9ca3af;
+      --gray-600:   #4b5563;
+      --gray-800:   #1f2937;
+      --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+      --max-w: 860px;
+    }
+
+    body {
+      font-family: var(--font);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--gray-800);
+      background: var(--gray-50);
+      padding: 48px 24px 80px;
+    }
+
+    .page {
+      max-width: var(--max-w);
+      margin: 0 auto;
+    }
+
+    /* ── Top nav ── */
+    .topnav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .topnav a {
+      font-size: 13px;
+      color: var(--blue);
+      text-decoration: none;
+      border: 1px solid var(--blue-muted);
+      padding: 5px 14px;
+      border-radius: 6px;
+      background: var(--blue-bg);
+      transition: background 0.15s;
+    }
+    .topnav a:hover { background: #dbeafe; }
+    .topnav-title {
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+
+    /* ── Header ── */
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--gray-800);
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--gray-600);
+      font-size: 1rem;
+      margin-bottom: 40px;
+      max-width: 620px;
+    }
+
+    /* ── Sections ── */
+    section { margin-bottom: 52px; }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--gray-200);
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--gray-800);
+      margin: 20px 0 6px;
+    }
+
+    p { margin-bottom: 12px; color: var(--gray-600); }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Scenario cards ── */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    @media (max-width: 600px) { .scenario-grid { grid-template-columns: 1fr; } }
+
+    .scenario-card {
+      border-radius: 10px;
+      padding: 16px 18px;
+      border-left: 4px solid transparent;
+    }
+    .sc-diy          { background: var(--blue-bg);   border-color: var(--blue);   }
+    .sc-managed      { background: var(--red-bg);    border-color: var(--red);    }
+    .sc-active       { background: var(--green-bg);  border-color: var(--green);  }
+    .sc-active-mgd   { background: var(--orange-bg); border-color: var(--orange); }
+    .sc-diy-mom      { background: var(--violet-bg); border-color: var(--violet); }
+    .sc-active-mom   { background: var(--cyan-bg);   border-color: var(--cyan);   }
+
+    .scenario-card .sc-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.65;
+      margin-bottom: 2px;
+    }
+    .scenario-card .sc-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .scenario-card p {
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 6px;
+      position: relative;
+      top: -1px;
+    }
+    .swatch-solid  { }
+    .swatch-dash   { background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 10px); }
+    .swatch-dotted { background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 6px); }
+
+    /* ── Control table ── */
+    .ctrl-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      margin-top: 4px;
+    }
+    .ctrl-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-400);
+      padding: 0 12px 8px 0;
+      border-bottom: 1px solid var(--gray-200);
+    }
+    .ctrl-table td {
+      padding: 9px 12px 9px 0;
+      vertical-align: top;
+      border-bottom: 1px solid var(--gray-100);
+      color: var(--gray-600);
+      line-height: 1.5;
+    }
+    .ctrl-table td:first-child {
+      font-weight: 600;
+      color: var(--gray-800);
+      white-space: nowrap;
+      width: 34%;
+    }
+
+    /* ── Comparison callouts ── */
+    .comparison-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .comparison-list li {
+      background: #fff;
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      color: var(--gray-600);
+      line-height: 1.55;
+    }
+    .comparison-list li strong {
+      display: block;
+      font-size: 14px;
+      color: var(--gray-800);
+      margin-bottom: 3px;
+    }
+
+    /* ── Tip boxes ── */
+    .tip {
+      background: var(--blue-bg);
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: #1e40af;
+      margin-top: 14px;
+      line-height: 1.55;
+    }
+    .tip b { color: #1e3a8a; }
+
+    /* ── Feature badges ── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--gray-100);
+      color: var(--gray-600);
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── Footer ── */
+    .disclaimer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--gray-200);
+      font-size: 12px;
+      color: var(--gray-400);
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Nav -->
+  <div class="topnav">
+    <a href="/">← Open Simulator</a>
+    <span class="topnav-title">User Guide</span>
+  </div>
+
+  <!-- Header -->
+  <h1>Investment Simulator — User Guide</h1>
+  <p class="subtitle">
+    A tool for exploring how different investment approaches — indexed, actively managed,
+    advisor-mediated, and momentum-driven — would have performed over any historical window
+    you choose, using real fund return data.
+  </p>
+
+  <!-- ── OVERVIEW ── -->
+  <section>
+    <h2>What the simulator does</h2>
+    <p>
+      The simulator takes a starting balance, a monthly contribution amount, and a date range,
+      then replays what would have happened to your money across up to six parallel investment
+      scenarios using actual historical monthly returns from Yahoo Finance. All scenarios share
+      the same inputs so differences in outcome are attributable entirely to strategy and cost.
+    </p>
+    <p>
+      The result is a chart of portfolio value over time for each scenario, a set of stat cards
+      summarising final value, total contributions, total gain, annualised return (CAGR), fees
+      paid, and after-tax wealth, and a plain-English fee-drag callout that quantifies the cost
+      of advisory and fund expenses in dollar terms.
+    </p>
+  </section>
+
+  <!-- ── SCENARIOS ── -->
+  <section>
+    <h2>The six scenarios</h2>
+    <p>Four scenarios are always shown; two momentum scenarios can be toggled on.</p>
+
+    <div class="scenario-grid">
+      <div class="scenario-card sc-diy">
+        <div class="sc-label">Scenario 1</div>
+        <div class="sc-name">
+          <span class="swatch swatch-solid" style="background:#2563eb;"></span>
+          Low-Cost Index — No Advisor
+        </div>
+        <p>
+          Invests in a three-fund index portfolio (e.g. VTI / VXUS / BND) at your chosen
+          stock/bond split. No advisory fee. Expense ratios are negligible and embedded in
+          fund prices. This is the baseline against which all other scenarios compete.
+        </p>
+      </div>
+
+      <div class="scenario-card sc-managed">
+        <div class="sc-label">Scenario 2</div>
+        <div class="sc-name">
+          <span class="swatch swatch-dash" style="color:#dc2626;"></span>
+          Fee-Adjusted Index — With Advisor
+        </div>
+        <p>
+          Same index funds, same weights — but an annual AUM fee and the selected active fund
+          family's weighted expense ratio are deducted monthly. Shows the pure cost of advisor
+          intermediation when the underlying portfolio is unchanged.
+        </p>
+      </div>
+
+      <div class="scenario-card sc-active">
+        <div class="sc-label">Scenario 3</div>
+        <div class="sc-name">
+          <span class="swatch swatch-dotted" style="color:#16a34a;"></span>
+          Actively Managed — No Advisor
+        </div>
+        <p>
+          Replaces the index funds with the selected active fund family at the same stock/bond
+          split. No AUM fee. Because active fund expense ratios are embedded in historical NAV
+          prices, their cost is already reflected — no separate deduction is needed.
+        </p>
+      </div>
+
+      <div class="scenario-card sc-active-mgd">
+        <div class="sc-label">Scenario 4</div>
+        <div class="sc-name">
+          <span class="swatch swatch-dotted" style="color:#d97706;"></span>
+          Fee-Adjusted Active — With Advisor
+        </div>
+        <p>
+          Active funds plus an advisor's annual AUM fee. This is the full cost of having both
+          active management and professional advice — the most common real-world arrangement
+          for clients of full-service wealth managers.
+        </p>
+      </div>
+
+      <div class="scenario-card sc-diy-mom">
+        <div class="sc-label">Scenario 5 — optional</div>
+        <div class="sc-name">
+          <span class="swatch swatch-dash" style="color:#7c3aed;"></span>
+          Index Momentum — With Advisor
+        </div>
+        <p>
+          An advisor rotates annually among a universe of index-style equity and bond funds
+          using 12-month trailing momentum: the best performer gets the largest weight, worst
+          gets the smallest. AUM fee applies. A yield-curve tactical overlay can shift
+          allocation toward bonds during inversions.
+        </p>
+      </div>
+
+      <div class="scenario-card sc-active-mom">
+        <div class="sc-label">Scenario 6 — optional</div>
+        <div class="sc-name">
+          <span class="swatch swatch-dash" style="color:#0891b2;"></span>
+          Active Momentum — With Advisor
+        </div>
+        <p>
+          Same momentum strategy applied to an expanded universe of actively managed funds.
+          The advisor picks among a larger pool of equity and bond funds each year based on
+          trailing performance, again with AUM fee and optional tactical overlay.
+        </p>
+      </div>
+    </div>
+
+    <div class="tip">
+      <b>Momentum mechanics:</b> For the first 12 months (cold start) all eligible funds
+      receive equal weight. At each subsequent 12-month anniversary the simulator ranks funds
+      by trailing 12-month cumulative return and assigns proportional weights — worst fund
+      gets the smallest share, best gets the largest. No look-ahead: weights at any date use
+      only data available up to the prior month. Funds not yet in existence at a given
+      rebalance date are automatically excluded.
+    </div>
+  </section>
+
+  <!-- ── CONTROLS ── -->
+  <section>
+    <h2>Controls &amp; settings</h2>
+
+    <h3>Portfolio inputs</h3>
+    <table class="ctrl-table">
+      <thead>
+        <tr><th>Control</th><th>What it does</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Starting Amount</td>
+          <td>Lump-sum invested on day one across all scenarios identically.</td>
+        </tr>
+        <tr>
+          <td>Monthly Contribution</td>
+          <td>
+            Added at the start of each month. In non-rebalancing months contributions are
+            allocated proportionally to current holdings; in rebalancing months the full
+            portfolio (including the new contribution) is rebalanced to target weights.
+          </td>
+        </tr>
+        <tr>
+          <td>Start Date / End Date</td>
+          <td>
+            Arrow pickers let you select any month within the available historical window.
+            The simulator uses the full range between your chosen start and end dates. Reset
+            the end date to the latest available data with the ✕ button.
+          </td>
+        </tr>
+        <tr>
+          <td>Stock / Bond Split</td>
+          <td>
+            Slider from 0 % to 100 % stocks. Within the equity portion, 80 % goes to the
+            domestic equity fund and 20 % to the international equity fund.
+          </td>
+        </tr>
+        <tr>
+          <td>Rebalancing</td>
+          <td>
+            <em>Annually</em> — portfolio is rebalanced to target weights once per year.<br />
+            <em>Quarterly</em> — rebalanced every three months.<br />
+            <em>Never</em> — portfolio drifts; contributions only loosely track targets.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Portfolio configuration</h3>
+    <table class="ctrl-table">
+      <tbody>
+        <tr>
+          <td>Investment Era</td>
+          <td>
+            <em>Modern (ETFs · 2011+)</em> — uses VTI / VXUS / BND for the DIY scenario.
+            History begins when VXUS started trading (late 2011).<br /><br />
+            <em>Pre-ETF (Mutual Funds · 1987+)</em> — uses VFINX / VWIGX / VBMFX, pushing
+            history back to 1987. Changes the available active fund families and the
+            momentum rotation universe to era-appropriate funds.
+          </td>
+        </tr>
+        <tr>
+          <td>Actively Managed Funds</td>
+          <td>
+            Selects the active fund family used in Scenarios 3 &amp; 4. Each family is a
+            three-fund set covering US equity, international equity, and bonds. Hover the
+            label to see which funds are in the active momentum rotation universe for the
+            current era.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Advisor cost settings</h3>
+    <table class="ctrl-table">
+      <tbody>
+        <tr>
+          <td>Advisor AUM Fee</td>
+          <td>
+            Annual percentage of portfolio value charged by the advisor, deducted monthly
+            before each contribution. Applied to Scenarios 2, 4, 5, and 6. Typical range
+            is 0.5 %–1.5 % per year.
+          </td>
+        </tr>
+        <tr>
+          <td>Fund Expense Ratio</td>
+          <td>
+            Read-only display. The weighted-average expense ratio of the selected active fund
+            family at your current stock/bond split. Added on top of the AUM fee in Scenario 2
+            only (active fund ERs are already in historical prices for Scenarios 3–6).
+          </td>
+        </tr>
+        <tr>
+          <td>Advisor Aggressiveness</td>
+          <td>
+            Controls the momentum scenarios only.<br />
+            <em>Conservative</em> — smaller concentration in top-ranked funds; shifts 10 % of
+            equity to bonds if the yield curve was inverted in the prior 12 months.<br />
+            <em>Moderate</em> — standard rank-proportional weights; 20 % tactical shift.<br />
+            <em>Aggressive</em> — doubles the weight of the top three equity funds; 35 %
+            tactical shift during inversions.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Display options</h3>
+    <table class="ctrl-table">
+      <tbody>
+        <tr>
+          <td>Account Type</td>
+          <td>
+            <em>Taxable</em> — simulates a standard brokerage account. A 20 % long-term
+            capital-gains rate applies. No-advisor scenarios defer all tax to final
+            liquidation; with-advisor &amp; momentum scenarios recognise gains at each
+            annual rebalancing event. Tax rows appear in the stat cards.<br /><br />
+            <em>Tax-Deferred</em> — simulates a 401(k) or IRA. No capital-gains tax during
+            the simulation. Tax rows are hidden.
+          </td>
+        </tr>
+        <tr>
+          <td>Inflation-adjust (real $)</td>
+          <td>
+            Deflates all values to today's purchasing power using FRED CPIAUCSL data. Lets
+            you compare real wealth accumulation rather than nominal dollar amounts.
+          </td>
+        </tr>
+        <tr>
+          <td>Show Total Invested</td>
+          <td>
+            Adds a grey dashed line showing cumulative contributions (initial amount + all
+            monthly contributions). Any scenario line above it has produced a net gain.
+          </td>
+        </tr>
+        <tr>
+          <td>Show After-Tax Wealth</td>
+          <td>
+            Switches the chart lines to the estimated after-tax net — what you would receive
+            if you liquidated the entire portfolio and paid all applicable capital-gains tax
+            that day. Automatically disabled in Tax-Deferred mode. Hover the label for details.
+          </td>
+        </tr>
+        <tr>
+          <td>Show Momentum Rotation</td>
+          <td>
+            Reveals Scenarios 5 &amp; 6 on the chart and shows their stat cards. Hidden by
+            default to keep the initial view uncluttered. Hover the label to see the full
+            fund universe for both momentum strategies.
+          </td>
+        </tr>
+        <tr>
+          <td>Fix Y-axis Scale</td>
+          <td>
+            Locks the vertical axis so it doesn't re-scale when you adjust settings — useful
+            for comparing across eras or date ranges. A <em>Rescale</em> button appears if
+            data grows outside the locked range.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── CHART FEATURES ── -->
+  <section>
+    <h2>Chart features</h2>
+
+    <h3>Crash annotations</h3>
+    <p>
+      Vertical dashed lines mark three major market events — the Dot-com peak (March 2001),
+      the 2008 Financial Crisis (September 2008), and the COVID-19 crash (February 2020).
+      They snap to the nearest available monthly date in the selected window; they disappear
+      automatically if your date range doesn't include them.
+    </p>
+
+    <h3>Yield curve inversion shading</h3>
+    <p>
+      Red-tinted bands cover every period when the 10-year Treasury yield fell below the
+      2-year yield (negative T10Y2Y spread, sourced from FRED). An inverted yield curve
+      has historically preceded recessions by 6–24 months — so inversions visible in the
+      chart provide context for subsequent drawdowns. The momentum scenarios also use this
+      signal: if the curve was inverted at any point in the prior 12 months, the advisor
+      shifts a portion of equity allocation to bonds.
+    </p>
+
+    <h3>Interactive legend &amp; tooltips</h3>
+    <p>
+      Hovering a legend entry shows a popup table of the specific fund tickers and asset
+      class for that scenario. Clicking a legend entry toggles that line's visibility.
+      The stat-card checkboxes in the bottom panel also toggle individual lines directly.
+      Hovering anywhere on the chart shows a crosshair tooltip with all scenario values
+      for that month, sorted highest-to-lowest.
+    </p>
+  </section>
+
+  <!-- ── COMPARISONS ── -->
+  <section>
+    <h2>Comparisons the simulator enables</h2>
+    <ul class="comparison-list">
+      <li>
+        <strong>Cost of advice on an index portfolio</strong>
+        Compare Scenario 1 (DIY) with Scenario 2 (Fee-Adjusted Index). The gap is the
+        dollar cost of paying an advisor and buying active funds while still holding
+        essentially the same index-style portfolio. The fee-drag callout at the bottom
+        of the page states this gap explicitly.
+      </li>
+      <li>
+        <strong>Active vs. passive management</strong>
+        Compare Scenario 1 (Low-Cost Index) with Scenario 3 (Actively Managed, no advisor).
+        This isolates the performance difference between index funds and the selected active
+        fund family without conflating it with advisory fees.
+      </li>
+      <li>
+        <strong>Full cost of active management plus advice</strong>
+        Compare Scenario 1 (DIY) with Scenario 4 (Fee-Adjusted Active). This is the most
+        common real-world comparison: an investor going it alone with index funds versus
+        paying a wealth manager who uses active funds.
+      </li>
+      <li>
+        <strong>Does momentum-based rotation beat buy-and-hold?</strong>
+        Toggle on momentum (Scenarios 5 &amp; 6) and compare them to their respective
+        buy-and-hold equivalents (Scenarios 1 &amp; 3). Both momentum scenarios carry the
+        same AUM fee as Scenario 2/4, so any outperformance represents skill above cost.
+      </li>
+      <li>
+        <strong>Era sensitivity</strong>
+        Switch between Modern (2011+) and Pre-ETF (1987+) eras to see whether the
+        conclusions hold across different market regimes — including the 1990s bull run,
+        the dot-com bust, the 2008 crisis, and the post-GFC recovery.
+      </li>
+      <li>
+        <strong>Date-range sensitivity</strong>
+        Use the start/end date pickers to zoom into specific periods — e.g., a bear market
+        only, or a single bull cycle — and see whether the relative ranking of strategies
+        is stable or depends heavily on the window chosen.
+      </li>
+      <li>
+        <strong>Stock/bond allocation effect</strong>
+        Drag the stock/bond slider across the full range to see how allocation alone
+        explains performance differences and whether advisor costs matter more at higher
+        or lower equity exposures.
+      </li>
+      <li>
+        <strong>Tax drag by strategy</strong>
+        In Taxable mode, compare the "After-Tax Value" rows across stat cards. Strategies
+        that rebalance more frequently (With Advisor / Momentum) realise gains annually and
+        pay tax sooner, while buy-and-hold strategies defer the entire tax bill to
+        liquidation — this difference can be material over long horizons.
+      </li>
+      <li>
+        <strong>Real vs. nominal wealth</strong>
+        Toggle inflation adjustment to see how much of apparent portfolio growth was offset
+        by rising prices — particularly useful when spanning decades of data.
+      </li>
+    </ul>
+  </section>
+
+  <!-- ── STAT CARDS ── -->
+  <section>
+    <h2>Reading the stat cards</h2>
+    <p>
+      Below the chart, each scenario has a stat card showing six to nine fields depending
+      on account type. The card's checkbox also controls that scenario's chart line.
+    </p>
+    <table class="ctrl-table">
+      <thead>
+        <tr><th>Field</th><th>Meaning</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Final Value</td>
+          <td>Portfolio value at the end of the simulation period (gross, before any liquidation tax).</td>
+        </tr>
+        <tr>
+          <td>Total Contributed</td>
+          <td>Starting amount plus all monthly contributions. This is your breakeven — any final value above it is a gain.</td>
+        </tr>
+        <tr>
+          <td>Total Gain</td>
+          <td>Final Value minus Total Contributed. Can be negative in declining periods.</td>
+        </tr>
+        <tr>
+          <td>CAGR</td>
+          <td>
+            Compound Annual Growth Rate: the single annualised return rate that would turn
+            Total Contributed into Final Value over the simulated period. Comparable across
+            windows of different lengths.
+          </td>
+        </tr>
+        <tr>
+          <td>Fees Paid</td>
+          <td>
+            Cumulative AUM fees deducted (and, for Scenario 2, the fund expense ratio
+            component). Zero for no-advisor scenarios.
+          </td>
+        </tr>
+        <tr>
+          <td>Taxes Paid <span class="badge">Taxable only</span></td>
+          <td>
+            Capital-gains taxes already realised — applies only to With-Advisor and Momentum
+            scenarios that trigger gains at each rebalancing event.
+          </td>
+        </tr>
+        <tr>
+          <td>Est. Tax at Sale <span class="badge">Taxable only</span></td>
+          <td>Estimated 20 % LTCG tax owed on unrealised gains if you liquidated the portfolio today.</td>
+        </tr>
+        <tr>
+          <td>After-Tax Value <span class="badge">Taxable only</span></td>
+          <td>Final Value minus Est. Tax at Sale — the net amount you would actually receive on liquidation.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ── DATA SOURCES ── -->
+  <section>
+    <h2>Data sources &amp; limitations</h2>
+    <p>
+      Monthly adjusted-close prices come from <strong>Yahoo Finance</strong> via the yfinance
+      library; returns are computed from price changes and therefore reflect dividends
+      (reinvested) and stock splits but <em>not</em> sales loads or short-term redemption fees.
+      CPI data and yield curve spreads (T10Y2Y) come from the <strong>FRED API</strong>
+      (Federal Reserve Bank of St. Louis). Data is cached for 24 hours.
+    </p>
+    <p>
+      The common date range for any simulation is limited by the fund with the shortest
+      history among the selected set. Pre-ETF mode extends available history to 1987 at
+      the cost of using older, less-liquid mutual fund proxies.
+    </p>
+    <p>
+      Transaction costs, bid-ask spreads, taxes on dividends, and fund minimum-investment
+      requirements are not modelled. The momentum rotation assumes annual rebalancing is
+      frictionless. No look-ahead is used in momentum weights, but survivorship bias may
+      exist in the universe of funds available to select.
+    </p>
+  </section>
+
+  <div class="disclaimer">
+    <strong>Disclaimer:</strong> This simulator uses real historical data for educational purposes only.
+    Past performance does not guarantee future results. This is not financial advice.
+    Always consult a qualified financial professional before making investment decisions.
+  </div>
+
+</div>
+</body>
+</html>

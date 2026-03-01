@@ -92,6 +92,11 @@ def index():
     return send_from_directory("static", "index.html")
 
 
+@app.route("/guide")
+def guide():
+    return send_from_directory("static", "guide.html")
+
+
 @app.route("/api/portfolio")
 def portfolio():
     try:
