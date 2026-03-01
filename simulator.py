@@ -213,8 +213,8 @@ def run_all_scenarios(
     diy_str    = " / ".join(diy_tickers)
     ticker_str = " / ".join(active_tickers)
     return {
-        "diy": {**diy, "label": f"DIY Index ({diy_str})"},
-        "managed": {**managed, "label": f"Fee-Adjusted Managed ({diy_str})"},
+        "diy": {**diy, "label": f"Low-Cost Index ({diy_str})"},
+        "managed": {**managed, "label": f"Fee-Adjusted Index ({diy_str})"},
         "active": {**active, "label": f"Actively Managed ({ticker_str})"},
         "active_managed": {**active_managed, "label": f"Fee-Adjusted Active ({ticker_str})"},
     }

@@ -292,16 +292,16 @@ function updateFeeDrag(data) {
 
   // DIY vs Fee-Managed
   if (fd.diy_vs_managed >= 0) {
-    lines.push(`DIY Index outperformed Fee-Adjusted Managed by <strong>${fmt$.format(fd.diy_vs_managed)}</strong> — money lost to advisor and fund fees.`);
+    lines.push(`Low-Cost Index outperformed Fee-Adjusted Index by <strong>${fmt$.format(fd.diy_vs_managed)}</strong> — money lost to advisor and fund fees.`);
   } else {
-    lines.push(`Fee-Adjusted Managed outperformed DIY by <strong>${fmt$.format(Math.abs(fd.diy_vs_managed))}</strong> in this period.`);
+    lines.push(`Fee-Adjusted Index outperformed Low-Cost Index by <strong>${fmt$.format(Math.abs(fd.diy_vs_managed))}</strong> in this period.`);
   }
 
   // DIY vs Active
   if (fd.diy_vs_active >= 0) {
-    lines.push(`DIY Index outperformed Actively Managed by <strong>${fmt$.format(fd.diy_vs_active)}</strong> over the same period.`);
+    lines.push(`Low-Cost Index outperformed Actively Managed by <strong>${fmt$.format(fd.diy_vs_active)}</strong> over the same period.`);
   } else {
-    lines.push(`Actively Managed outperformed DIY by <strong>${fmt$.format(Math.abs(fd.diy_vs_active))}</strong> — active management added value in this period.`);
+    lines.push(`Actively Managed outperformed Low-Cost Index by <strong>${fmt$.format(Math.abs(fd.diy_vs_active))}</strong> — active management added value in this period.`);
   }
 
   // Active vs Fee-Adjusted Active
