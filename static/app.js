@@ -419,32 +419,76 @@ function updateStats(data) {
 
 function updateFeeDrag(data) {
   const fd = data.fee_drag;
+  const s  = data.scenarios;
   const el = document.getElementById("feeDragText");
+
+  const diyFinal    = s.diy.stats.final_value;
+  const mgdFinal    = s.managed.stats.final_value;
+  const actFinal    = s.active.stats.final_value;
+  const actMgdFinal = s.active_managed.stats.final_value;
+
+  // Scenario name with tooltip showing its final value and what costs are included
+  function scen(label, finalVal, note) {
+    const tt = `${label}  ·  Final value: ${fmt$.format(finalVal)}  ·  ${note}`;
+    return `<span class="tooltip-term" data-tooltip="${tt.replace(/"/g, "&quot;")}">${label}</span>`;
+  }
+
+  // Dollar difference with tooltip showing the explicit subtraction formula
+  function diff(amount, a, b) {
+    const tt = `How this is calculated: ${fmt$.format(a)} − ${fmt$.format(b)} = ${fmt$.format(Math.abs(amount))}`;
+    return `<span class="tooltip-term" data-tooltip="${tt}"><strong>${fmt$.format(Math.abs(amount))}</strong></span>`;
+  }
 
   const lines = [];
 
-  // DIY vs Fee-Managed
-  if (fd.diy_vs_managed >= 0) {
-    lines.push(`Low-Cost Index outperformed Fee-Adjusted Index by <strong>${fmt$.format(fd.diy_vs_managed)}</strong> — money lost to advisor and fund fees.`);
+  // 1. Advisor + fund expense drag on index funds
+  const d1 = fd.diy_vs_managed;
+  if (d1 >= 0) {
+    lines.push(
+      `${scen(s.diy.label, diyFinal, "No AUM fee; index fund returns at cost")} grew to <strong>${fmt$.format(diyFinal)}</strong>. ` +
+      `${scen(s.managed.label, mgdFinal, "Same index funds — AUM fee + weighted active fund expense ratio deducted monthly")} would have ended at <strong>${fmt$.format(mgdFinal)}</strong>. ` +
+      `Advisor and fund fees cost ${diff(d1, diyFinal, mgdFinal)} in final portfolio value.`
+    );
   } else {
-    lines.push(`Fee-Adjusted Index outperformed Low-Cost Index by <strong>${fmt$.format(Math.abs(fd.diy_vs_managed))}</strong> in this period.`);
+    lines.push(
+      `In this period the fee-adjusted scenario edged out the no-fee index by ${diff(-d1, mgdFinal, diyFinal)} ` +
+      `(${scen(s.managed.label, mgdFinal, "With AUM fee + fund expenses")} <strong>${fmt$.format(mgdFinal)}</strong> vs. ` +
+      `${scen(s.diy.label, diyFinal, "No fees")} <strong>${fmt$.format(diyFinal)}</strong>).`
+    );
   }
 
-  // DIY vs Active
-  if (fd.diy_vs_active >= 0) {
-    lines.push(`Low-Cost Index outperformed Actively Managed by <strong>${fmt$.format(fd.diy_vs_active)}</strong> over the same period.`);
+  // 2. Active management vs. passive index
+  const d2 = fd.diy_vs_active;
+  if (d2 >= 0) {
+    lines.push(
+      `Against ${scen(s.active.label, actFinal, "No advisor; fund expense ratios are already embedded in historical NAV prices")} ` +
+      `(<strong>${fmt$.format(actFinal)}</strong>), the index portfolio finished ${diff(d2, diyFinal, actFinal)} ahead.`
+    );
   } else {
-    lines.push(`Actively Managed outperformed Low-Cost Index by <strong>${fmt$.format(Math.abs(fd.diy_vs_active))}</strong> — active management added value in this period.`);
+    lines.push(
+      `${scen(s.active.label, actFinal, "No advisor; expense ratios embedded in NAV")} ` +
+      `(<strong>${fmt$.format(actFinal)}</strong>) beat the index by ${diff(-d2, actFinal, diyFinal)} ` +
+      `— active management added value in this period.`
+    );
   }
 
-  // Active vs Fee-Adjusted Active
-  if (fd.active_vs_active_managed >= 0) {
-    lines.push(`Applying advisor fees to the active portfolio cost <strong>${fmt$.format(fd.active_vs_active_managed)}</strong> versus the no-fee active baseline.`);
+  // 3. Cost of adding an advisor to the active funds
+  const d3 = fd.active_vs_active_managed;
+  if (d3 >= 0) {
+    lines.push(
+      `Layering an advisor onto the active funds: ` +
+      `${scen(s.active_managed.label, actMgdFinal, "Active funds + AUM fee deducted monthly")} ended at <strong>${fmt$.format(actMgdFinal)}</strong>, ` +
+      `vs. <strong>${fmt$.format(actFinal)}</strong> without an advisor. ` +
+      `The AUM fee cost ${diff(d3, actFinal, actMgdFinal)}.`
+    );
   } else {
-    lines.push(`Fee-Adjusted Active outperformed no-fee Active by <strong>${fmt$.format(Math.abs(fd.active_vs_active_managed))}</strong> (unexpected in this period).`);
+    lines.push(
+      `The advisor-managed active portfolio ended ${diff(-d3, actMgdFinal, actFinal)} ahead of the no-advisor active baseline ` +
+      `(<strong>${fmt$.format(actMgdFinal)}</strong> vs. <strong>${fmt$.format(actFinal)}</strong>).`
+    );
   }
 
-  el.innerHTML = lines.join("<br />");
+  el.innerHTML = lines.join("<br /><br />");
 }
 
 // ==================== FETCH & RENDER ====================
