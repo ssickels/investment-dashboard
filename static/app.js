@@ -93,6 +93,18 @@ function fundTable(sections) {
 }
 
 /**
+ * Position the floating tooltip near the cursor, clamping so it never
+ * overflows the right or bottom edge of the viewport.
+ * Must be called after tip.style.display = "block" so offsetWidth is non-zero.
+ */
+function positionTip(tip, clientX, clientY) {
+  const x = Math.min(clientX + 14, window.innerWidth  - tip.offsetWidth  - 8);
+  const y = Math.min(clientY + 14, window.innerHeight - tip.offsetHeight - 8);
+  tip.style.left = x + "px";
+  tip.style.top  = y + "px";
+}
+
+/**
  * Wire a floating fund-table tooltip to an element.
  * Assigns onmouse* properties so repeated calls on the same element overwrite cleanly.
  */
@@ -103,8 +115,8 @@ function wireFundHover(el, html) {
   el.style.textDecorationStyle = "dotted";
   el.style.textDecorationColor = "#9ca3af";
   const tip = document.getElementById("legendTooltip");
-  el.onmouseenter = (e) => { tip.innerHTML = html; tip.style.left = (e.clientX + 14) + "px"; tip.style.top = (e.clientY + 14) + "px"; tip.style.display = "block"; };
-  el.onmousemove  = (e) => { tip.style.left = (e.clientX + 14) + "px"; tip.style.top  = (e.clientY + 14) + "px"; };
+  el.onmouseenter = (e) => { tip.innerHTML = html; tip.style.display = "block"; positionTip(tip, e.clientX, e.clientY); };
+  el.onmousemove  = (e) => { positionTip(tip, e.clientX, e.clientY); };
   el.onmouseleave = ()  => { tip.style.display = "none"; };
 }
 
@@ -346,9 +358,8 @@ function buildChart(data) {
             if (!content || !e.native) return;
             const el = document.getElementById("legendTooltip");
             el.innerHTML = content;
-            el.style.left = (e.native.clientX + 14) + "px";
-            el.style.top  = (e.native.clientY + 14) + "px";
             el.style.display = "block";
+            positionTip(el, e.native.clientX, e.native.clientY);
           },
           onLeave: () => {
             document.getElementById("legendTooltip").style.display = "none";
