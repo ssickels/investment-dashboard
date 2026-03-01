@@ -696,6 +696,150 @@
     </table>
   </section>
 
+  <!-- ── FUND UNIVERSE ── -->
+  <section>
+    <h2>Fund universe &amp; selection rationale</h2>
+
+    <p>
+      The simulator works with a fixed, curated set of funds chosen to be
+      <strong>representative of broad investment approaches</strong> — not to model any
+      particular investor's portfolio or to identify top-performing funds. The goal is to
+      illustrate structural differences between strategies (passive vs. active, self-directed
+      vs. advisor-managed, buy-and-hold vs. momentum rotation) using funds that are
+      well-known, widely held, and have long enough histories to support multi-decade
+      backtests.
+    </p>
+    <p>
+      Results should be read as evidence about <em>strategies</em>, not as endorsements of
+      the specific funds shown. Swapping in comparable funds from the same category would
+      likely produce similar directional conclusions — but different numbers. The universe
+      is deliberately small so that the simulations remain legible and the cost/return
+      trade-offs stay visible, rather than getting lost in fund-selection noise.
+    </p>
+
+    <h3>Index / DIY funds — two eras</h3>
+    <p>
+      The three-fund DIY portfolio changes with the selected era. Modern ETFs begin in
+      late 2011 (limited by VXUS inception); Pre-ETF mutual funds extend history to 1987.
+    </p>
+    <table class="ctrl-table">
+      <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Era</th></tr></thead>
+      <tbody>
+        <tr><td>VTI</td>  <td>Vanguard Total Stock Market ETF</td>          <td>US Large Blend</td>              <td>Modern</td></tr>
+        <tr><td>VXUS</td> <td>Vanguard Total International Stock ETF</td>   <td>Foreign Large Blend</td>         <td>Modern</td></tr>
+        <tr><td>BND</td>  <td>Vanguard Total Bond Market ETF</td>           <td>Intermediate Core Bond</td>      <td>Modern</td></tr>
+        <tr><td>VFINX</td><td>Vanguard 500 Index Fund</td>                  <td>US Large Blend</td>              <td>Pre-ETF</td></tr>
+        <tr><td>VWIGX</td><td>Vanguard International Growth Fund</td>       <td>Foreign Large Growth</td>        <td>Pre-ETF</td></tr>
+        <tr><td>VBMFX</td><td>Vanguard Total Bond Market Index</td>         <td>Intermediate Core Bond</td>      <td>Pre-ETF</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Active fund families</h3>
+    <p>
+      Four families are available in Modern era; two families in Pre-ETF era (plus T. Rowe
+      Price, which spans both). Each family contributes one US equity, one international
+      equity, and one bond fund — a structure chosen to mirror the three-fund index
+      portfolio and keep the stock/bond split parameter meaningful across all scenarios.
+      Families were selected for long operating histories, broad name recognition, and
+      coverage of different management styles (growth, value, international).
+    </p>
+    <table class="ctrl-table">
+      <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Family / Era</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">American / Dodge &amp; Cox — Modern</td></tr>
+        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>             <td rowspan="3">American/Dodge</td></tr>
+        <tr><td>DODFX</td><td>Dodge &amp; Cox International Stock</td>      <td>Foreign Large Value</td></tr>
+        <tr><td>PTTAX</td><td>PIMCO Total Return A</td>                     <td>Intermediate Core-Plus Bond</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Fidelity — Modern</td></tr>
+        <tr><td>FCNTX</td><td>Fidelity Contrafund</td>                      <td>US Large Growth</td>            <td rowspan="3">Fidelity</td></tr>
+        <tr><td>FIEUX</td><td>Fidelity Europe Fund</td>                     <td>Europe Stock</td></tr>
+        <tr><td>FTBFX</td><td>Fidelity Total Bond Fund</td>                 <td>Intermediate Core Bond</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">T. Rowe Price — Modern &amp; Pre-ETF</td></tr>
+        <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>            <td rowspan="3">T. Rowe Price</td></tr>
+        <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td></tr>
+        <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Vanguard Active — Modern</td></tr>
+        <tr><td>VWUSX</td><td>Vanguard U.S. Growth Fund</td>                <td>US Large Growth</td>            <td rowspan="3">Vanguard Active</td></tr>
+        <tr><td>VWILX</td><td>Vanguard Intl Growth Fund (Admiral)</td>      <td>Foreign Large Growth</td></tr>
+        <tr><td>VBTLX</td><td>Vanguard Total Bond Market Index (Admiral)</td><td>Intermediate Core Bond</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Fidelity Classic — Pre-ETF</td></tr>
+        <tr><td>FMAGX</td><td>Fidelity Magellan Fund</td>                   <td>US Large Growth</td>            <td rowspan="3">Fidelity Classic</td></tr>
+        <tr><td>FOSFX</td><td>Fidelity Overseas Fund</td>                   <td>Foreign Large Growth</td></tr>
+        <tr><td>FBNDX</td><td>Fidelity Investment Grade Bond</td>           <td>Intermediate Core Bond</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">American Funds — Pre-ETF</td></tr>
+        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>            <td rowspan="3">American Funds</td></tr>
+        <tr><td>ANWPX</td><td>American Funds New Perspective Fund A</td>    <td>World Large-Stock Growth</td></tr>
+        <tr><td>ABNDX</td><td>American Funds Bond Fund of America A</td>    <td>Intermediate Core Bond</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Momentum rotation universe</h3>
+    <p>
+      When momentum scenarios are enabled, the advisor selects each year from a wider pool
+      of funds than the three used in the buy-and-hold scenarios. This pool is era-specific.
+      Sector funds are included to give the momentum strategy more opportunity to rotate
+      into assets with different return drivers — real estate, energy, health care, and
+      technology — while the bond selection shifts each year to whichever bond fund had the
+      best trailing return.
+    </p>
+    <table class="ctrl-table">
+      <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Role</th></tr></thead>
+      <tbody>
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Modern ETF era — Equity pool</td></tr>
+        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>DODFX</td><td>Dodge &amp; Cox International Stock</td>      <td>Foreign Large Value</td>   <td>Equity</td></tr>
+        <tr><td>FCNTX</td><td>Fidelity Contrafund</td>                      <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>FIEUX</td><td>Fidelity Europe Fund</td>                     <td>Europe Stock</td>          <td>Equity</td></tr>
+        <tr><td>VWUSX</td><td>Vanguard U.S. Growth Fund</td>                <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>VWILX</td><td>Vanguard Intl Growth Fund (Admiral)</td>      <td>Foreign Large Growth</td>  <td>Equity</td></tr>
+        <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td>   <td>Equity</td></tr>
+        <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td><td>Equity</td></tr>
+        <tr><td>VNQ</td>  <td>Vanguard Real Estate ETF</td>                 <td>Real Estate</td>           <td>Equity</td></tr>
+        <tr><td>XLE</td>  <td>Energy Select Sector SPDR Fund</td>           <td>Equity Energy</td>         <td>Equity</td></tr>
+        <tr><td>XLV</td>  <td>Health Care Select Sector SPDR Fund</td>      <td>Health</td>                <td>Equity</td></tr>
+        <tr><td>XLK</td>  <td>Technology Select Sector SPDR Fund</td>       <td>Technology</td>            <td>Equity</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Modern ETF era — Bond pool</td></tr>
+        <tr><td>PTTAX</td><td>PIMCO Total Return A</td>                     <td>Intermediate Core-Plus Bond</td><td>Bond</td></tr>
+        <tr><td>FTBFX</td><td>Fidelity Total Bond Fund</td>                 <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+        <tr><td>VBTLX</td><td>Vanguard Total Bond Market Index (Admiral)</td><td>Intermediate Core Bond</td>   <td>Bond</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Pre-ETF era — Equity pool</td></tr>
+        <tr><td>FMAGX</td><td>Fidelity Magellan Fund</td>                   <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>FOSFX</td><td>Fidelity Overseas Fund</td>                   <td>Foreign Large Growth</td>  <td>Equity</td></tr>
+        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>ANWPX</td><td>American Funds New Perspective Fund A</td>    <td>World Large-Stock Growth</td><td>Equity</td></tr>
+        <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>       <td>Equity</td></tr>
+        <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td>   <td>Equity</td></tr>
+        <tr><td>FRESX</td><td>Fidelity Real Estate Investment Portfolio</td> <td>Real Estate</td>           <td>Equity</td></tr>
+        <tr><td>FSENX</td><td>Fidelity Select Energy Portfolio</td>         <td>Equity Energy</td>         <td>Equity</td></tr>
+        <tr><td>FSPHX</td><td>Fidelity Select Health Care Portfolio</td>    <td>Health</td>                <td>Equity</td></tr>
+        <tr><td>VGSIX</td><td>Vanguard REIT Index Fund</td>                 <td>Real Estate</td>           <td>Equity</td></tr>
+
+        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Pre-ETF era — Bond pool</td></tr>
+        <tr><td>FBNDX</td><td>Fidelity Investment Grade Bond</td>           <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+        <tr><td>ABNDX</td><td>American Funds Bond Fund of America A</td>    <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+        <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+      </tbody>
+    </table>
+
+    <div class="tip">
+      <b>Why this matters for interpreting results:</b> The simulator is designed to show
+      whether a <em>strategy</em> — momentum rotation, active management, advisor
+      intermediation — tends to add or subtract value relative to a low-cost index baseline.
+      It is not designed to tell you whether FCNTX is a better fund than AGTHX, or whether
+      you should own any of these specific securities. Different representative fund
+      selections from the same categories would shift the numbers while leaving the
+      structural conclusions largely intact.
+    </div>
+  </section>
+
   <!-- ── DATA SOURCES ── -->
   <section>
     <h2>Data sources &amp; limitations</h2>
