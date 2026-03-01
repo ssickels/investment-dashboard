@@ -181,7 +181,8 @@ function buildChart(data) {
       plugins: {
         legend: {
           labels: {
-            filter: (item) => item.text !== "_fill",
+            filter: (item) => item.text !== "_fill" &&
+            (item.text !== "Total Invested" || document.getElementById("showContrib").checked),
             font: { size: 12 },
             boxWidth: 20,
             usePointStyle: true,
