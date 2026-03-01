@@ -429,6 +429,12 @@ input[type="range"] {
   opacity: 1;
 }
 
+/* Sidebar tooltips: anchor left so they don't overflow off-screen */
+.sidebar .tooltip-term::after {
+  left: 0;
+  transform: none;
+}
+
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 900px) {
   .layout { flex-direction: column; }
