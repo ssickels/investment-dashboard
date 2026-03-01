@@ -116,6 +116,26 @@
         <div class="er-display" id="erDisplay">—</div>
       </div>
 
+      <div class="control-group">
+        <label>
+          <span class="tooltip-term" data-tooltip="Applies only to 'With Advisor' momentum scenarios. Conservative: shifts 10% of equity to bonds during yield curve inversions, less concentrated momentum bets (40/60 equity split). Moderate: 20% tactical shift, standard 1/3-2/3 split. Aggressive: 35% tactical shift, highly concentrated 25/75 split.">Advisor Aggressiveness</span>
+        </label>
+        <div class="agg-toggle">
+          <label class="agg-option" id="aggConservativeLabel">
+            <input type="radio" name="aggressiveness" value="conservative" />
+            <span>Conservative</span>
+          </label>
+          <label class="agg-option agg-option--selected" id="aggModerateLabel">
+            <input type="radio" name="aggressiveness" value="moderate" checked />
+            <span>Moderate</span>
+          </label>
+          <label class="agg-option" id="aggAggressiveLabel">
+            <input type="radio" name="aggressiveness" value="aggressive" />
+            <span>Aggressive</span>
+          </label>
+        </div>
+      </div>
+
       <div class="control-group checkbox-group">
         <label>
           <input type="checkbox" id="inflationAdj" />
@@ -332,7 +352,8 @@
       <div class="disclaimer">
         <strong>Disclaimer:</strong> This tool uses real historical data for educational purposes only.
         Past performance does not guarantee future results. Market crash annotations (Dot-com, 2008 Financial Crisis,
-        COVID-19) mark approximate peak-to-trough start dates. This is not financial advice.
+        COVID-19) mark approximate peak-to-trough start dates. Red-shaded regions mark periods of yield curve
+        inversion (10Y–2Y Treasury spread &lt; 0, FRED T10Y2Y). This is not financial advice.
         Always consult a qualified financial professional before making investment decisions.
       </div>
     </main>

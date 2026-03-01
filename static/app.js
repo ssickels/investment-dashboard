@@ -89,6 +89,26 @@ function buildChart(data) {
   ];
 
   const annotations = {};
+
+  // Yield curve inversion shading (drawn behind chart lines)
+  const chartStartTime = labels.length ? new Date(labels[0]).getTime() : 0;
+  const chartEndTime   = labels.length ? new Date(labels[labels.length - 1]).getTime() : 0;
+  for (const period of (data.yield_curve_inversions || [])) {
+    const pStart = new Date(period.start).getTime();
+    const pEnd   = new Date(period.end).getTime();
+    if (pEnd < chartStartTime || pStart > chartEndTime) continue;
+    const snappedStart = snapDate(period.start, labels) || labels[0];
+    const snappedEnd   = snapDate(period.end,   labels) || labels[labels.length - 1];
+    annotations[`inv_${period.start}`] = {
+      type: "box",
+      xMin: snappedStart,
+      xMax: snappedEnd,
+      backgroundColor: "rgba(220,38,38,0.07)",
+      borderWidth: 0,
+      drawTime: "beforeDatasetsDraw",
+    };
+  }
+
   for (const crash of CRASHES) {
     const snapped = snapDate(crash.target, labels);
     if (!snapped) continue;
@@ -378,7 +398,7 @@ function updateFeeDrag(data) {
 
 function getParams() {
   return {
-    initial_amount: document.getElementById("initialAmount").value,
+    initial_amount:  document.getElementById("initialAmount").value,
     monthly_contrib: document.getElementById("monthlyContrib").value,
     start_date:      document.getElementById("startDate").value,
     stock_pct:       document.getElementById("stockPct").value,
@@ -387,6 +407,7 @@ function getParams() {
     inflation_adj:   document.getElementById("inflationAdj").checked ? "true" : "false",
     active_fund_set: document.getElementById("activeFundSet").value,
     diy_portfolio:   document.getElementById("diyPortfolio").value,
+    aggressiveness:  document.querySelector("input[name='aggressiveness']:checked")?.value || "moderate",
   };
 }
 
@@ -435,6 +456,18 @@ async function fetchAndRender() {
 }
 
 const debouncedFetch = debounce(fetchAndRender, 400);
+
+// ==================== AGGRESSIVENESS SELECTION ====================
+
+function setAggressiveness(value) {
+  document.querySelectorAll(".agg-option").forEach(el => {
+    const radio = el.querySelector("input[name='aggressiveness']");
+    if (radio) {
+      radio.checked = radio.value === value;
+      el.classList.toggle("agg-option--selected", radio.value === value);
+    }
+  });
+}
 
 // ==================== ERA SELECTION ====================
 
@@ -588,6 +621,14 @@ function wireInputs() {
   document.querySelectorAll("input[name='era']").forEach(radio => {
     radio.addEventListener("change", (e) => {
       setEra(e.target.value);
+      debouncedFetch();
+    });
+  });
+
+  // Aggressiveness radio buttons
+  document.querySelectorAll("input[name='aggressiveness']").forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      setAggressiveness(e.target.value);
       debouncedFetch();
     });
   });

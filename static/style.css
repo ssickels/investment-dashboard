@@ -580,6 +580,46 @@ input[type="range"] {
   color: var(--gray-400);
 }
 
+/* ==================== AGGRESSIVENESS TOGGLE ==================== */
+.agg-toggle {
+  display: flex;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.agg-option {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray-600);
+  background: #fff;
+  border-right: 1px solid var(--gray-200);
+  transition: background 0.15s, color 0.15s;
+  user-select: none;
+  text-align: center;
+}
+
+.agg-option:last-child {
+  border-right: none;
+}
+
+.agg-option input[type="radio"] {
+  display: none;
+}
+
+.agg-option--selected {
+  background: var(--blue-bg);
+  color: var(--blue);
+  font-weight: 600;
+}
+
 /* ==================== DATE PICKER ==================== */
 .date-picker {
   display: flex;

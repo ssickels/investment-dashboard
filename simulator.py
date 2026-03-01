@@ -148,17 +148,25 @@ def simulate_momentum(
     params: SimParams,
     monthly_fee_rate: float = 0.0,
     deflator: Optional[pd.Series] = None,
+    yield_curve_spread: Optional[pd.Series] = None,
+    aggressiveness: str = "moderate",
 ) -> dict:
     """
     Simulate an annual momentum-rotation portfolio over the given 3-ticker universe.
 
     tickers = [equity_us, equity_intl, bond]
-    Bond is always held at the target weight (params.stock_pct). The two equity
-    funds are ranked annually by trailing 12-month return; the top-ranked equity
-    gets 2/3 of the equity allocation, the bottom gets 1/3.
-    Cold start: standard 80/20 US/intl equity split for the first 12 months.
-    No look-ahead: at month i, only returns[i-12 .. i-1] are used.
-    AUM fee and CPI deflation applied identically to simulate().
+    Bond is held at the target weight; the two equity funds are ranked annually by
+    trailing 12-month return.  No look-ahead: at month i, only returns[i-12..i-1] used.
+
+    aggressiveness controls two behaviours at each annual rebalance:
+      - Momentum concentration:
+          conservative  → bottom 40% / top 60% of equity (+ 5% portfolio floor)
+          moderate      → bottom 1/3 / top 2/3  (current default)
+          aggressive    → bottom 25% / top 75%
+      - Tactical yield-curve shift (when spread < 0 at rebalance date):
+          conservative  → move 10% of equity allocation to bonds
+          moderate      → move 20%
+          aggressive    → move 35%
     """
     months = params.years * 12
     slice_df = returns_df[tickers].iloc[:months]
@@ -168,7 +176,29 @@ def simulate_momentum(
 
     s = params.stock_pct / 100.0
     b = 1.0 - s
-    # Cold start: standard equity split, bond at target
+
+    # Equity concentration: (bottom_fraction, top_fraction) of equity allocation
+    EQ_SPLITS = {
+        "conservative": (2 / 5, 3 / 5),
+        "moderate":     (1 / 3, 2 / 3),
+        "aggressive":   (1 / 4, 3 / 4),
+    }
+    # Tactical shift: fraction of equity moved to bonds during inversion
+    TACTICAL_SHIFTS = {
+        "conservative": 0.10,
+        "moderate":     0.20,
+        "aggressive":   0.35,
+    }
+    CONSERVATIVE_FLOOR = 0.05   # min 5% of total portfolio per equity fund (conservative)
+    bot_frac, top_frac = EQ_SPLITS.get(aggressiveness, EQ_SPLITS["moderate"])
+    tactical_shift = TACTICAL_SHIFTS.get(aggressiveness, 0.20)
+
+    # Pre-align yield curve to simulation dates
+    yc_aligned = None
+    if yield_curve_spread is not None:
+        yc_aligned = yield_curve_spread.reindex(slice_df.index, method="ffill")
+
+    # Cold start: standard 80/20 equity split, bond at target
     current_weights = {tickers[0]: 0.8 * s, tickers[1]: 0.2 * s, tickers[2]: b}
     holdings = {t: params.initial_amount * current_weights[t] for t in tickers}
     total_fees_paid = 0.0
@@ -193,15 +223,33 @@ def simulate_momentum(
 
         # Annual momentum rebalance + contribution
         if i > 0 and i % 12 == 0:
-            # Rank only the 2 equity funds by trailing 12-month return (no look-ahead)
+            # Compute effective stock/bond split (tactical shift during inversion)
+            effective_s = s
+            effective_b = b
+            if yc_aligned is not None and date in yc_aligned.index:
+                spread_val = yc_aligned[date]
+                if not pd.isna(spread_val) and spread_val < 0:
+                    shift = min(tactical_shift, effective_s)
+                    effective_s -= shift
+                    effective_b += shift
+
+            # Rank equity funds by trailing 12-month return (no look-ahead)
             lookback = slice_df.iloc[i - 12:i]
             cum_ret = (1 + lookback).prod() - 1
-            eq_ranks = cum_ret[[tickers[0], tickers[1]]].rank()  # worst=1, best=2
-            eq_weights = eq_ranks / eq_ranks.sum()  # → 1/3 and 2/3 of equity portion
+            eq_cum = cum_ret[[tickers[0], tickers[1]]]
+            sorted_eq = eq_cum.sort_values()   # index[0]=bottom, index[1]=top
+
+            # Apply concentration fractions with optional conservative floor
+            b_f, t_f = bot_frac, top_frac
+            if aggressiveness == "conservative" and effective_s > 0:
+                min_frac = CONSERVATIVE_FLOOR / effective_s
+                b_f = max(b_f, min_frac)
+                t_f = 1.0 - b_f
+
             current_weights = {
-                tickers[0]: s * float(eq_weights[tickers[0]]),
-                tickers[1]: s * float(eq_weights[tickers[1]]),
-                tickers[2]: b,
+                sorted_eq.index[0]: effective_s * b_f,
+                sorted_eq.index[1]: effective_s * t_f,
+                tickers[2]: effective_b,
             }
 
             # Add contribution then rebalance to new weights
@@ -259,6 +307,8 @@ def run_all_scenarios(
     diy_momentum_tickers: list = None,
     active_momentum_tickers: list = None,
     monthly_momentum_fee_rate: float = 0.0,
+    yield_curve_spread: Optional[pd.Series] = None,
+    aggressiveness: str = "moderate",
 ) -> dict:
     """
     Run all 4 investment scenarios.
@@ -337,6 +387,8 @@ def run_all_scenarios(
                 params=params,
                 monthly_fee_rate=monthly_momentum_fee_rate,
                 deflator=deflator,
+                yield_curve_spread=yield_curve_spread,
+                aggressiveness=aggressiveness,
             ),
             "label": f"Index Momentum ({mom_str})",
         }
@@ -350,6 +402,8 @@ def run_all_scenarios(
                 params=params,
                 monthly_fee_rate=monthly_momentum_fee_rate,
                 deflator=deflator,
+                yield_curve_spread=yield_curve_spread,
+                aggressiveness=aggressiveness,
             ),
             "label": f"Active Momentum ({amom_str})",
         }

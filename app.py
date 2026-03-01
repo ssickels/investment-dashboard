@@ -82,6 +82,10 @@ def portfolio():
         rebalance = request.args.get("rebalance", "annually")
         aum_fee = float(request.args.get("aum_fee", 1.0))
         inflation_adj = request.args.get("inflation_adj", "false").lower() == "true"
+        aggressiveness = request.args.get("aggressiveness", "moderate")
+        if aggressiveness not in ("conservative", "moderate", "aggressive"):
+            aggressiveness = "moderate"
+
         active_fund_set_key = request.args.get("active_fund_set", "american_dodge")
         if active_fund_set_key not in ACTIVE_FUND_SETS:
             active_fund_set_key = "american_dodge"
@@ -162,6 +166,16 @@ def portfolio():
                 warning = f"Inflation adjustment unavailable: {e}. Showing nominal values."
                 inflation_adj = False
 
+        # Load yield curve data (graceful fallback if FRED key unavailable)
+        yield_curve_spread = None
+        inversion_periods = []
+        try:
+            yc = data_module.load_yield_curve_spread()
+            yield_curve_spread = yc
+            inversion_periods = data_module.compute_inversion_periods(yc)
+        except Exception as yc_err:
+            print(f"Warning: yield curve data unavailable ({yc_err})")
+
         params = SimParams(
             initial_amount=initial_amount,
             monthly_contrib=monthly_contrib,
@@ -181,6 +195,8 @@ def portfolio():
             diy_momentum_tickers=diy_momentum_tickers,
             active_momentum_tickers=active_momentum_tickers,
             monthly_momentum_fee_rate=monthly_active_managed_fee,
+            yield_curve_spread=yield_curve_spread,
+            aggressiveness=aggressiveness,
         )
 
         # Use dates from DIY scenario (all same length)
@@ -255,6 +271,8 @@ def portfolio():
                 "label": diy_portfolio["label"],
                 "description": diy_portfolio["description"],
             },
+            "yield_curve_inversions": inversion_periods,
+            "aggressiveness": aggressiveness,
             "error": warning,
         }
 

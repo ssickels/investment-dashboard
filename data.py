@@ -230,6 +230,87 @@ def load_cpi_series() -> pd.Series:
         raise RuntimeError(f"Cannot load CPI: {e}") from e
 
 
+def load_yield_curve_spread() -> pd.Series:
+    """
+    Fetch T10Y2Y (10-Year minus 2-Year Treasury spread) from FRED.
+    Negative values indicate yield curve inversion.
+    Resamples daily FRED data to monthly (month-end mean) before caching.
+    """
+    key = "T10Y2Y"
+    cached = _load_cache(key)
+
+    if cached and _cache_is_fresh(cached):
+        data = cached["data"]
+        s = pd.Series(data, dtype=float)
+        s.index = pd.to_datetime(s.index)
+        return s
+
+    api_key = os.getenv("FRED_API_KEY", "")
+    if not api_key or api_key == "your_key_here":
+        if cached:
+            print("Warning: FRED_API_KEY not set, using cached T10Y2Y")
+            data = cached["data"]
+            s = pd.Series(data, dtype=float)
+            s.index = pd.to_datetime(s.index)
+            return s
+        raise RuntimeError("FRED_API_KEY not configured — yield curve data unavailable")
+
+    url = (
+        "https://api.stlouisfed.org/fred/series/observations"
+        f"?series_id=T10Y2Y&api_key={api_key}&file_type=json"
+        "&observation_start=1985-01-01"
+    )
+    try:
+        resp = requests.get(url, timeout=15)
+        resp.raise_for_status()
+        obs = resp.json()["observations"]
+
+        daily = {}
+        for o in obs:
+            if o["value"] != ".":
+                daily[o["date"]] = float(o["value"])
+
+        s_daily = pd.Series(daily, dtype=float)
+        s_daily.index = pd.to_datetime(s_daily.index)
+        # Resample daily → monthly mean, then normalize to month-end
+        s_monthly = s_daily.resample("ME").mean().dropna()
+        s_monthly.index = _normalize_to_month_end(s_monthly.index)
+
+        monthly_dict = {str(d.date()): float(v) for d, v in s_monthly.items()}
+        _save_cache(key, monthly_dict)
+        return s_monthly
+
+    except Exception as e:
+        if cached:
+            print(f"Warning: FRED T10Y2Y fetch failed ({e}), using stale cache")
+            data = cached["data"]
+            s = pd.Series(data, dtype=float)
+            s.index = pd.to_datetime(s.index)
+            return s
+        raise RuntimeError(f"Cannot load yield curve spread: {e}") from e
+
+
+def compute_inversion_periods(spread: pd.Series) -> list:
+    """
+    Given a monthly T10Y2Y spread series, return a list of contiguous inversion
+    periods as [{"start": "YYYY-MM-DD", "end": "YYYY-MM-DD"}].
+    """
+    inverted = spread < 0
+    periods = []
+    in_inversion = False
+    start_date = None
+    for date, is_inv in inverted.items():
+        if is_inv and not in_inversion:
+            in_inversion = True
+            start_date = date
+        elif not is_inv and in_inversion:
+            in_inversion = False
+            periods.append({"start": str(start_date.date()), "end": str(date.date())})
+    if in_inversion and start_date is not None:
+        periods.append({"start": str(start_date.date()), "end": str(spread.index[-1].date())})
+    return periods
+
+
 def compute_cpi_deflator(cpi: pd.Series, base_date: pd.Timestamp) -> pd.Series:
     """
     Returns cpi[base_date] / cpi[t] — values < 1 for dates before base,
