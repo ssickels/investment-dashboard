@@ -95,7 +95,7 @@
       </div>
 
       <div class="control-group">
-        <label for="activeFundSet">Actively Managed Funds</label>
+        <label for="activeFundSet"><span class="tooltip-term" id="activeFundSetLabel">Actively Managed Funds</span></label>
         <select id="activeFundSet"></select>
       </div>
 
@@ -182,7 +182,7 @@
         <label>
           <input type="checkbox" id="showMomentum" />
           <span>
-            <span class="tooltip-term" data-tooltip="Each year, ranks the 2 equity funds by trailing 12-month return. The top-ranked equity gets 2/3 of your equity allocation; the bottom gets 1/3. The bond fund stays fixed at your target weight. Standard 80/20 US/intl equity split used in year one (cold start). Advisor AUM fee applies. No look-ahead — only past returns are used at each decision point.">Show momentum rotation</span>
+            <span class="tooltip-term" id="showMomentumTip" data-tooltip="Each year, ranks the equity funds by trailing 12-month return. Top-ranked equity gets 2/3 of allocation; bottom gets 1/3. Bond allocation fixed. Equal weights in year one. Advisor AUM fee applies. No look-ahead.">Show momentum rotation</span>
           </span>
         </label>
       </div>
@@ -212,6 +212,7 @@
 
       <div class="chart-container">
         <canvas id="mainChart"></canvas>
+        <div id="legendTooltip"></div>
         <div id="loadingOverlay" class="loading-overlay">
           <div class="spinner"></div>
           <span>Fetching historical data…</span>
@@ -338,7 +339,7 @@
         <div class="stats-grid">
 
           <div class="stat-group stat-group-diy-momentum">
-            <div class="stat-group-label">Index Momentum (With Advisor)</div>
+            <div class="stat-group-label" id="diyMomentumGroupLabel">Index Momentum (With Advisor)</div>
             <div class="stat-group-cards">
               <div class="stat-card diy-momentum" id="statsDiyMomentum">
                 <div class="stat-card-title">Momentum Rotation</div>
@@ -368,7 +369,7 @@
           </div>
 
           <div class="stat-group stat-group-active-momentum">
-            <div class="stat-group-label">Active Momentum — AGTHX / ANWPX / ABNDX (With Advisor)</div>
+            <div class="stat-group-label" id="activeMomentumGroupLabel">Active Momentum (With Advisor)</div>
             <div class="stat-group-cards">
               <div class="stat-card active-momentum" id="statsActiveMomentum">
                 <div class="stat-card-title">Momentum Rotation</div>

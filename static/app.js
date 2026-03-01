@@ -28,6 +28,99 @@ function snapDate(target, dates) {
   return best;
 }
 
+// ==================== FUND INFO ====================
+
+const FUND_INFO = {
+  // Modern DIY index
+  VTI:   { name: "Vanguard Total Stock Market ETF",               cat: "US Large Blend" },
+  VXUS:  { name: "Vanguard Total International Stock ETF",        cat: "Foreign Large Blend" },
+  BND:   { name: "Vanguard Total Bond Market ETF",                cat: "Intermediate Core Bond" },
+  // Pre-ETF DIY index
+  VFINX: { name: "Vanguard 500 Index Fund",                       cat: "US Large Blend" },
+  VWIGX: { name: "Vanguard International Growth Fund",            cat: "Foreign Large Growth" },
+  VBMFX: { name: "Vanguard Total Bond Market Index",              cat: "Intermediate Core Bond" },
+  // Active — American / Dodge
+  AGTHX: { name: "American Funds Growth Fund of America A",       cat: "US Large Growth" },
+  DODFX: { name: "Dodge & Cox International Stock",               cat: "Foreign Large Value" },
+  PTTAX: { name: "PIMCO Total Return A",                          cat: "Intermediate Core-Plus Bond" },
+  // Active — Fidelity (modern)
+  FCNTX: { name: "Fidelity Contrafund",                           cat: "US Large Growth" },
+  FIEUX: { name: "Fidelity Europe Fund",                          cat: "Europe Stock" },
+  FTBFX: { name: "Fidelity Total Bond Fund",                      cat: "Intermediate Core Bond" },
+  // Active — T. Rowe Price
+  PRGFX: { name: "T. Rowe Price Growth Stock Fund",               cat: "US Large Growth" },
+  PRITX: { name: "T. Rowe Price International Stock Fund",        cat: "Foreign Large Blend" },
+  PRTIX: { name: "T. Rowe Price U.S. Bond Enhanced Index",        cat: "Intermediate Core Bond" },
+  // Active — Vanguard active
+  VWUSX: { name: "Vanguard U.S. Growth Fund",                     cat: "US Large Growth" },
+  VWILX: { name: "Vanguard International Growth Fund (Admiral)",  cat: "Foreign Large Growth" },
+  VBTLX: { name: "Vanguard Total Bond Market Index (Admiral)",    cat: "Intermediate Core Bond" },
+  // Pre-ETF classic — Fidelity
+  FMAGX: { name: "Fidelity Magellan Fund",                        cat: "US Large Growth" },
+  FOSFX: { name: "Fidelity Overseas Fund",                        cat: "Foreign Large Growth" },
+  FBNDX: { name: "Fidelity Investment Grade Bond",                cat: "Intermediate Core Bond" },
+  // Pre-ETF classic — American Funds
+  ANWPX: { name: "American Funds New Perspective Fund A",         cat: "World Large-Stock Growth" },
+  ABNDX: { name: "American Funds Bond Fund of America A",         cat: "Intermediate Core Bond" },
+  // Sector — pre-ETF mutual funds
+  FRESX: { name: "Fidelity Real Estate Investment Portfolio",     cat: "Real Estate" },
+  FSENX: { name: "Fidelity Select Energy Portfolio",              cat: "Equity Energy" },
+  FSPHX: { name: "Fidelity Select Health Care Portfolio",         cat: "Health" },
+  VGSIX: { name: "Vanguard REIT Index Fund",                      cat: "Real Estate" },
+  // Sector ETFs — modern
+  VNQ:   { name: "Vanguard Real Estate ETF",                      cat: "Real Estate" },
+  XLE:   { name: "Energy Select Sector SPDR Fund",                cat: "Equity Energy" },
+  XLV:   { name: "Health Care Select Sector SPDR Fund",           cat: "Health" },
+  XLK:   { name: "Technology Select Sector SPDR Fund",            cat: "Technology" },
+};
+
+/** Single ticker wrapped in a CSS tooltip span. */
+function fundTip(ticker) {
+  const info = FUND_INFO[ticker];
+  if (!info) return ticker;
+  const tt = `${ticker} — ${info.name}\n${info.cat}`;
+  return `<span class="tooltip-term" data-tooltip="${tt}">${ticker}</span>`;
+}
+
+/** "VTI / VXUS / BND" with each ticker individually tipped. */
+function tickersHtml(tickers) {
+  return tickers.map(fundTip).join(" / ");
+}
+
+/**
+ * Build HTML rows for a list of tickers (used in the floating legend tooltip).
+ * Returns an HTML string.
+ */
+function fundRows(tickers) {
+  return tickers.map(t => {
+    const info = FUND_INFO[t] || { name: t, cat: "—" };
+    return `<strong>${t}</strong> ${info.name} <span class="tt-cat">${info.cat}</span>`;
+  }).join("<br>");
+}
+
+/**
+ * Build plain-text lines listing all funds in a universe (for data-tooltip attributes).
+ * Returns an array of strings; join with "\n" to use as a tooltip value.
+ */
+function universeTooltipLines(eqTickers, bondTickers) {
+  const line = t => { const i = FUND_INFO[t] || {}; return `  ${t} — ${i.name || t} (${i.cat || "—"})`; };
+  return [
+    `Equity (${eqTickers.length}):`,
+    ...eqTickers.map(line),
+    `Bond (${bondTickers.length}):`,
+    ...bondTickers.map(line),
+  ];
+}
+
+/** Build a one-liner tooltip for a universe displayed as compact text in a stat card. */
+function universeSubHtml(eqTickers, bondTickers) {
+  const eqLines  = eqTickers.map(t => { const i = FUND_INFO[t] || {}; return `${t} — ${i.name || t} (${i.cat || "—"})`; });
+  const bndLines = bondTickers.map(t => { const i = FUND_INFO[t] || {}; return `${t} — ${i.name || t} (${i.cat || "—"})`; });
+  const tip = ["── Equity ──", ...eqLines, "── Bond ──", ...bndLines].join("\n");
+  const label = `${eqTickers.length} equity · ${bondTickers.length} bond`;
+  return `<span class="tooltip-term" data-tooltip="${tip.replace(/"/g, "&quot;")}">${label}</span> · annual rotation`;
+}
+
 // ==================== CHART SETUP ====================
 
 let chart = null;
@@ -35,6 +128,7 @@ let scaleLocked = false;
 let lockedYMin  = null;
 let lockedYMax  = null;
 let lastData    = null;
+let legendTooltips = [];
 
 function getDataExtremes(data) {
   const allVals = [
@@ -63,8 +157,36 @@ function handleScaleAfterRender(data) {
   rescaleBtn.style.display = (max > lockedYMax || min < lockedYMin) ? "inline-block" : "none";
 }
 
+function buildLegendTooltips(data) {
+  const mu  = data.momentum_universe || {};
+  const diy = data.diy_portfolio.tickers    || [];
+  const act = data.active_fund_set.tickers  || [];
+
+  function block(heading, tickers) {
+    return `<div class="tt-head">${heading}</div>${fundRows(tickers)}`;
+  }
+
+  return [
+    block("No-advisor · index funds · no fees", diy),
+    block("Index funds + AUM fee + active fund expense ratios", diy),
+    block("No-advisor · actively managed funds", act),
+    block("Active funds + AUM fee", act),
+    `<div class="tt-head">Total contributed over time</div>Initial investment + monthly contributions`,
+    null,  // _fill dataset (hidden)
+    (mu.diy_equity && mu.diy_equity.length)
+      ? block("Index Momentum · Equity", mu.diy_equity) + "<br>" + block("Bond", mu.diy_bond)
+      : null,
+    (mu.active_equity && mu.active_equity.length)
+      ? block("Active Momentum · Equity universe", mu.active_equity) + "<br>" + block("Bond universe", mu.active_bond)
+      : null,
+  ];
+}
+
 function buildChart(data) {
   const ctx = document.getElementById("mainChart").getContext("2d");
+
+  // Rebuild legend tooltip content for this render
+  legendTooltips = buildLegendTooltips(data);
 
   const labels = data.dates;
 
@@ -236,6 +358,18 @@ function buildChart(data) {
       interaction: { mode: "index", intersect: false },
       plugins: {
         legend: {
+          onHover: (e, legendItem) => {
+            const content = legendTooltips[legendItem.datasetIndex];
+            if (!content || !e.native) return;
+            const el = document.getElementById("legendTooltip");
+            el.innerHTML = content;
+            el.style.left = (e.native.clientX + 14) + "px";
+            el.style.top  = (e.native.clientY + 14) + "px";
+            el.style.display = "block";
+          },
+          onLeave: () => {
+            document.getElementById("legendTooltip").style.display = "none";
+          },
           onClick: (e, legendItem, legend) => {
             // Default Chart.js toggle
             const idx = legendItem.datasetIndex;
@@ -401,16 +535,56 @@ function updateStats(data) {
   }
 
   // Update DIY and managed card subtitles
-  const diyDesc = data.diy_portfolio.description;
-  document.getElementById("diyCardSub").textContent          = diyDesc;
-  document.getElementById("managedCardSub").textContent      = `${diyDesc} + advisor fees`;
-  if (s.diy_momentum) document.getElementById("diyMomentumCardSub").textContent  = `${diyDesc} · annual momentum rotation`;
+  const diyTickers = data.diy_portfolio.tickers;
+  const actTickers = data.active_fund_set.tickers;
+  const mu = data.momentum_universe;
+  document.getElementById("diyCardSub").innerHTML     = tickersHtml(diyTickers);
+  document.getElementById("managedCardSub").innerHTML = tickersHtml(diyTickers) + " + advisor fees";
+  if (s.diy_momentum && mu) {
+    document.getElementById("diyMomentumCardSub").innerHTML = universeSubHtml(mu.diy_equity, mu.diy_bond);
+    const diyMomLabel = document.getElementById("diyMomentumGroupLabel");
+    if (diyMomLabel) diyMomLabel.innerHTML = "Index Momentum (With Advisor) · " + tickersHtml(mu.diy_equity.concat(mu.diy_bond));
+  }
 
   // Update active card subtitles to reflect selected fund family
-  const desc = data.active_fund_set.description;
-  document.getElementById("activeCardSub").textContent             = desc;
-  document.getElementById("activeManagedCardSub").textContent      = `${desc} + advisor fees`;
-  if (s.active_momentum) document.getElementById("activeMomentumCardSub").textContent = "AGTHX / ANWPX / ABNDX · annual momentum rotation";
+  document.getElementById("activeCardSub").innerHTML        = tickersHtml(actTickers);
+  document.getElementById("activeManagedCardSub").innerHTML = tickersHtml(actTickers) + " + advisor fees";
+  if (s.active_momentum && mu) {
+    document.getElementById("activeMomentumCardSub").innerHTML = universeSubHtml(mu.active_equity, mu.active_bond);
+    const actMomLabel = document.getElementById("activeMomentumGroupLabel");
+    if (actMomLabel) actMomLabel.innerHTML = "Active Momentum (With Advisor) · " + tickersHtml(mu.active_equity.concat(mu.active_bond));
+  }
+
+  // Update "Actively Managed Funds" dropdown tooltip to show momentum universe
+  const activeFundLabelEl = document.getElementById("activeFundSetLabel");
+  if (activeFundLabelEl && mu) {
+    const tip = [
+      "Selects the 3-fund family used for the Buy & Hold Actively Managed scenarios.",
+      "",
+      "When momentum rotation is on, the advisor picks annually",
+      "from a broader universe of potential selections:",
+      ...universeTooltipLines(mu.active_equity, mu.active_bond),
+    ].join("\n");
+    activeFundLabelEl.dataset.tooltip = tip;
+  }
+
+  // Update "Show momentum rotation" checkbox tooltip to list both universes
+  const showMomTipEl = document.getElementById("showMomentumTip");
+  if (showMomTipEl && mu) {
+    const tip = [
+      "Each year, ranks equity funds by trailing 12-month return.",
+      "Top-ranked: 2/3 of equity allocation; bottom: 1/3.",
+      "Bond allocation fixed. Equal weights in year one.",
+      "Advisor AUM fee applies. No look-ahead.",
+      "",
+      "Index fund rotation universe:",
+      ...universeTooltipLines(mu.diy_equity, mu.diy_bond),
+      "",
+      "Active fund rotation universe:",
+      ...universeTooltipLines(mu.active_equity, mu.active_bond),
+    ].join("\n");
+    showMomTipEl.dataset.tooltip = tip;
+  }
 
   // Update weighted expense ratio display
   const wer = data.active_fund_set.weighted_expense_ratio;
@@ -582,6 +756,7 @@ function setAggressiveness(value) {
 
 const ERA_CONFIG = {
   etf: {
+    diyTickers: ["VTI", "VXUS", "BND"],
     diyDisplay: "VTI / VXUS / BND",
     activeFunds: [
       { value: "american_dodge",  label: "American/Dodge — AGTHX / DODFX / PTTAX" },
@@ -591,6 +766,7 @@ const ERA_CONFIG = {
     ],
   },
   pre_etf: {
+    diyTickers: ["VFINX", "VWIGX", "VBMFX"],
     diyDisplay: "VFINX / VWIGX / VBMFX",
     activeFunds: [
       { value: "fidelity_classic", label: "Fidelity Classic — FMAGX / FOSFX / FBNDX" },
@@ -607,7 +783,7 @@ function setEra(era) {
   document.getElementById("diyPortfolio").value = era;
 
   // Update DIY fund display
-  document.getElementById("diyFundDisplay").textContent = config.diyDisplay;
+  document.getElementById("diyFundDisplay").innerHTML = tickersHtml(config.diyTickers);
 
   // Check the matching radio button and style the labels
   document.querySelectorAll("input[name='era']").forEach(radio => {
