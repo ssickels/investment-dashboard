@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investment Strategy Comparison</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <div class="layout">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <h1 class="sidebar-title">Investment Simulator</h1>
+      <p class="sidebar-subtitle">Compare three real-world investment strategies using historical data.</p>
+
+      <div class="control-group">
+        <label for="initialAmount">Starting Amount</label>
+        <div class="input-prefix-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="initialAmount" value="10000" min="100" step="100" />
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="monthlyContrib">Monthly Contribution</label>
+        <div class="input-prefix-wrap">
+          <span class="prefix">$</span>
+          <input type="number" id="monthlyContrib" value="500" min="0" step="50" />
+        </div>
+      </div>
+
+      <div class="control-group">
+        <label for="years">
+          Time Horizon: <span id="yearsDisplay">10</span> years
+        </label>
+        <input type="range" id="years" min="1" max="14" value="10" step="1" />
+        <div class="range-labels"><span>1 yr</span><span id="yearsMax">14 yrs</span></div>
+      </div>
+
+      <div class="control-group">
+        <label for="stockPct">
+          Stock / Bond Split: <span id="stockPctDisplay">80</span>% stocks
+        </label>
+        <input type="range" id="stockPct" min="0" max="100" value="80" step="5" />
+        <div class="range-labels"><span>All Bonds</span><span>All Stocks</span></div>
+      </div>
+
+      <div class="control-group">
+        <label for="rebalance">
+          <span class="tooltip-term" data-tooltip="Rebalancing restores your target stock/bond split by selling winners and buying laggards.">Rebalancing</span>
+        </label>
+        <select id="rebalance">
+          <option value="annually" selected>Annually</option>
+          <option value="quarterly">Quarterly</option>
+          <option value="never">Never</option>
+        </select>
+      </div>
+
+      <div class="section-header">Managed Fund Costs (Scenario 2)</div>
+
+      <div class="control-group">
+        <label for="aumFee">
+          <span class="tooltip-term" data-tooltip="AUM fee (Assets Under Management): an annual fee charged by a financial advisor, typically 0.5%–1.5% of your portfolio value each year.">Advisor AUM Fee</span>
+          <span class="pct-label">%/yr</span>
+        </label>
+        <input type="number" id="aumFee" value="1.0" min="0" max="5" step="0.1" />
+      </div>
+
+      <div class="control-group">
+        <label for="expenseRatio">
+          <span class="tooltip-term" data-tooltip="Expense ratio: the annual operating cost of a mutual fund, deducted automatically. Active funds average ~0.5%–1%, index funds often under 0.1%.">Fund Expense Ratio</span>
+          <span class="pct-label">%/yr</span>
+        </label>
+        <input type="number" id="expenseRatio" value="0.5" min="0" max="5" step="0.1" />
+      </div>
+
+      <div class="control-group checkbox-group">
+        <label>
+          <input type="checkbox" id="inflationAdj" />
+          <span>
+            <span class="tooltip-term" data-tooltip="Adjusts all values to today's dollars using the Consumer Price Index (CPI), so you can compare purchasing power rather than nominal dollar amounts.">Inflation-adjust</span>
+            results (real $)
+          </span>
+        </label>
+      </div>
+
+      <div class="data-note">
+        Data source: Yahoo Finance (VTI, VXUS, BND, AGTHX, DODFX, PTTAX) &amp; FRED CPI.<br />
+        <span id="dateRangeNote">Loading…</span>
+      </div>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="chart-area">
+      <div class="chart-header">
+        <h2>Portfolio Growth Over Time</h2>
+        <div id="errorBanner" class="error-banner" style="display:none;"></div>
+      </div>
+
+      <div class="chart-container">
+        <canvas id="mainChart"></canvas>
+        <div id="loadingOverlay" class="loading-overlay">
+          <div class="spinner"></div>
+          <span>Fetching historical data…</span>
+        </div>
+      </div>
+
+      <!-- STATS GRID -->
+      <div class="stats-grid">
+        <div class="stat-card diy" id="statsDiy">
+          <div class="stat-card-title">DIY Index</div>
+          <div class="stat-card-sub">VTI / VXUS / BND</div>
+          <dl>
+            <dt>Final Value</dt>
+            <dd id="diyFinal">—</dd>
+            <dt>Total Contributed</dt>
+            <dd id="diyContrib">—</dd>
+            <dt>Total Gain</dt>
+            <dd id="diyGain">—</dd>
+            <dt>
+              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+            </dt>
+            <dd id="diyCagr">—</dd>
+            <dt>Fees Paid</dt>
+            <dd id="diyFees">—</dd>
+          </dl>
+        </div>
+
+        <div class="stat-card managed" id="statsManaged">
+          <div class="stat-card-title">Fee-Adjusted</div>
+          <div class="stat-card-sub">Same funds + advisor fees</div>
+          <dl>
+            <dt>Final Value</dt>
+            <dd id="managedFinal">—</dd>
+            <dt>Total Contributed</dt>
+            <dd id="managedContrib">—</dd>
+            <dt>Total Gain</dt>
+            <dd id="managedGain">—</dd>
+            <dt>
+              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+            </dt>
+            <dd id="managedCagr">—</dd>
+            <dt>Fees Paid</dt>
+            <dd id="managedFees">—</dd>
+          </dl>
+        </div>
+
+        <div class="stat-card active" id="statsActive">
+          <div class="stat-card-title">Actively Managed</div>
+          <div class="stat-card-sub">AGTHX / DODFX / PTTAX</div>
+          <dl>
+            <dt>Final Value</dt>
+            <dd id="activeFinal">—</dd>
+            <dt>Total Contributed</dt>
+            <dd id="activeContrib">—</dd>
+            <dt>Total Gain</dt>
+            <dd id="activeGain">—</dd>
+            <dt>
+              <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
+            </dt>
+            <dd id="activeCagr">—</dd>
+            <dt>Fees Paid</dt>
+            <dd id="activeFees">—</dd>
+          </dl>
+        </div>
+      </div>
+
+      <!-- FEE DRAG CALLOUT -->
+      <div class="fee-drag-callout" id="feeDragCallout">
+        <div id="feeDragText">—</div>
+      </div>
+
+      <!-- DISCLAIMER -->
+      <div class="disclaimer">
+        <strong>Disclaimer:</strong> This tool uses real historical data for educational purposes only.
+        Past performance does not guarantee future results. Market crash annotations (Dot-com, 2008 Financial Crisis,
+        COVID-19) mark approximate peak-to-trough start dates. This is not financial advice.
+        Always consult a qualified financial professional before making investment decisions.
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>
