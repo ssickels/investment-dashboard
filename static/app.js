@@ -34,6 +34,7 @@ let chart = null;
 let scaleLocked = false;
 let lockedYMin  = null;
 let lockedYMax  = null;
+let lastData    = null;
 
 function getDataExtremes(data) {
   const allVals = [
@@ -404,6 +405,7 @@ async function fetchAndRender() {
       errBanner.style.display = "block";
     }
 
+    lastData = data;
     buildChart(data);
     handleScaleAfterRender(data);
     updateStats(data);
@@ -593,13 +595,8 @@ function wireInputs() {
   // Show momentum rotation checkbox
   document.getElementById("showMomentum").addEventListener("change", (e) => {
     document.getElementById("momentumStats").style.display = e.target.checked ? "block" : "none";
-    if (!chart) return;
-    chart.data.datasets.forEach((ds) => {
-      if (ds.label && (ds.label.includes("Momentum") || ds.label.includes("momentum"))) {
-        chart.getDatasetMeta(chart.data.datasets.indexOf(ds)).hidden = !e.target.checked;
-      }
-    });
-    chart.update();
+    if (!chart || !lastData) return;
+    buildChart(lastData);
   });
 
   // Scale lock checkbox
