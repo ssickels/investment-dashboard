@@ -68,13 +68,16 @@ function buildChart(data) {
 
   const labels = data.dates;
 
-  const diyVals            = data.scenarios.diy.values;
-  const managedVals        = data.scenarios.managed.values;
-  const activeVals         = data.scenarios.active.values;
-  const activeManagedVals  = data.scenarios.active_managed.values;
+  const showAfterTax = data.taxable && document.getElementById("showAfterTax").checked;
+  const pick = (sc) => showAfterTax ? sc.after_tax_values : sc.values;
+
+  const diyVals            = pick(data.scenarios.diy);
+  const managedVals        = pick(data.scenarios.managed);
+  const activeVals         = pick(data.scenarios.active);
+  const activeManagedVals  = pick(data.scenarios.active_managed);
   const momentumAvailable  = !!(data.scenarios.diy_momentum && data.scenarios.active_momentum);
-  const diyMomentumVals    = momentumAvailable ? data.scenarios.diy_momentum.values : [];
-  const activeMomentumVals = momentumAvailable ? data.scenarios.active_momentum.values : [];
+  const diyMomentumVals    = momentumAvailable ? pick(data.scenarios.diy_momentum) : [];
+  const activeMomentumVals = momentumAvailable ? pick(data.scenarios.active_momentum) : [];
   const momentumVisible    = momentumAvailable && document.getElementById("showMomentum").checked;
 
   const initialAmount  = parseFloat(document.getElementById("initialAmount").value) || 0;
@@ -361,6 +364,7 @@ function buildChart(data) {
 
 function updateStats(data) {
   const s = data.scenarios;
+  const taxable = data.taxable;
 
   function fill(prefix, stats) {
     document.getElementById(`${prefix}Final`).textContent   = fmt$.format(stats.final_value);
@@ -368,6 +372,11 @@ function updateStats(data) {
     document.getElementById(`${prefix}Gain`).textContent    = fmt$.format(stats.total_gain);
     document.getElementById(`${prefix}Cagr`).textContent    = fmtPct(stats.cagr);
     document.getElementById(`${prefix}Fees`).textContent    = fmt$.format(stats.total_fees_paid);
+    // Tax rows (optional elements)
+    const setPair = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmt$.format(val); };
+    setPair(`${prefix}TaxesPaid`, stats.total_taxes_paid || 0);
+    setPair(`${prefix}TaxDue`,    stats.taxes_due_at_liquidation || 0);
+    setPair(`${prefix}AfterTax`,  stats.after_tax_final != null ? stats.after_tax_final : stats.final_value);
   }
 
   fill("diy",            s.diy.stats);
@@ -376,6 +385,20 @@ function updateStats(data) {
   fill("activeManaged",  s.active_managed.stats);
   if (s.diy_momentum)    fill("diyMomentum",    s.diy_momentum.stats);
   if (s.active_momentum) fill("activeMomentum", s.active_momentum.stats);
+
+  // Show/hide tax rows based on account type
+  document.querySelectorAll(".tax-row").forEach(el => {
+    el.style.display = taxable ? "" : "none";
+  });
+
+  // Manage "Show After-Tax Wealth" checkbox state
+  const atCb = document.getElementById("showAfterTax");
+  if (!taxable) {
+    atCb.checked  = false;
+    atCb.disabled = true;
+  } else {
+    atCb.disabled = false;
+  }
 
   // Update DIY and managed card subtitles
   const diyDesc = data.diy_portfolio.description;
@@ -438,6 +461,7 @@ function getParams() {
     active_fund_set: document.getElementById("activeFundSet").value,
     diy_portfolio:   document.getElementById("diyPortfolio").value,
     aggressiveness:  document.querySelector("input[name='aggressiveness']:checked")?.value || "moderate",
+    taxable:         document.querySelector("input[name='taxable']:checked")?.value ?? "true",
   };
 }
 
@@ -486,6 +510,17 @@ async function fetchAndRender() {
 }
 
 const debouncedFetch = debounce(fetchAndRender, 400);
+
+// ==================== ACCOUNT TYPE SELECTION ====================
+
+function setTaxable(value) {
+  document.querySelectorAll(".agg-option", "#taxToggle").forEach(el => {
+    const radio = el.querySelector("input[name='taxable']");
+    if (!radio) return;
+    radio.checked = radio.value === value;
+    el.classList.toggle("agg-option--selected", radio.value === value);
+  });
+}
 
 // ==================== AGGRESSIVENESS SELECTION ====================
 
@@ -655,6 +690,14 @@ function wireInputs() {
     });
   });
 
+  // Account Type radio buttons (Taxable / Tax-Deferred)
+  document.querySelectorAll("input[name='taxable']").forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      setTaxable(e.target.value);
+      debouncedFetch();
+    });
+  });
+
   // Aggressiveness radio buttons
   document.querySelectorAll("input[name='aggressiveness']").forEach(radio => {
     radio.addEventListener("change", (e) => {
@@ -687,6 +730,12 @@ function wireInputs() {
     if (idx === -1) return;
     chart.getDatasetMeta(idx).hidden = !e.target.checked;
     chart.update();
+  });
+
+  // Show after-tax wealth checkbox
+  document.getElementById("showAfterTax").addEventListener("change", () => {
+    if (!lastData) return;
+    buildChart(lastData);
   });
 
   // Show momentum rotation checkbox

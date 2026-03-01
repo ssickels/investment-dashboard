@@ -136,6 +136,22 @@
         </div>
       </div>
 
+      <div class="control-group">
+        <label>
+          <span class="tooltip-term" data-tooltip="Taxable: simulates a brokerage account where capital gains tax (20% long-term rate) applies. No-Advisor scenarios defer tax to final liquidation. With-Advisor &amp; Momentum scenarios trigger capital gains at each annual rebalancing. Tax-Deferred: simulates a 401(k) or IRA — no capital gains tax during the simulation.">Account Type</span>
+        </label>
+        <div class="agg-toggle" id="taxToggle">
+          <label class="agg-option agg-option--selected" id="taxTaxableLabel">
+            <input type="radio" name="taxable" value="true" checked />
+            <span>Taxable</span>
+          </label>
+          <label class="agg-option" id="taxDeferredLabel">
+            <input type="radio" name="taxable" value="false" />
+            <span>Tax-Deferred</span>
+          </label>
+        </div>
+      </div>
+
       <div class="control-group checkbox-group">
         <label>
           <input type="checkbox" id="inflationAdj" />
@@ -150,6 +166,15 @@
         <label>
           <input type="checkbox" id="showContrib" />
           <span>Show total invested</span>
+        </label>
+      </div>
+
+      <div class="control-group checkbox-group">
+        <label>
+          <input type="checkbox" id="showAfterTax" checked />
+          <span>
+            <span class="tooltip-term" data-tooltip="When checked, chart lines show estimated after-tax wealth — what you would net after paying all applicable capital gains taxes if you liquidated today. Automatically disabled in Tax-Deferred mode.">Show after-tax wealth</span>
+          </span>
         </label>
       </div>
 
@@ -216,6 +241,10 @@
                 <dd id="diyCagr">—</dd>
                 <dt>Fees Paid</dt>
                 <dd id="diyFees">—</dd>
+                <dt class="tax-row">Est. Tax at Sale</dt>
+                <dd class="tax-row" id="diyTaxDue">—</dd>
+                <dt class="tax-row">After-Tax Value</dt>
+                <dd class="tax-row" id="diyAfterTax">—</dd>
               </dl>
             </div>
 
@@ -236,6 +265,12 @@
                 <dd id="managedCagr">—</dd>
                 <dt>Fees Paid</dt>
                 <dd id="managedFees">—</dd>
+                <dt class="tax-row">Taxes Paid</dt>
+                <dd class="tax-row" id="managedTaxesPaid">—</dd>
+                <dt class="tax-row">Est. Tax at Sale</dt>
+                <dd class="tax-row" id="managedTaxDue">—</dd>
+                <dt class="tax-row">After-Tax Value</dt>
+                <dd class="tax-row" id="managedAfterTax">—</dd>
               </dl>
             </div>
           </div>
@@ -261,6 +296,10 @@
                 <dd id="activeCagr">—</dd>
                 <dt>Fees Paid</dt>
                 <dd id="activeFees">—</dd>
+                <dt class="tax-row">Est. Tax at Sale</dt>
+                <dd class="tax-row" id="activeTaxDue">—</dd>
+                <dt class="tax-row">After-Tax Value</dt>
+                <dd class="tax-row" id="activeAfterTax">—</dd>
               </dl>
             </div>
 
@@ -281,6 +320,12 @@
                 <dd id="activeManagedCagr">—</dd>
                 <dt>Fees Paid</dt>
                 <dd id="activeManagedFees">—</dd>
+                <dt class="tax-row">Taxes Paid</dt>
+                <dd class="tax-row" id="activeManagedTaxesPaid">—</dd>
+                <dt class="tax-row">Est. Tax at Sale</dt>
+                <dd class="tax-row" id="activeManagedTaxDue">—</dd>
+                <dt class="tax-row">After-Tax Value</dt>
+                <dd class="tax-row" id="activeManagedAfterTax">—</dd>
               </dl>
             </div>
           </div>
@@ -311,6 +356,12 @@
                   <dd id="diyMomentumCagr">—</dd>
                   <dt>Fees Paid</dt>
                   <dd id="diyMomentumFees">—</dd>
+                  <dt class="tax-row">Taxes Paid</dt>
+                  <dd class="tax-row" id="diyMomentumTaxesPaid">—</dd>
+                  <dt class="tax-row">Est. Tax at Sale</dt>
+                  <dd class="tax-row" id="diyMomentumTaxDue">—</dd>
+                  <dt class="tax-row">After-Tax Value</dt>
+                  <dd class="tax-row" id="diyMomentumAfterTax">—</dd>
                 </dl>
               </div>
             </div>
@@ -335,6 +386,12 @@
                   <dd id="activeMomentumCagr">—</dd>
                   <dt>Fees Paid</dt>
                   <dd id="activeMomentumFees">—</dd>
+                  <dt class="tax-row">Taxes Paid</dt>
+                  <dd class="tax-row" id="activeMomentumTaxesPaid">—</dd>
+                  <dt class="tax-row">Est. Tax at Sale</dt>
+                  <dd class="tax-row" id="activeMomentumTaxDue">—</dd>
+                  <dt class="tax-row">After-Tax Value</dt>
+                  <dd class="tax-row" id="activeMomentumAfterTax">—</dd>
                 </dl>
               </div>
             </div>

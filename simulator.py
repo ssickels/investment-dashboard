@@ -50,15 +50,26 @@ def simulate(
     params: SimParams,
     monthly_fee_rate: float = 0.0,
     deflator: Optional[pd.Series] = None,
+    tax_mode: str = "none",  # "none" | "end" | "rebalance"
 ) -> dict:
     """
     Simulate a portfolio for the given tickers/weights/params.
 
+    tax_mode:
+      "none"      – no capital gains tax (tax-deferred account)
+      "end"       – tax unrealized gains at liquidation only (no-advisor scenarios)
+      "rebalance" – tax realized gains at each rebalancing event; remaining unrealized
+                    gains taxed at liquidation (with-advisor scenarios)
+
     Returns dict with:
-      - values: list of portfolio values (one per month)
+      - values: list of gross portfolio values (one per month)
+      - after_tax_values: mark-to-market after-tax wealth if liquidated each month
       - dates: list of date strings
-      - stats: {final_value, total_contributions, total_gain, cagr, total_fees_paid}
+      - stats: {final_value, total_contributions, total_gain, cagr, total_fees_paid,
+                total_taxes_paid, taxes_due_at_liquidation, after_tax_final}
     """
+    LTCG_RATE = 0.20
+
     # Slice to requested years
     months = params.years * 12
     slice_df = returns_df[tickers].iloc[:months]
@@ -66,10 +77,13 @@ def simulate(
     if len(slice_df) == 0:
         raise ValueError("No data available for simulation")
 
-    # Initialize holdings
+    # Initialize holdings and cost-basis tracking
     holdings = {t: params.initial_amount * weights[t] for t in tickers}
+    total_cost_basis = params.initial_amount  # cumulative dollars invested (adjusted for recognized gains)
     total_fees_paid = 0.0
+    total_taxes_paid = 0.0
     values = []
+    after_tax_values = []
     dates = []
 
     for i, (date, row) in enumerate(slice_df.iterrows()):
@@ -83,31 +97,60 @@ def simulate(
         if monthly_fee_rate > 0:
             fee = portfolio_value * monthly_fee_rate
             total_fees_paid += fee
-            # Reduce holdings proportionally
             ratio = (portfolio_value - fee) / portfolio_value
             for t in tickers:
                 holdings[t] *= ratio
             portfolio_value -= fee
 
-        # Add monthly contribution
-        if i > 0:  # skip first month (initial invested at start)
+        # Add monthly contribution / rebalance
+        if i > 0:
             if _is_rebalance_month(i, params.rebalance):
-                # Add contribution then rebalance everything
+                # Compute gain rate BEFORE adding contribution (pure market gain fraction)
+                pv_pre = portfolio_value
+                cb_pre = total_cost_basis
+                gain_rate = max(0.0, (pv_pre - cb_pre) / pv_pre) if pv_pre > 0 else 0.0
+
+                # Add contribution (new money — full cost basis)
                 portfolio_value += params.monthly_contrib
-                holdings = {t: portfolio_value * weights[t] for t in tickers}
+                total_cost_basis += params.monthly_contrib
+
+                # New target allocations (post-contribution, pre-tax)
+                new_target = {t: portfolio_value * weights[t] for t in tickers}
+
+                if tax_mode == "rebalance":
+                    # Tax realized gains on positions being reduced
+                    rebalance_tax = 0.0
+                    total_sold = 0.0
+                    for t in tickers:
+                        sold = max(0.0, holdings[t] - new_target[t])
+                        if sold > 0:
+                            total_sold += sold
+                            rebalance_tax += sold * gain_rate * LTCG_RATE
+                    total_taxes_paid += rebalance_tax
+                    portfolio_value -= rebalance_tax
+                    # Step up cost basis: realized gains already taxed won't be taxed again at liquidation
+                    total_cost_basis += total_sold * gain_rate * (1.0 - LTCG_RATE)
+                    new_target = {t: portfolio_value * weights[t] for t in tickers}
+
+                holdings = new_target
             else:
-                # Add contribution proportional to current drifted weights
+                # Drift: add contribution proportional to current weights
                 cur_total = sum(holdings.values())
                 if cur_total > 0:
                     for t in tickers:
                         holdings[t] += params.monthly_contrib * (holdings[t] / cur_total)
                 portfolio_value += params.monthly_contrib
+                total_cost_basis += params.monthly_contrib
         else:
-            # First month: rebalance if requested (sets target weights from start)
+            # First month: rebalance if requested
             if params.rebalance != "never":
                 holdings = {t: portfolio_value * weights[t] for t in tickers}
 
         portfolio_value = sum(holdings.values())
+
+        # Mark-to-market after-tax value (what you'd net if you liquidated today)
+        unrealized_gain = max(0.0, portfolio_value - total_cost_basis)
+        after_tax_values.append(portfolio_value - unrealized_gain * LTCG_RATE)
         values.append(portfolio_value)
         dates.append(str(date.date()))
 
@@ -117,11 +160,19 @@ def simulate(
         for i, date in enumerate(slice_df.index):
             if date in deflator_aligned.index and not pd.isna(deflator_aligned[date]):
                 values[i] *= float(deflator_aligned[date])
+                after_tax_values[i] *= float(deflator_aligned[date])
 
     n = len(values)
     total_contributions = params.initial_amount + params.monthly_contrib * max(0, n - 1)
     final_value = values[-1] if values else 0.0
     total_gain = final_value - total_contributions
+
+    # Tax owed at liquidation on remaining unrealized gains
+    if tax_mode in ("end", "rebalance"):
+        taxes_due_at_liquidation = max(0.0, final_value - total_cost_basis) * LTCG_RATE
+    else:
+        taxes_due_at_liquidation = 0.0
+    after_tax_final = final_value - taxes_due_at_liquidation
 
     # CAGR based on months simulated
     if n > 0 and total_contributions > 0 and final_value > 0:
@@ -131,6 +182,7 @@ def simulate(
 
     return {
         "values": [round(v, 2) for v in values],
+        "after_tax_values": [round(v, 2) for v in after_tax_values],
         "dates": dates,
         "stats": {
             "final_value": round(final_value, 2),
@@ -138,6 +190,9 @@ def simulate(
             "total_gain": round(total_gain, 2),
             "cagr": round(cagr * 100, 4),  # as percent
             "total_fees_paid": round(total_fees_paid, 2),
+            "total_taxes_paid": round(total_taxes_paid, 2),
+            "taxes_due_at_liquidation": round(taxes_due_at_liquidation, 2),
+            "after_tax_final": round(after_tax_final, 2),
         },
     }
 
@@ -151,6 +206,7 @@ def simulate_momentum(
     deflator: Optional[pd.Series] = None,
     yield_curve_spread: Optional[pd.Series] = None,
     aggressiveness: str = "moderate",
+    tax_mode: str = "none",  # "none" | "rebalance"
 ) -> dict:
     """
     Full advisor momentum simulation supporting a variable-size universe.
@@ -204,8 +260,12 @@ def simulate_momentum(
     for t in avail_bond_0:
         holdings[t] += params.initial_amount * b / len(avail_bond_0)
 
+    total_cost_basis = params.initial_amount
     total_fees_paid = 0.0
+    total_taxes_paid = 0.0
+    LTCG_RATE = 0.20
     values = []
+    after_tax_values = []
     dates = []
 
     for i, (date, row) in enumerate(slice_df.iterrows()):
@@ -227,6 +287,11 @@ def simulate_momentum(
 
         # Annual momentum rebalance
         if i > 0 and i % 12 == 0:
+            # Gain rate computed BEFORE contribution (pure market gain fraction)
+            pv_pre = portfolio_value
+            cb_pre = total_cost_basis
+            gain_rate = max(0.0, (pv_pre - cb_pre) / pv_pre) if pv_pre > 0 else 0.0
+
             lookback = slice_df.iloc[i - 12:i]
 
             # Eligible funds: full 12 months of non-NaN returns (no look-ahead)
@@ -280,20 +345,41 @@ def simulate_momentum(
 
             new_weights[best_bond] = effective_b
 
-            # Rebalance + add contribution
+            # Add contribution (new money — full cost basis)
             portfolio_value += params.monthly_contrib
+            total_cost_basis += params.monthly_contrib
+
+            # Compute new target holdings (pre-tax)
+            new_target = {t: portfolio_value * new_weights.get(t, 0.0) for t in avail_cols}
+
+            if tax_mode == "rebalance":
+                rebalance_tax = 0.0
+                total_sold = 0.0
+                for t in avail_cols:
+                    sold = max(0.0, holdings[t] - new_target[t])
+                    if sold > 0:
+                        total_sold += sold
+                        rebalance_tax += sold * gain_rate * LTCG_RATE
+                total_taxes_paid += rebalance_tax
+                portfolio_value -= rebalance_tax
+                total_cost_basis += total_sold * gain_rate * (1.0 - LTCG_RATE)
+                new_target = {t: portfolio_value * new_weights.get(t, 0.0) for t in avail_cols}
+
             holdings = {t: 0.0 for t in avail_cols}
-            for t, w in new_weights.items():
-                if w > 0:
-                    holdings[t] = portfolio_value * w
+            for t, v in new_target.items():
+                holdings[t] = v
 
         elif i > 0:
             cur_total = sum(holdings.values())
             if cur_total > 0:
                 for t in avail_cols:
                     holdings[t] += params.monthly_contrib * (holdings[t] / cur_total)
+            total_cost_basis += params.monthly_contrib
 
-        values.append(sum(holdings.values()))
+        pv_now = sum(holdings.values())
+        unrealized_gain = max(0.0, pv_now - total_cost_basis)
+        after_tax_values.append(pv_now - unrealized_gain * LTCG_RATE)
+        values.append(pv_now)
         dates.append(str(date.date()))
 
     # CPI deflation
@@ -302,11 +388,19 @@ def simulate_momentum(
         for i, date in enumerate(slice_df.index):
             if date in deflator_aligned.index and not pd.isna(deflator_aligned[date]):
                 values[i] *= float(deflator_aligned[date])
+                after_tax_values[i] *= float(deflator_aligned[date])
 
     n_m = len(values)
     total_contributions = params.initial_amount + params.monthly_contrib * max(0, n_m - 1)
     final_value = values[-1] if values else 0.0
     total_gain = final_value - total_contributions
+
+    if tax_mode == "rebalance":
+        taxes_due_at_liquidation = max(0.0, final_value - total_cost_basis) * LTCG_RATE
+    else:
+        taxes_due_at_liquidation = 0.0
+    after_tax_final = final_value - taxes_due_at_liquidation
+
     cagr = (
         (final_value / total_contributions) ** (12.0 / n_m) - 1.0
         if n_m > 0 and total_contributions > 0 and final_value > 0
@@ -315,6 +409,7 @@ def simulate_momentum(
 
     return {
         "values": [round(v, 2) for v in values],
+        "after_tax_values": [round(v, 2) for v in after_tax_values],
         "dates": dates,
         "stats": {
             "final_value": round(final_value, 2),
@@ -322,6 +417,9 @@ def simulate_momentum(
             "total_gain": round(total_gain, 2),
             "cagr": round(cagr * 100, 4),
             "total_fees_paid": round(total_fees_paid, 2),
+            "total_taxes_paid": round(total_taxes_paid, 2),
+            "taxes_due_at_liquidation": round(taxes_due_at_liquidation, 2),
+            "after_tax_final": round(after_tax_final, 2),
         },
     }
 
@@ -343,6 +441,7 @@ def run_all_scenarios(
     monthly_momentum_fee_rate: float = 0.0,
     yield_curve_spread: Optional[pd.Series] = None,
     aggressiveness: str = "moderate",
+    taxable: bool = False,
 ) -> dict:
     """
     Run all 4 investment scenarios.
@@ -367,6 +466,10 @@ def run_all_scenarios(
         active_tickers[2]: b,
     }
 
+    # No-advisor scenarios defer all taxes to liquidation; advisor scenarios tax at rebalancing
+    end_mode       = "end"       if taxable else "none"
+    rebalance_mode = "rebalance" if taxable else "none"
+
     diy = simulate(
         returns_df=returns_df,
         tickers=diy_tickers,
@@ -374,6 +477,7 @@ def run_all_scenarios(
         params=params,
         monthly_fee_rate=0.0,
         deflator=deflator,
+        tax_mode=end_mode,
     )
 
     managed = simulate(
@@ -383,6 +487,7 @@ def run_all_scenarios(
         params=params,
         monthly_fee_rate=monthly_managed_fee_rate,
         deflator=deflator,
+        tax_mode=rebalance_mode,
     )
 
     active = simulate(
@@ -392,6 +497,7 @@ def run_all_scenarios(
         params=params,
         monthly_fee_rate=0.0,
         deflator=deflator,
+        tax_mode=end_mode,
     )
 
     active_managed = simulate(
@@ -401,6 +507,7 @@ def run_all_scenarios(
         params=params,
         monthly_fee_rate=monthly_active_managed_fee_rate,
         deflator=deflator,
+        tax_mode=rebalance_mode,
     )
 
     diy_str    = " / ".join(diy_tickers)
@@ -426,6 +533,7 @@ def run_all_scenarios(
                     deflator=deflator,
                     yield_curve_spread=yield_curve_spread,
                     aggressiveness=aggressiveness,
+                    tax_mode=rebalance_mode,
                 ),
                 "label": f"Index Momentum ({mom_str})",
             }
@@ -447,6 +555,7 @@ def run_all_scenarios(
                     deflator=deflator,
                     yield_curve_spread=yield_curve_spread,
                     aggressiveness=aggressiveness,
+                    tax_mode=rebalance_mode,
                 ),
                 "label": f"Active Momentum ({n_eq} equity + {n_b} bond funds)",
             }

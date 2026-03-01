@@ -105,6 +105,7 @@ def portfolio():
         aggressiveness = request.args.get("aggressiveness", "moderate")
         if aggressiveness not in ("conservative", "moderate", "aggressive"):
             aggressiveness = "moderate"
+        taxable = request.args.get("taxable", "true").lower() == "true"
 
         active_fund_set_key = request.args.get("active_fund_set", "american_dodge")
         if active_fund_set_key not in ACTIVE_FUND_SETS:
@@ -233,6 +234,7 @@ def portfolio():
             monthly_momentum_fee_rate=monthly_active_managed_fee,
             yield_curve_spread=yield_curve_spread,
             aggressiveness=aggressiveness,
+            taxable=taxable,
         )
 
         # Use dates from DIY scenario (all same length)
@@ -263,36 +265,20 @@ def portfolio():
             },
             "dates": dates,
             "scenarios": {
-                "diy": {
-                    "label": scenarios["diy"]["label"],
-                    "values": scenarios["diy"]["values"],
-                    "stats": scenarios["diy"]["stats"],
-                },
-                "managed": {
-                    "label": scenarios["managed"]["label"],
-                    "values": scenarios["managed"]["values"],
-                    "stats": scenarios["managed"]["stats"],
-                },
-                "active": {
-                    "label": scenarios["active"]["label"],
-                    "values": scenarios["active"]["values"],
-                    "stats": scenarios["active"]["stats"],
-                },
-                "active_managed": {
-                    "label": scenarios["active_managed"]["label"],
-                    "values": scenarios["active_managed"]["values"],
-                    "stats": scenarios["active_managed"]["stats"],
-                },
-                "diy_momentum": {
-                    "label": scenarios["diy_momentum"]["label"],
-                    "values": scenarios["diy_momentum"]["values"],
-                    "stats": scenarios["diy_momentum"]["stats"],
-                } if "diy_momentum" in scenarios else None,
-                "active_momentum": {
-                    "label": scenarios["active_momentum"]["label"],
-                    "values": scenarios["active_momentum"]["values"],
-                    "stats": scenarios["active_momentum"]["stats"],
-                } if "active_momentum" in scenarios else None,
+                k: {
+                    "label": v["label"],
+                    "values": v["values"],
+                    "after_tax_values": v["after_tax_values"],
+                    "stats": v["stats"],
+                } if v else None
+                for k, v in {
+                    "diy":            scenarios["diy"],
+                    "managed":        scenarios["managed"],
+                    "active":         scenarios["active"],
+                    "active_managed": scenarios["active_managed"],
+                    "diy_momentum":    scenarios.get("diy_momentum"),
+                    "active_momentum": scenarios.get("active_momentum"),
+                }.items()
             },
             "fee_drag": fee_drag,
             "active_fund_set": {
@@ -309,6 +295,7 @@ def portfolio():
             },
             "yield_curve_inversions": inversion_periods,
             "aggressiveness": aggressiveness,
+            "taxable": taxable,
             "error": warning,
         }
 
