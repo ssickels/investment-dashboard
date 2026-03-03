@@ -2,22 +2,22 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --blue:    #2563eb;
-  --blue-bg: #eff6ff;
-  --red:     #dc2626;
-  --red-bg:  #fef2f2;
-  --green:   #16a34a;
-  --green-bg:#f0fdf4;
-  --orange:    #d97706;
-  --orange-bg: #fffbeb;
-  --gray-50: #f9fafb;
-  --gray-100:#f3f4f6;
-  --gray-200:#e5e7eb;
-  --gray-400:#9ca3af;
-  --gray-600:#4b5563;
-  --gray-800:#1f2937;
+  --blue:      var(--color-primary);               /* teal  #7dd4e8 */
+  --blue-bg:   var(--color-surface-hi);            /* #003a50 */
+  --red:       var(--color-negative);              /* coral #e07040 */
+  --red-bg:    rgba(224, 112, 64, 0.12);
+  --green:     var(--color-positive);              /* seafoam #4db8a0 */
+  --green-bg:  rgba(77, 184, 160, 0.12);
+  --orange:    var(--color-data-4);                /* #e07040 */
+  --orange-bg: rgba(224, 112, 64, 0.12);
+  --gray-50:   var(--color-bg);                    /* #001e2a */
+  --gray-100:  var(--color-surface);               /* #002d3d */
+  --gray-200:  var(--color-border);                /* rgba(100,210,230,0.14) */
+  --gray-400:  var(--color-text-dim);              /* #5a9aaa */
+  --gray-600:  var(--color-text-dim);              /* #5a9aaa */
+  --gray-800:  var(--color-text);                  /* #d0eef5 */
   --sidebar-w: 300px;
-  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font: var(--font-sans);
 }
 
 html, body {
@@ -32,14 +32,15 @@ html, body {
 .layout {
   display: flex;
   min-height: 100vh;
+  padding-top: 34px;
 }
 
 /* ==================== SIDEBAR ==================== */
 .sidebar {
   width: var(--sidebar-w);
   min-width: var(--sidebar-w);
-  background: #fff;
-  border-right: 1px solid var(--gray-200);
+  background: var(--color-surface);
+  border-right: 1px solid var(--color-border-hi);
   padding: 24px 20px;
   display: flex;
   flex-direction: column;
@@ -47,10 +48,10 @@ html, body {
   overflow-y: auto;
   overflow-x: hidden;
   position: sticky;
-  top: 0;
-  height: 100vh;
+  top: 34px;
+  height: calc(100vh - 34px);
   transition: width 0.25s ease, min-width 0.25s ease, padding 0.25s ease;
-  position: relative;
+  position: sticky;
 }
 
 .sidebar--collapsed {
@@ -156,7 +157,7 @@ html, body {
   border: 1px solid var(--gray-200);
   border-radius: 6px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .prefix {
@@ -187,7 +188,7 @@ input[type="number"] {
   font-size: 13px;
   outline: none;
   width: 100%;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 input[type="number"]:focus,
@@ -203,7 +204,7 @@ select {
   font-size: 13px;
   outline: none;
   width: 100%;
-  background: #fff;
+  background: var(--color-surface);
   cursor: pointer;
 }
 
@@ -311,7 +312,7 @@ input[type="range"] {
   padding: 5px 12px;
   border: 1px solid var(--blue);
   border-radius: 5px;
-  background: white;
+  background: var(--color-surface);
   color: var(--blue);
   cursor: pointer;
   font-weight: 600;
@@ -335,7 +336,7 @@ input[type="range"] {
 /* ==================== CHART CONTAINER ==================== */
 .chart-container {
   position: relative;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--gray-200);
   border-radius: 12px;
   padding: 16px;
@@ -349,7 +350,7 @@ input[type="range"] {
 .loading-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(255,255,255,0.85);
+  background: rgba(0, 30, 42, 0.88);
   border-radius: 12px;
   display: flex;
   flex-direction: column;
@@ -388,8 +389,8 @@ input[type="range"] {
   gap: 10px;
 }
 
-.stat-group-diy    { background: #f8fbff; border-color: #bfdbfe; }
-.stat-group-active { background: #f8fff9; border-color: #bbf7d0; }
+.stat-group-diy    { background: rgba(125, 212, 232, 0.06); border-color: rgba(125, 212, 232, 0.25); }
+.stat-group-active { background: rgba(77, 184, 160, 0.06);  border-color: rgba(77, 184, 160, 0.25);  }
 
 .stat-group-label {
   font-size: 11px;
@@ -409,7 +410,7 @@ input[type="range"] {
 }
 
 .stat-card {
-  background: #fff;
+  background: var(--color-surface);
   border: 2px solid var(--gray-200);
   position: relative;
   border-radius: 10px;
@@ -475,9 +476,9 @@ input[type="range"] {
 
 /* ==================== FEE DRAG CALLOUT ==================== */
 .fee-drag-callout {
-  background: var(--blue-bg);
-  border: 1px solid #bfdbfe;
-  border-left: 4px solid var(--blue);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-hi);
+  border-left: 4px solid var(--color-primary);
   border-radius: 8px;
   padding: 14px 18px;
   font-size: 14px;
@@ -597,7 +598,7 @@ input[type="range"] {
   border: 1px solid var(--gray-200);
   border-radius: 6px;
   cursor: pointer;
-  background: #fff;
+  background: var(--color-surface);
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -635,7 +636,7 @@ input[type="range"] {
   border: 1px solid var(--gray-200);
   border-radius: 6px;
   overflow: hidden;
-  background: #fff;
+  background: var(--color-surface);
 }
 
 .agg-option {
@@ -648,7 +649,7 @@ input[type="range"] {
   font-size: 12px;
   font-weight: 500;
   color: var(--gray-600);
-  background: #fff;
+  background: var(--color-surface);
   border-right: 1px solid var(--gray-200);
   transition: background 0.15s, color 0.15s;
   user-select: none;
@@ -706,7 +707,7 @@ input[type="range"] {
   display: flex;
   align-items: center;
   gap: 2px;
-  background: #fff;
+  background: var(--color-surface);
   border: 1px solid var(--gray-200);
   border-radius: 6px;
   padding: 4px 6px;
