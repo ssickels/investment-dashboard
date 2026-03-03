@@ -5,48 +5,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Investment Simulator — User Guide</title>
   <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --blue:       #2563eb;
-      --blue-bg:    #eff6ff;
-      --blue-muted: #93c5fd;
-      --red:        #dc2626;
-      --red-bg:     #fef2f2;
-      --green:      #16a34a;
-      --green-bg:   #f0fdf4;
-      --orange:     #d97706;
-      --orange-bg:  #fffbeb;
-      --violet:     #7c3aed;
-      --violet-bg:  #f5f3ff;
-      --cyan:       #0891b2;
-      --cyan-bg:    #ecfeff;
-      --gray-50:    #f9fafb;
-      --gray-100:   #f3f4f6;
-      --gray-200:   #e5e7eb;
-      --gray-400:   #9ca3af;
-      --gray-600:   #4b5563;
-      --gray-800:   #1f2937;
-      --font: system-ui, -apple-system, "Segoe UI", sans-serif;
-      --max-w: 860px;
+      --sc-diy:        #7dd4e8;
+      --sc-managed:    #e07040;
+      --sc-active:     #4db8a0;
+      --sc-active-mgd: #e8c020;
+      --sc-diy-mom:    #a080d0;
+      --sc-active-mom: #60b8d0;
     }
 
     body {
-      font-family: var(--font);
+      font-family: var(--font-sans);
       font-size: 15px;
       line-height: 1.7;
-      color: var(--gray-800);
-      background: var(--gray-50);
-      padding: 48px 24px 80px;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 82px 24px 80px;
     }
 
-    .page {
-      max-width: var(--max-w);
+    /* ── Two-column layout ── */
+    .guide-layout {
+      display: flex;
+      gap: 40px;
+      max-width: 1100px;
       margin: 0 auto;
+      align-items: flex-start;
     }
 
-    /* ── Top nav ── */
+    /* ── Table of Contents ── */
+    .toc {
+      width: 180px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 50px;
+      max-height: calc(100vh - 70px);
+      overflow-y: auto;
+    }
+
+    .toc-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-dim);
+      margin-bottom: 10px;
+      padding-left: 10px;
+    }
+
+    .toc ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .toc a {
+      display: block;
+      font-size: 12.5px;
+      color: var(--color-primary);
+      padding: 5px 10px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      text-decoration: none;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      line-height: 1.4;
+    }
+
+    .toc a:hover {
+      color: var(--color-primary);
+      background: rgba(125, 212, 232, 0.07);
+    }
+
+    .toc a.is-active {
+      color: var(--color-primary-hi);
+      border-left-color: var(--color-primary);
+      background: rgba(125, 212, 232, 0.07);
+      font-weight: 500;
+    }
+
+    /* ── Main content ── */
+    .guide-main { flex: 1; min-width: 0; }
+
+    /* ── Back link ── */
     .topnav {
       display: flex;
       align-items: center;
@@ -55,18 +99,21 @@
     }
     .topnav a {
       font-size: 13px;
-      color: var(--blue);
+      color: var(--color-primary);
       text-decoration: none;
-      border: 1px solid var(--blue-muted);
+      border: 1px solid var(--color-border-hi);
       padding: 5px 14px;
       border-radius: 6px;
-      background: var(--blue-bg);
-      transition: background 0.15s;
+      background: var(--color-surface);
+      transition: background 0.15s, color 0.15s;
     }
-    .topnav a:hover { background: #dbeafe; }
+    .topnav a:hover {
+      background: var(--color-surface-hi);
+      color: var(--color-primary-hi);
+    }
     .topnav-title {
       font-size: 13px;
-      color: var(--gray-400);
+      color: var(--color-text-dim);
     }
 
     /* ── Header ── */
@@ -74,36 +121,61 @@
       font-size: 2rem;
       font-weight: 700;
       letter-spacing: -0.5px;
-      color: var(--gray-800);
+      color: var(--color-primary-hi);
       margin-bottom: 8px;
     }
     .subtitle {
-      color: var(--gray-600);
+      color: var(--color-text);
       font-size: 1rem;
       margin-bottom: 40px;
       max-width: 620px;
     }
 
     /* ── Sections ── */
-    section { margin-bottom: 52px; }
+    section { margin-bottom: 52px; scroll-margin-top: 50px; }
 
     h2 {
       font-size: 1.2rem;
       font-weight: 700;
-      color: var(--gray-800);
+      color: var(--color-primary-hi);
       margin-bottom: 14px;
       padding-bottom: 8px;
-      border-bottom: 2px solid var(--gray-200);
+      border-bottom: 2px solid var(--color-border-hi);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .h2-chevron {
+      font-size: 30px;
+      color: var(--color-text-dim);
+      transition: transform 0.25s ease;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    section.is-collapsed .h2-chevron { transform: rotate(-90deg); }
+
+    .section-body {
+      overflow: hidden;
+      transition: max-height 0.35s ease, opacity 0.25s ease;
+      max-height: 8000px;
+      opacity: 1;
+    }
+    section.is-collapsed .section-body {
+      max-height: 0;
+      opacity: 0;
     }
 
     h3 {
       font-size: 1rem;
       font-weight: 600;
-      color: var(--gray-800);
+      color: var(--color-primary-hi);
       margin: 20px 0 6px;
     }
 
-    p { margin-bottom: 12px; color: var(--gray-600); }
+    p { margin-bottom: 12px; color: var(--color-text); }
     p:last-child { margin-bottom: 0; }
 
     /* ── Scenario cards ── */
@@ -119,31 +191,34 @@
       border-radius: 10px;
       padding: 16px 18px;
       border-left: 4px solid transparent;
+      background: var(--color-surface);
     }
-    .sc-diy          { background: var(--blue-bg);   border-color: var(--blue);   }
-    .sc-managed      { background: var(--red-bg);    border-color: var(--red);    }
-    .sc-active       { background: var(--green-bg);  border-color: var(--green);  }
-    .sc-active-mgd   { background: var(--orange-bg); border-color: var(--orange); }
-    .sc-diy-mom      { background: var(--violet-bg); border-color: var(--violet); }
-    .sc-active-mom   { background: var(--cyan-bg);   border-color: var(--cyan);   }
+    .sc-diy        { border-color: var(--sc-diy);        background: rgba(125,212,232,0.07); }
+    .sc-managed    { border-color: var(--sc-managed);    background: rgba(224,112, 64,0.07); }
+    .sc-active     { border-color: var(--sc-active);     background: rgba( 77,184,160,0.07); }
+    .sc-active-mgd { border-color: var(--sc-active-mgd); background: rgba(232,192, 32,0.07); }
+    .sc-diy-mom    { border-color: var(--sc-diy-mom);    background: rgba(160,128,208,0.07); }
+    .sc-active-mom { border-color: var(--sc-active-mom); background: rgba( 96,184,208,0.07); }
 
     .scenario-card .sc-label {
       font-size: 11px;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      opacity: 0.65;
+      color: var(--color-text-dim);
       margin-bottom: 2px;
     }
     .scenario-card .sc-name {
       font-size: 1rem;
       font-weight: 700;
       margin-bottom: 6px;
+      color: var(--color-text);
     }
     .scenario-card p {
       font-size: 13px;
       line-height: 1.55;
       margin: 0;
+      color: var(--color-text);
     }
 
     .swatch {
@@ -156,7 +231,6 @@
       position: relative;
       top: -1px;
     }
-    .swatch-solid  { }
     .swatch-dash   { background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 10px); }
     .swatch-dotted { background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 6px); }
 
@@ -173,22 +247,30 @@
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.06em;
-      color: var(--gray-400);
+      color: var(--color-text-dim);
       padding: 0 12px 8px 0;
-      border-bottom: 1px solid var(--gray-200);
+      border-bottom: 1px solid var(--color-border-hi);
     }
     .ctrl-table td {
       padding: 9px 12px 9px 0;
       vertical-align: top;
-      border-bottom: 1px solid var(--gray-100);
-      color: var(--gray-600);
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
       line-height: 1.5;
     }
     .ctrl-table td:first-child {
       font-weight: 600;
-      color: var(--gray-800);
+      color: var(--color-text);
       white-space: nowrap;
       width: 34%;
+    }
+    .ctrl-table .tbl-subhead {
+      padding-top: 10px;
+      font-weight: 600;
+      color: var(--color-text-dim);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
     }
 
     /* ── Comparison callouts ── */
@@ -200,33 +282,33 @@
       margin-top: 4px;
     }
     .comparison-list li {
-      background: #fff;
-      border: 1px solid var(--gray-200);
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
       border-radius: 8px;
       padding: 14px 16px;
       font-size: 13.5px;
-      color: var(--gray-600);
+      color: var(--color-text);
       line-height: 1.55;
     }
     .comparison-list li strong {
       display: block;
       font-size: 14px;
-      color: var(--gray-800);
+      color: var(--color-text);
       margin-bottom: 3px;
     }
 
     /* ── Tip boxes ── */
     .tip {
-      background: var(--blue-bg);
-      border: 1px solid #bfdbfe;
+      background: rgba(125, 212, 232, 0.07);
+      border: 1px solid var(--color-border-hi);
       border-radius: 8px;
       padding: 14px 16px;
       font-size: 13px;
-      color: #1e40af;
+      color: var(--color-text);
       margin-top: 14px;
       line-height: 1.55;
     }
-    .tip b { color: #1e3a8a; }
+    .tip b { color: var(--color-primary-hi); }
 
     /* ── Feature badges ── */
     .badge {
@@ -235,8 +317,8 @@
       font-weight: 600;
       padding: 2px 8px;
       border-radius: 4px;
-      background: var(--gray-100);
-      color: var(--gray-600);
+      background: var(--color-surface-hi);
+      color: var(--color-text-dim);
       margin-left: 6px;
       vertical-align: middle;
     }
@@ -245,630 +327,711 @@
     .disclaimer {
       margin-top: 60px;
       padding-top: 20px;
-      border-top: 1px solid var(--gray-200);
+      border-top: 1px solid var(--color-border-hi);
       font-size: 12px;
-      color: var(--gray-400);
+      color: var(--color-text-dim);
       line-height: 1.6;
+    }
+
+    /* ── Mobile: hide TOC ── */
+    @media (max-width: 768px) {
+      .toc { display: none; }
+      .guide-layout { display: block; }
     }
   </style>
 </head>
 <body>
-<div class="page">
+<script src="/static/nav.js"></script>
 
-  <!-- Nav -->
-  <div class="topnav">
-    <a href="/">← Open Simulator</a>
-    <span class="topnav-title">User Guide</span>
-  </div>
+<div class="guide-layout">
 
-  <!-- Header -->
-  <h1>Investment Simulator — User Guide</h1>
-  <p class="subtitle">
-    A tool for exploring how different investment approaches — indexed, actively managed,
-    advisor-mediated, and momentum-driven — would have performed over any historical window
-    you choose, using real fund return data.
-  </p>
-
-  <!-- ── OVERVIEW ── -->
-  <section>
-    <h2>What the simulator does</h2>
-    <p>
-      The simulator takes a starting balance, a monthly contribution amount, and a date range,
-      then replays what would have happened to your money across up to six parallel investment
-      scenarios using actual historical monthly returns from Yahoo Finance. All scenarios share
-      the same inputs so differences in outcome are attributable entirely to strategy and cost.
-    </p>
-    <p>
-      The result is a chart of portfolio value over time for each scenario, a set of stat cards
-      summarising final value, total contributions, total gain, annualised return (CAGR), fees
-      paid, and after-tax wealth, and a plain-English fee-drag callout that quantifies the cost
-      of advisory and fund expenses in dollar terms.
-    </p>
-  </section>
-
-  <!-- ── SCENARIOS ── -->
-  <section>
-    <h2>The six scenarios</h2>
-    <p>Four scenarios are always shown; two momentum scenarios can be toggled on.</p>
-
-    <div class="scenario-grid">
-      <div class="scenario-card sc-diy">
-        <div class="sc-label">Scenario 1</div>
-        <div class="sc-name">
-          <span class="swatch swatch-solid" style="background:#2563eb;"></span>
-          Low-Cost Index — No Advisor
-        </div>
-        <p>
-          Invests in a three-fund index portfolio (e.g. VTI / VXUS / BND) at your chosen
-          stock/bond split. No advisory fee. Expense ratios are negligible and embedded in
-          fund prices. This is the baseline against which all other scenarios compete.
-        </p>
-      </div>
-
-      <div class="scenario-card sc-managed">
-        <div class="sc-label">Scenario 2</div>
-        <div class="sc-name">
-          <span class="swatch swatch-dash" style="color:#dc2626;"></span>
-          Fee-Adjusted Index — With Advisor
-        </div>
-        <p>
-          Same index funds, same weights — but an annual AUM fee and the selected active fund
-          family's weighted expense ratio are deducted monthly. Shows the pure cost of advisor
-          intermediation when the underlying portfolio is unchanged.
-        </p>
-      </div>
-
-      <div class="scenario-card sc-active">
-        <div class="sc-label">Scenario 3</div>
-        <div class="sc-name">
-          <span class="swatch swatch-dotted" style="color:#16a34a;"></span>
-          Actively Managed — No Advisor
-        </div>
-        <p>
-          Replaces the index funds with the selected active fund family at the same stock/bond
-          split. No AUM fee. Because active fund expense ratios are embedded in historical NAV
-          prices, their cost is already reflected — no separate deduction is needed.
-        </p>
-      </div>
-
-      <div class="scenario-card sc-active-mgd">
-        <div class="sc-label">Scenario 4</div>
-        <div class="sc-name">
-          <span class="swatch swatch-dotted" style="color:#d97706;"></span>
-          Fee-Adjusted Active — With Advisor
-        </div>
-        <p>
-          Active funds plus an advisor's annual AUM fee. This is the full cost of having both
-          active management and professional advice — the most common real-world arrangement
-          for clients of full-service wealth managers.
-        </p>
-      </div>
-
-      <div class="scenario-card sc-diy-mom">
-        <div class="sc-label">Scenario 5 — optional</div>
-        <div class="sc-name">
-          <span class="swatch swatch-dash" style="color:#7c3aed;"></span>
-          Index Momentum — With Advisor
-        </div>
-        <p>
-          An advisor rotates annually among a universe of index-style equity and bond funds
-          using 12-month trailing momentum: the best performer gets the largest weight, worst
-          gets the smallest. AUM fee applies. A yield-curve tactical overlay can shift
-          allocation toward bonds during inversions.
-        </p>
-      </div>
-
-      <div class="scenario-card sc-active-mom">
-        <div class="sc-label">Scenario 6 — optional</div>
-        <div class="sc-name">
-          <span class="swatch swatch-dash" style="color:#0891b2;"></span>
-          Active Momentum — With Advisor
-        </div>
-        <p>
-          Same momentum strategy applied to an expanded universe of actively managed funds.
-          The advisor picks among a larger pool of equity and bond funds each year based on
-          trailing performance, again with AUM fee and optional tactical overlay.
-        </p>
-      </div>
-    </div>
-
-    <div class="tip">
-      <b>Momentum mechanics:</b> For the first 12 months (cold start) all eligible funds
-      receive equal weight. At each subsequent 12-month anniversary the simulator ranks funds
-      by trailing 12-month cumulative return and assigns proportional weights — worst fund
-      gets the smallest share, best gets the largest. No look-ahead: weights at any date use
-      only data available up to the prior month. Funds not yet in existence at a given
-      rebalance date are automatically excluded.
-    </div>
-  </section>
-
-  <!-- ── CONTROLS ── -->
-  <section>
-    <h2>Controls &amp; settings</h2>
-
-    <h3>Portfolio inputs</h3>
-    <table class="ctrl-table">
-      <thead>
-        <tr><th>Control</th><th>What it does</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Starting Amount</td>
-          <td>Lump-sum invested on day one across all scenarios identically.</td>
-        </tr>
-        <tr>
-          <td>Monthly Contribution</td>
-          <td>
-            Added at the start of each month. In non-rebalancing months contributions are
-            allocated proportionally to current holdings; in rebalancing months the full
-            portfolio (including the new contribution) is rebalanced to target weights.
-          </td>
-        </tr>
-        <tr>
-          <td>Start Date / End Date</td>
-          <td>
-            Arrow pickers let you select any month within the available historical window.
-            The simulator uses the full range between your chosen start and end dates. Reset
-            the end date to the latest available data with the ✕ button.
-          </td>
-        </tr>
-        <tr>
-          <td>Stock / Bond Split</td>
-          <td>
-            Slider from 0 % to 100 % stocks. Within the equity portion, 80 % goes to the
-            domestic equity fund and 20 % to the international equity fund.
-          </td>
-        </tr>
-        <tr>
-          <td>Rebalancing</td>
-          <td>
-            <em>Annually</em> — portfolio is rebalanced to target weights once per year.<br />
-            <em>Quarterly</em> — rebalanced every three months.<br />
-            <em>Never</em> — portfolio drifts; contributions only loosely track targets.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Portfolio configuration</h3>
-    <table class="ctrl-table">
-      <tbody>
-        <tr>
-          <td>Investment Era</td>
-          <td>
-            <em>Modern (ETFs · 2011+)</em> — uses VTI / VXUS / BND for the DIY scenario.
-            History begins when VXUS started trading (late 2011).<br /><br />
-            <em>Pre-ETF (Mutual Funds · 1987+)</em> — uses VFINX / VWIGX / VBMFX, pushing
-            history back to 1987. Changes the available active fund families and the
-            momentum rotation universe to era-appropriate funds.
-          </td>
-        </tr>
-        <tr>
-          <td>Actively Managed Funds</td>
-          <td>
-            Selects the active fund family used in Scenarios 3 &amp; 4. Each family is a
-            three-fund set covering US equity, international equity, and bonds. Hover the
-            label to see which funds are in the active momentum rotation universe for the
-            current era.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Advisor cost settings</h3>
-    <table class="ctrl-table">
-      <tbody>
-        <tr>
-          <td>Advisor AUM Fee</td>
-          <td>
-            Annual percentage of portfolio value charged by the advisor, deducted monthly
-            before each contribution. Applied to Scenarios 2, 4, 5, and 6. Typical range
-            is 0.5 %–1.5 % per year.
-          </td>
-        </tr>
-        <tr>
-          <td>Fund Expense Ratio</td>
-          <td>
-            Read-only display. The weighted-average expense ratio of the selected active fund
-            family at your current stock/bond split. Added on top of the AUM fee in Scenario 2
-            only (active fund ERs are already in historical prices for Scenarios 3–6).
-          </td>
-        </tr>
-        <tr>
-          <td>Advisor Aggressiveness</td>
-          <td>
-            Controls the momentum scenarios only.<br />
-            <em>Conservative</em> — smaller concentration in top-ranked funds; shifts 10 % of
-            equity to bonds if the yield curve was inverted in the prior 12 months.<br />
-            <em>Moderate</em> — standard rank-proportional weights; 20 % tactical shift.<br />
-            <em>Aggressive</em> — doubles the weight of the top three equity funds; 35 %
-            tactical shift during inversions.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-
-    <h3>Display options</h3>
-    <table class="ctrl-table">
-      <tbody>
-        <tr>
-          <td>Account Type</td>
-          <td>
-            <em>Taxable</em> — simulates a standard brokerage account. A 20 % long-term
-            capital-gains rate applies. No-advisor scenarios defer all tax to final
-            liquidation; with-advisor &amp; momentum scenarios recognise gains at each
-            annual rebalancing event. Tax rows appear in the stat cards.<br /><br />
-            <em>Tax-Deferred</em> — simulates a 401(k) or IRA. No capital-gains tax during
-            the simulation. Tax rows are hidden.
-          </td>
-        </tr>
-        <tr>
-          <td>Inflation-adjust (real $)</td>
-          <td>
-            Deflates all values to today's purchasing power using FRED CPIAUCSL data. Lets
-            you compare real wealth accumulation rather than nominal dollar amounts.
-          </td>
-        </tr>
-        <tr>
-          <td>Show Total Invested</td>
-          <td>
-            Adds a grey dashed line showing cumulative contributions (initial amount + all
-            monthly contributions). Any scenario line above it has produced a net gain.
-          </td>
-        </tr>
-        <tr>
-          <td>Show After-Tax Wealth</td>
-          <td>
-            Switches the chart lines to the estimated after-tax net — what you would receive
-            if you liquidated the entire portfolio and paid all applicable capital-gains tax
-            that day. Automatically disabled in Tax-Deferred mode. Hover the label for details.
-          </td>
-        </tr>
-        <tr>
-          <td>Show Momentum Rotation</td>
-          <td>
-            Reveals Scenarios 5 &amp; 6 on the chart and shows their stat cards. Hidden by
-            default to keep the initial view uncluttered. Hover the label to see the full
-            fund universe for both momentum strategies.
-          </td>
-        </tr>
-        <tr>
-          <td>Fix Y-axis Scale</td>
-          <td>
-            Locks the vertical axis so it doesn't re-scale when you adjust settings — useful
-            for comparing across eras or date ranges. A <em>Rescale</em> button appears if
-            data grows outside the locked range.
-          </td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
-
-  <!-- ── CHART FEATURES ── -->
-  <section>
-    <h2>Chart features</h2>
-
-    <h3>Crash annotations</h3>
-    <p>
-      Vertical dashed lines mark three major market events — the Dot-com peak (March 2001),
-      the 2008 Financial Crisis (September 2008), and the COVID-19 crash (February 2020).
-      They snap to the nearest available monthly date in the selected window; they disappear
-      automatically if your date range doesn't include them.
-    </p>
-
-    <h3>Yield curve inversion shading</h3>
-    <p>
-      Red-tinted bands cover every period when the 10-year Treasury yield fell below the
-      2-year yield (negative T10Y2Y spread, sourced from FRED). An inverted yield curve
-      has historically preceded recessions by 6–24 months — so inversions visible in the
-      chart provide context for subsequent drawdowns. The momentum scenarios also use this
-      signal: if the curve was inverted at any point in the prior 12 months, the advisor
-      shifts a portion of equity allocation to bonds.
-    </p>
-
-    <h3>Interactive legend &amp; tooltips</h3>
-    <p>
-      Hovering a legend entry shows a popup table of the specific fund tickers and asset
-      class for that scenario. Clicking a legend entry toggles that line's visibility.
-      The stat-card checkboxes in the bottom panel also toggle individual lines directly.
-      Hovering anywhere on the chart shows a crosshair tooltip with all scenario values
-      for that month, sorted highest-to-lowest.
-    </p>
-  </section>
-
-  <!-- ── COMPARISONS ── -->
-  <section>
-    <h2>Comparisons the simulator enables</h2>
-    <ul class="comparison-list">
-      <li>
-        <strong>Cost of advice on an index portfolio</strong>
-        Compare Scenario 1 (DIY) with Scenario 2 (Fee-Adjusted Index). The gap is the
-        dollar cost of paying an advisor and buying active funds while still holding
-        essentially the same index-style portfolio. The fee-drag callout at the bottom
-        of the page states this gap explicitly.
-      </li>
-      <li>
-        <strong>Active vs. passive management</strong>
-        Compare Scenario 1 (Low-Cost Index) with Scenario 3 (Actively Managed, no advisor).
-        This isolates the performance difference between index funds and the selected active
-        fund family without conflating it with advisory fees.
-      </li>
-      <li>
-        <strong>Full cost of active management plus advice</strong>
-        Compare Scenario 1 (DIY) with Scenario 4 (Fee-Adjusted Active). This is the most
-        common real-world comparison: an investor going it alone with index funds versus
-        paying a wealth manager who uses active funds.
-      </li>
-      <li>
-        <strong>Does momentum-based rotation beat buy-and-hold?</strong>
-        Toggle on momentum (Scenarios 5 &amp; 6) and compare them to their respective
-        buy-and-hold equivalents (Scenarios 1 &amp; 3). Both momentum scenarios carry the
-        same AUM fee as Scenario 2/4, so any outperformance represents skill above cost.
-      </li>
-      <li>
-        <strong>Era sensitivity</strong>
-        Switch between Modern (2011+) and Pre-ETF (1987+) eras to see whether the
-        conclusions hold across different market regimes — including the 1990s bull run,
-        the dot-com bust, the 2008 crisis, and the post-GFC recovery.
-      </li>
-      <li>
-        <strong>Date-range sensitivity</strong>
-        Use the start/end date pickers to zoom into specific periods — e.g., a bear market
-        only, or a single bull cycle — and see whether the relative ranking of strategies
-        is stable or depends heavily on the window chosen.
-      </li>
-      <li>
-        <strong>Stock/bond allocation effect</strong>
-        Drag the stock/bond slider across the full range to see how allocation alone
-        explains performance differences and whether advisor costs matter more at higher
-        or lower equity exposures.
-      </li>
-      <li>
-        <strong>Tax drag by strategy</strong>
-        In Taxable mode, compare the "After-Tax Value" rows across stat cards. Strategies
-        that rebalance more frequently (With Advisor / Momentum) realise gains annually and
-        pay tax sooner, while buy-and-hold strategies defer the entire tax bill to
-        liquidation — this difference can be material over long horizons.
-      </li>
-      <li>
-        <strong>Real vs. nominal wealth</strong>
-        Toggle inflation adjustment to see how much of apparent portfolio growth was offset
-        by rising prices — particularly useful when spanning decades of data.
-      </li>
+  <!-- ── Table of Contents ── -->
+  <nav class="toc" id="guide-toc">
+    <div class="toc-title">On this page</div>
+    <ul>
+      <li><a href="#overview">What it does</a></li>
+      <li><a href="#scenarios">The six scenarios</a></li>
+      <li><a href="#controls">Controls &amp; settings</a></li>
+      <li><a href="#chart">Chart features</a></li>
+      <li><a href="#comparisons">Comparisons</a></li>
+      <li><a href="#stat-cards">Stat cards</a></li>
+      <li><a href="#funds">Fund universe</a></li>
+      <li><a href="#data">Data sources</a></li>
     </ul>
-  </section>
+  </nav>
 
-  <!-- ── STAT CARDS ── -->
-  <section>
-    <h2>Reading the stat cards</h2>
-    <p>
-      Below the chart, each scenario has a stat card showing six to nine fields depending
-      on account type. The card's checkbox also controls that scenario's chart line.
-    </p>
-    <table class="ctrl-table">
-      <thead>
-        <tr><th>Field</th><th>Meaning</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Final Value</td>
-          <td>Portfolio value at the end of the simulation period (gross, before any liquidation tax).</td>
-        </tr>
-        <tr>
-          <td>Total Contributed</td>
-          <td>Starting amount plus all monthly contributions. This is your breakeven — any final value above it is a gain.</td>
-        </tr>
-        <tr>
-          <td>Total Gain</td>
-          <td>Final Value minus Total Contributed. Can be negative in declining periods.</td>
-        </tr>
-        <tr>
-          <td>CAGR</td>
-          <td>
-            Compound Annual Growth Rate: the single annualised return rate that would turn
-            Total Contributed into Final Value over the simulated period. Comparable across
-            windows of different lengths.
-          </td>
-        </tr>
-        <tr>
-          <td>Fees Paid</td>
-          <td>
-            Cumulative AUM fees deducted (and, for Scenario 2, the fund expense ratio
-            component). Zero for no-advisor scenarios.
-          </td>
-        </tr>
-        <tr>
-          <td>Taxes Paid <span class="badge">Taxable only</span></td>
-          <td>
-            Capital-gains taxes already realised — applies only to With-Advisor and Momentum
-            scenarios that trigger gains at each rebalancing event.
-          </td>
-        </tr>
-        <tr>
-          <td>Est. Tax at Sale <span class="badge">Taxable only</span></td>
-          <td>Estimated 20 % LTCG tax owed on unrealised gains if you liquidated the portfolio today.</td>
-        </tr>
-        <tr>
-          <td>After-Tax Value <span class="badge">Taxable only</span></td>
-          <td>Final Value minus Est. Tax at Sale — the net amount you would actually receive on liquidation.</td>
-        </tr>
-      </tbody>
-    </table>
-  </section>
+  <!-- ── Main content ── -->
+  <div class="guide-main">
 
-  <!-- ── FUND UNIVERSE ── -->
-  <section>
-    <h2>Fund universe &amp; selection rationale</h2>
-
-    <p>
-      The simulator works with a fixed, curated set of funds chosen to be
-      <strong>representative of broad investment approaches</strong> — not to model any
-      particular investor's portfolio or to identify top-performing funds. The goal is to
-      illustrate structural differences between strategies (passive vs. active, self-directed
-      vs. advisor-managed, buy-and-hold vs. momentum rotation) using funds that are
-      well-known, widely held, and have long enough histories to support multi-decade
-      backtests.
-    </p>
-    <p>
-      Results should be read as evidence about <em>strategies</em>, not as endorsements of
-      the specific funds shown. Swapping in comparable funds from the same category would
-      likely produce similar directional conclusions — but different numbers. The universe
-      is deliberately small so that the simulations remain legible and the cost/return
-      trade-offs stay visible, rather than getting lost in fund-selection noise.
-    </p>
-
-    <h3>Index / DIY funds — two eras</h3>
-    <p>
-      The three-fund DIY portfolio changes with the selected era. Modern ETFs begin in
-      late 2011 (limited by VXUS inception); Pre-ETF mutual funds extend history to 1987.
-    </p>
-    <table class="ctrl-table">
-      <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Era</th></tr></thead>
-      <tbody>
-        <tr><td>VTI</td>  <td>Vanguard Total Stock Market ETF</td>          <td>US Large Blend</td>              <td>Modern</td></tr>
-        <tr><td>VXUS</td> <td>Vanguard Total International Stock ETF</td>   <td>Foreign Large Blend</td>         <td>Modern</td></tr>
-        <tr><td>BND</td>  <td>Vanguard Total Bond Market ETF</td>           <td>Intermediate Core Bond</td>      <td>Modern</td></tr>
-        <tr><td>VFINX</td><td>Vanguard 500 Index Fund</td>                  <td>US Large Blend</td>              <td>Pre-ETF</td></tr>
-        <tr><td>VWIGX</td><td>Vanguard International Growth Fund</td>       <td>Foreign Large Growth</td>        <td>Pre-ETF</td></tr>
-        <tr><td>VBMFX</td><td>Vanguard Total Bond Market Index</td>         <td>Intermediate Core Bond</td>      <td>Pre-ETF</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Active fund families</h3>
-    <p>
-      Four families are available in Modern era; two families in Pre-ETF era (plus T. Rowe
-      Price, which spans both). Each family contributes one US equity, one international
-      equity, and one bond fund — a structure chosen to mirror the three-fund index
-      portfolio and keep the stock/bond split parameter meaningful across all scenarios.
-      Families were selected for long operating histories, broad name recognition, and
-      coverage of different management styles (growth, value, international).
-    </p>
-    <table class="ctrl-table">
-      <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Family / Era</th></tr></thead>
-      <tbody>
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">American / Dodge &amp; Cox — Modern</td></tr>
-        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>             <td rowspan="3">American/Dodge</td></tr>
-        <tr><td>DODFX</td><td>Dodge &amp; Cox International Stock</td>      <td>Foreign Large Value</td></tr>
-        <tr><td>PTTAX</td><td>PIMCO Total Return A</td>                     <td>Intermediate Core-Plus Bond</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Fidelity — Modern</td></tr>
-        <tr><td>FCNTX</td><td>Fidelity Contrafund</td>                      <td>US Large Growth</td>            <td rowspan="3">Fidelity</td></tr>
-        <tr><td>FIEUX</td><td>Fidelity Europe Fund</td>                     <td>Europe Stock</td></tr>
-        <tr><td>FTBFX</td><td>Fidelity Total Bond Fund</td>                 <td>Intermediate Core Bond</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">T. Rowe Price — Modern &amp; Pre-ETF</td></tr>
-        <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>            <td rowspan="3">T. Rowe Price</td></tr>
-        <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td></tr>
-        <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Vanguard Active — Modern</td></tr>
-        <tr><td>VWUSX</td><td>Vanguard U.S. Growth Fund</td>                <td>US Large Growth</td>            <td rowspan="3">Vanguard Active</td></tr>
-        <tr><td>VWILX</td><td>Vanguard Intl Growth Fund (Admiral)</td>      <td>Foreign Large Growth</td></tr>
-        <tr><td>VBTLX</td><td>Vanguard Total Bond Market Index (Admiral)</td><td>Intermediate Core Bond</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Fidelity Classic — Pre-ETF</td></tr>
-        <tr><td>FMAGX</td><td>Fidelity Magellan Fund</td>                   <td>US Large Growth</td>            <td rowspan="3">Fidelity Classic</td></tr>
-        <tr><td>FOSFX</td><td>Fidelity Overseas Fund</td>                   <td>Foreign Large Growth</td></tr>
-        <tr><td>FBNDX</td><td>Fidelity Investment Grade Bond</td>           <td>Intermediate Core Bond</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">American Funds — Pre-ETF</td></tr>
-        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>            <td rowspan="3">American Funds</td></tr>
-        <tr><td>ANWPX</td><td>American Funds New Perspective Fund A</td>    <td>World Large-Stock Growth</td></tr>
-        <tr><td>ABNDX</td><td>American Funds Bond Fund of America A</td>    <td>Intermediate Core Bond</td></tr>
-      </tbody>
-    </table>
-
-    <h3>Momentum rotation universe</h3>
-    <p>
-      When momentum scenarios are enabled, the advisor selects each year from a wider pool
-      of funds than the three used in the buy-and-hold scenarios. This pool is era-specific.
-      Sector funds are included to give the momentum strategy more opportunity to rotate
-      into assets with different return drivers — real estate, energy, health care, and
-      technology — while the bond selection shifts each year to whichever bond fund had the
-      best trailing return.
-    </p>
-    <table class="ctrl-table">
-      <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Role</th></tr></thead>
-      <tbody>
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Modern ETF era — Equity pool</td></tr>
-        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>DODFX</td><td>Dodge &amp; Cox International Stock</td>      <td>Foreign Large Value</td>   <td>Equity</td></tr>
-        <tr><td>FCNTX</td><td>Fidelity Contrafund</td>                      <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>FIEUX</td><td>Fidelity Europe Fund</td>                     <td>Europe Stock</td>          <td>Equity</td></tr>
-        <tr><td>VWUSX</td><td>Vanguard U.S. Growth Fund</td>                <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>VWILX</td><td>Vanguard Intl Growth Fund (Admiral)</td>      <td>Foreign Large Growth</td>  <td>Equity</td></tr>
-        <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td>   <td>Equity</td></tr>
-        <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td><td>Equity</td></tr>
-        <tr><td>VNQ</td>  <td>Vanguard Real Estate ETF</td>                 <td>Real Estate</td>           <td>Equity</td></tr>
-        <tr><td>XLE</td>  <td>Energy Select Sector SPDR Fund</td>           <td>Equity Energy</td>         <td>Equity</td></tr>
-        <tr><td>XLV</td>  <td>Health Care Select Sector SPDR Fund</td>      <td>Health</td>                <td>Equity</td></tr>
-        <tr><td>XLK</td>  <td>Technology Select Sector SPDR Fund</td>       <td>Technology</td>            <td>Equity</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Modern ETF era — Bond pool</td></tr>
-        <tr><td>PTTAX</td><td>PIMCO Total Return A</td>                     <td>Intermediate Core-Plus Bond</td><td>Bond</td></tr>
-        <tr><td>FTBFX</td><td>Fidelity Total Bond Fund</td>                 <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
-        <tr><td>VBTLX</td><td>Vanguard Total Bond Market Index (Admiral)</td><td>Intermediate Core Bond</td>   <td>Bond</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Pre-ETF era — Equity pool</td></tr>
-        <tr><td>FMAGX</td><td>Fidelity Magellan Fund</td>                   <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>FOSFX</td><td>Fidelity Overseas Fund</td>                   <td>Foreign Large Growth</td>  <td>Equity</td></tr>
-        <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>ANWPX</td><td>American Funds New Perspective Fund A</td>    <td>World Large-Stock Growth</td><td>Equity</td></tr>
-        <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>       <td>Equity</td></tr>
-        <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td>   <td>Equity</td></tr>
-        <tr><td>FRESX</td><td>Fidelity Real Estate Investment Portfolio</td> <td>Real Estate</td>           <td>Equity</td></tr>
-        <tr><td>FSENX</td><td>Fidelity Select Energy Portfolio</td>         <td>Equity Energy</td>         <td>Equity</td></tr>
-        <tr><td>FSPHX</td><td>Fidelity Select Health Care Portfolio</td>    <td>Health</td>                <td>Equity</td></tr>
-        <tr><td>VGSIX</td><td>Vanguard REIT Index Fund</td>                 <td>Real Estate</td>           <td>Equity</td></tr>
-
-        <tr><td colspan="4" style="padding-top:10px;font-weight:600;color:#4b5563;font-size:12px;text-transform:uppercase;letter-spacing:.05em;">Pre-ETF era — Bond pool</td></tr>
-        <tr><td>FBNDX</td><td>Fidelity Investment Grade Bond</td>           <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
-        <tr><td>ABNDX</td><td>American Funds Bond Fund of America A</td>    <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
-        <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
-      </tbody>
-    </table>
-
-    <div class="tip">
-      <b>Why this matters for interpreting results:</b> The simulator is designed to show
-      whether a <em>strategy</em> — momentum rotation, active management, advisor
-      intermediation — tends to add or subtract value relative to a low-cost index baseline.
-      It is not designed to tell you whether FCNTX is a better fund than AGTHX, or whether
-      you should own any of these specific securities. Different representative fund
-      selections from the same categories would shift the numbers while leaving the
-      structural conclusions largely intact.
+    <!-- Back link -->
+    <div class="topnav">
+      <a href="/">← Open Simulator</a>
+      <span class="topnav-title">User Guide</span>
     </div>
-  </section>
 
-  <!-- ── DATA SOURCES ── -->
-  <section>
-    <h2>Data sources &amp; limitations</h2>
-    <p>
-      Monthly adjusted-close prices come from <strong>Yahoo Finance</strong> via the yfinance
-      library; returns are computed from price changes and therefore reflect dividends
-      (reinvested) and stock splits but <em>not</em> sales loads or short-term redemption fees.
-      CPI data and yield curve spreads (T10Y2Y) come from the <strong>FRED API</strong>
-      (Federal Reserve Bank of St. Louis). Data is cached for 24 hours.
+    <!-- Header -->
+    <h1>Investment Simulator — User Guide</h1>
+    <p class="subtitle">
+      A tool for exploring how different investment approaches — indexed, actively managed,
+      advisor-mediated, and momentum-driven — would have performed over any historical window
+      you choose, using real fund return data.
     </p>
-    <p>
-      The common date range for any simulation is limited by the fund with the shortest
-      history among the selected set. Pre-ETF mode extends available history to 1987 at
-      the cost of using older, less-liquid mutual fund proxies.
-    </p>
-    <p>
-      Transaction costs, bid-ask spreads, taxes on dividends, and fund minimum-investment
-      requirements are not modelled. The momentum rotation assumes annual rebalancing is
-      frictionless. No look-ahead is used in momentum weights, but survivorship bias may
-      exist in the universe of funds available to select.
-    </p>
-  </section>
 
-  <div class="disclaimer">
-    <strong>Disclaimer:</strong> This simulator uses real historical data for educational purposes only.
-    Past performance does not guarantee future results. This is not financial advice.
-    Always consult a qualified financial professional before making investment decisions.
-  </div>
+    <!-- ── OVERVIEW ── -->
+    <section id="overview">
+      <h2>What the simulator does</h2>
+      <div class="section-body">
+        <p>
+          The simulator takes a starting balance, a monthly contribution amount, and a date range,
+          then replays what would have happened to your money across up to six parallel investment
+          scenarios using actual historical monthly returns from Yahoo Finance. All scenarios share
+          the same inputs so differences in outcome are attributable entirely to strategy and cost.
+        </p>
+        <p>
+          The result is a chart of portfolio value over time for each scenario, a set of stat cards
+          summarising final value, total contributions, total gain, annualised return (CAGR), fees
+          paid, and after-tax wealth, and a plain-English fee-drag callout that quantifies the cost
+          of advisory and fund expenses in dollar terms.
+        </p>
+      </div>
+    </section>
 
-</div>
+    <!-- ── SCENARIOS ── -->
+    <section id="scenarios">
+      <h2>The six scenarios</h2>
+      <div class="section-body">
+        <p>Four scenarios are always shown; two momentum scenarios can be toggled on.</p>
+
+        <div class="scenario-grid">
+          <div class="scenario-card sc-diy">
+            <div class="sc-label">Scenario 1</div>
+            <div class="sc-name">
+              <span class="swatch swatch-solid" style="background:#7dd4e8;"></span>
+              Low-Cost Index — No Advisor
+            </div>
+            <p>
+              Invests in a three-fund index portfolio (e.g. VTI / VXUS / BND) at your chosen
+              stock/bond split. No advisory fee. Expense ratios are negligible and embedded in
+              fund prices. This is the baseline against which all other scenarios compete.
+            </p>
+          </div>
+
+          <div class="scenario-card sc-managed">
+            <div class="sc-label">Scenario 2</div>
+            <div class="sc-name">
+              <span class="swatch swatch-dash" style="color:#e07040;"></span>
+              Fee-Adjusted Index — With Advisor
+            </div>
+            <p>
+              Same index funds, same weights — but an annual AUM fee and the selected active fund
+              family's weighted expense ratio are deducted monthly. Shows the pure cost of advisor
+              intermediation when the underlying portfolio is unchanged.
+            </p>
+          </div>
+
+          <div class="scenario-card sc-active">
+            <div class="sc-label">Scenario 3</div>
+            <div class="sc-name">
+              <span class="swatch swatch-dotted" style="color:#4db8a0;"></span>
+              Actively Managed — No Advisor
+            </div>
+            <p>
+              Replaces the index funds with the selected active fund family at the same stock/bond
+              split. No AUM fee. Because active fund expense ratios are embedded in historical NAV
+              prices, their cost is already reflected — no separate deduction is needed.
+            </p>
+          </div>
+
+          <div class="scenario-card sc-active-mgd">
+            <div class="sc-label">Scenario 4</div>
+            <div class="sc-name">
+              <span class="swatch swatch-dotted" style="color:#e8c020;"></span>
+              Fee-Adjusted Active — With Advisor
+            </div>
+            <p>
+              Active funds plus an advisor's annual AUM fee. This is the full cost of having both
+              active management and professional advice — the most common real-world arrangement
+              for clients of full-service wealth managers.
+            </p>
+          </div>
+
+          <div class="scenario-card sc-diy-mom">
+            <div class="sc-label">Scenario 5 — optional</div>
+            <div class="sc-name">
+              <span class="swatch swatch-dash" style="color:#a080d0;"></span>
+              Index Momentum — With Advisor
+            </div>
+            <p>
+              An advisor rotates annually among a universe of index-style equity and bond funds
+              using 12-month trailing momentum: the best performer gets the largest weight, worst
+              gets the smallest. AUM fee applies. A yield-curve tactical overlay can shift
+              allocation toward bonds during inversions.
+            </p>
+          </div>
+
+          <div class="scenario-card sc-active-mom">
+            <div class="sc-label">Scenario 6 — optional</div>
+            <div class="sc-name">
+              <span class="swatch swatch-dash" style="color:#60b8d0;"></span>
+              Active Momentum — With Advisor
+            </div>
+            <p>
+              Same momentum strategy applied to an expanded universe of actively managed funds.
+              The advisor picks among a larger pool of equity and bond funds each year based on
+              trailing performance, again with AUM fee and optional tactical overlay.
+            </p>
+          </div>
+        </div>
+
+        <div class="tip">
+          <b>Momentum mechanics:</b> For the first 12 months (cold start) all eligible funds
+          receive equal weight. At each subsequent 12-month anniversary the simulator ranks funds
+          by trailing 12-month cumulative return and assigns proportional weights — worst fund
+          gets the smallest share, best gets the largest. No look-ahead: weights at any date use
+          only data available up to the prior month. Funds not yet in existence at a given
+          rebalance date are automatically excluded.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CONTROLS ── -->
+    <section id="controls">
+      <h2>Controls &amp; settings</h2>
+      <div class="section-body">
+
+        <h3>Portfolio inputs</h3>
+        <table class="ctrl-table">
+          <thead>
+            <tr><th>Control</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Starting Amount</td>
+              <td>Lump-sum invested on day one across all scenarios identically.</td>
+            </tr>
+            <tr>
+              <td>Monthly Contribution</td>
+              <td>
+                Added at the start of each month. In non-rebalancing months contributions are
+                allocated proportionally to current holdings; in rebalancing months the full
+                portfolio (including the new contribution) is rebalanced to target weights.
+              </td>
+            </tr>
+            <tr>
+              <td>Start Date / End Date</td>
+              <td>
+                Arrow pickers let you select any month within the available historical window.
+                The simulator uses the full range between your chosen start and end dates. Reset
+                the end date to the latest available data with the ✕ button.
+              </td>
+            </tr>
+            <tr>
+              <td>Stock / Bond Split</td>
+              <td>
+                Slider from 0 % to 100 % stocks. Within the equity portion, 80 % goes to the
+                domestic equity fund and 20 % to the international equity fund.
+              </td>
+            </tr>
+            <tr>
+              <td>Rebalancing</td>
+              <td>
+                <em>Annually</em> — portfolio is rebalanced to target weights once per year.<br />
+                <em>Quarterly</em> — rebalanced every three months.<br />
+                <em>Never</em> — portfolio drifts; contributions only loosely track targets.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Portfolio configuration</h3>
+        <table class="ctrl-table">
+          <tbody>
+            <tr>
+              <td>Investment Era</td>
+              <td>
+                <em>Modern (ETFs · 2011+)</em> — uses VTI / VXUS / BND for the DIY scenario.
+                History begins when VXUS started trading (late 2011).<br /><br />
+                <em>Pre-ETF (Mutual Funds · 1987+)</em> — uses VFINX / VWIGX / VBMFX, pushing
+                history back to 1987. Changes the available active fund families and the
+                momentum rotation universe to era-appropriate funds.
+              </td>
+            </tr>
+            <tr>
+              <td>Actively Managed Funds</td>
+              <td>
+                Selects the active fund family used in Scenarios 3 &amp; 4. Each family is a
+                three-fund set covering US equity, international equity, and bonds. Hover the
+                label to see which funds are in the active momentum rotation universe for the
+                current era.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Advisor cost settings</h3>
+        <table class="ctrl-table">
+          <tbody>
+            <tr>
+              <td>Advisor AUM Fee</td>
+              <td>
+                Annual percentage of portfolio value charged by the advisor, deducted monthly
+                before each contribution. Applied to Scenarios 2, 4, 5, and 6. Typical range
+                is 0.5 %–1.5 % per year.
+              </td>
+            </tr>
+            <tr>
+              <td>Fund Expense Ratio</td>
+              <td>
+                Read-only display. The weighted-average expense ratio of the selected active fund
+                family at your current stock/bond split. Added on top of the AUM fee in Scenario 2
+                only (active fund ERs are already in historical prices for Scenarios 3–6).
+              </td>
+            </tr>
+            <tr>
+              <td>Advisor Aggressiveness</td>
+              <td>
+                Controls the momentum scenarios only.<br />
+                <em>Conservative</em> — smaller concentration in top-ranked funds; shifts 10 % of
+                equity to bonds if the yield curve was inverted in the prior 12 months.<br />
+                <em>Moderate</em> — standard rank-proportional weights; 20 % tactical shift.<br />
+                <em>Aggressive</em> — doubles the weight of the top three equity funds; 35 %
+                tactical shift during inversions.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Display options</h3>
+        <table class="ctrl-table">
+          <tbody>
+            <tr>
+              <td>Account Type</td>
+              <td>
+                <em>Taxable</em> — simulates a standard brokerage account. A 20 % long-term
+                capital-gains rate applies. No-advisor scenarios defer all tax to final
+                liquidation; with-advisor &amp; momentum scenarios recognise gains at each
+                annual rebalancing event. Tax rows appear in the stat cards.<br /><br />
+                <em>Tax-Deferred</em> — simulates a 401(k) or IRA. No capital-gains tax during
+                the simulation. Tax rows are hidden.
+              </td>
+            </tr>
+            <tr>
+              <td>Inflation-adjust (real $)</td>
+              <td>
+                Deflates all values to today's purchasing power using FRED CPIAUCSL data. Lets
+                you compare real wealth accumulation rather than nominal dollar amounts.
+              </td>
+            </tr>
+            <tr>
+              <td>Show Total Invested</td>
+              <td>
+                Adds a grey dashed line showing cumulative contributions (initial amount + all
+                monthly contributions). Any scenario line above it has produced a net gain.
+              </td>
+            </tr>
+            <tr>
+              <td>Show After-Tax Wealth</td>
+              <td>
+                Switches the chart lines to the estimated after-tax net — what you would receive
+                if you liquidated the entire portfolio and paid all applicable capital-gains tax
+                that day. Automatically disabled in Tax-Deferred mode. Hover the label for details.
+              </td>
+            </tr>
+            <tr>
+              <td>Show Momentum Rotation</td>
+              <td>
+                Reveals Scenarios 5 &amp; 6 on the chart and shows their stat cards. Hidden by
+                default to keep the initial view uncluttered. Hover the label to see the full
+                fund universe for both momentum strategies.
+              </td>
+            </tr>
+            <tr>
+              <td>Fix Y-axis Scale</td>
+              <td>
+                Locks the vertical axis so it doesn't re-scale when you adjust settings — useful
+                for comparing across eras or date ranges. A <em>Rescale</em> button appears if
+                data grows outside the locked range.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CHART FEATURES ── -->
+    <section id="chart">
+      <h2>Chart features</h2>
+      <div class="section-body">
+
+        <h3>Crash annotations</h3>
+        <p>
+          Vertical dashed lines mark three major market events — the Dot-com peak (March 2001),
+          the 2008 Financial Crisis (September 2008), and the COVID-19 crash (February 2020).
+          They snap to the nearest available monthly date in the selected window; they disappear
+          automatically if your date range doesn't include them.
+        </p>
+
+        <h3>Yield curve inversion shading</h3>
+        <p>
+          Red-tinted bands cover every period when the 10-year Treasury yield fell below the
+          2-year yield (negative T10Y2Y spread, sourced from FRED). An inverted yield curve
+          has historically preceded recessions by 6–24 months — so inversions visible in the
+          chart provide context for subsequent drawdowns. The momentum scenarios also use this
+          signal: if the curve was inverted at any point in the prior 12 months, the advisor
+          shifts a portion of equity allocation to bonds.
+        </p>
+
+        <h3>Interactive legend &amp; tooltips</h3>
+        <p>
+          Hovering a legend entry shows a popup table of the specific fund tickers and asset
+          class for that scenario. Clicking a legend entry toggles that line's visibility.
+          The stat-card checkboxes in the bottom panel also toggle individual lines directly.
+          Hovering anywhere on the chart shows a crosshair tooltip with all scenario values
+          for that month, sorted highest-to-lowest.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── COMPARISONS ── -->
+    <section id="comparisons">
+      <h2>Comparisons the simulator enables</h2>
+      <div class="section-body">
+        <ul class="comparison-list">
+          <li>
+            <strong>Cost of advice on an index portfolio</strong>
+            Compare Scenario 1 (DIY) with Scenario 2 (Fee-Adjusted Index). The gap is the
+            dollar cost of paying an advisor and buying active funds while still holding
+            essentially the same index-style portfolio. The fee-drag callout at the bottom
+            of the page states this gap explicitly.
+          </li>
+          <li>
+            <strong>Active vs. passive management</strong>
+            Compare Scenario 1 (Low-Cost Index) with Scenario 3 (Actively Managed, no advisor).
+            This isolates the performance difference between index funds and the selected active
+            fund family without conflating it with advisory fees.
+          </li>
+          <li>
+            <strong>Full cost of active management plus advice</strong>
+            Compare Scenario 1 (DIY) with Scenario 4 (Fee-Adjusted Active). This is the most
+            common real-world comparison: an investor going it alone with index funds versus
+            paying a wealth manager who uses active funds.
+          </li>
+          <li>
+            <strong>Does momentum-based rotation beat buy-and-hold?</strong>
+            Toggle on momentum (Scenarios 5 &amp; 6) and compare them to their respective
+            buy-and-hold equivalents (Scenarios 1 &amp; 3). Both momentum scenarios carry the
+            same AUM fee as Scenario 2/4, so any outperformance represents skill above cost.
+          </li>
+          <li>
+            <strong>Era sensitivity</strong>
+            Switch between Modern (2011+) and Pre-ETF (1987+) eras to see whether the
+            conclusions hold across different market regimes — including the 1990s bull run,
+            the dot-com bust, the 2008 crisis, and the post-GFC recovery.
+          </li>
+          <li>
+            <strong>Date-range sensitivity</strong>
+            Use the start/end date pickers to zoom into specific periods — e.g., a bear market
+            only, or a single bull cycle — and see whether the relative ranking of strategies
+            is stable or depends heavily on the window chosen.
+          </li>
+          <li>
+            <strong>Stock/bond allocation effect</strong>
+            Drag the stock/bond slider across the full range to see how allocation alone
+            explains performance differences and whether advisor costs matter more at higher
+            or lower equity exposures.
+          </li>
+          <li>
+            <strong>Tax drag by strategy</strong>
+            In Taxable mode, compare the "After-Tax Value" rows across stat cards. Strategies
+            that rebalance more frequently (With Advisor / Momentum) realise gains annually and
+            pay tax sooner, while buy-and-hold strategies defer the entire tax bill to
+            liquidation — this difference can be material over long horizons.
+          </li>
+          <li>
+            <strong>Real vs. nominal wealth</strong>
+            Toggle inflation adjustment to see how much of apparent portfolio growth was offset
+            by rising prices — particularly useful when spanning decades of data.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── STAT CARDS ── -->
+    <section id="stat-cards">
+      <h2>Reading the stat cards</h2>
+      <div class="section-body">
+        <p>
+          Below the chart, each scenario has a stat card showing six to nine fields depending
+          on account type. The card's checkbox also controls that scenario's chart line.
+        </p>
+        <table class="ctrl-table">
+          <thead>
+            <tr><th>Field</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Final Value</td>
+              <td>Portfolio value at the end of the simulation period (gross, before any liquidation tax).</td>
+            </tr>
+            <tr>
+              <td>Total Contributed</td>
+              <td>Starting amount plus all monthly contributions. This is your breakeven — any final value above it is a gain.</td>
+            </tr>
+            <tr>
+              <td>Total Gain</td>
+              <td>Final Value minus Total Contributed. Can be negative in declining periods.</td>
+            </tr>
+            <tr>
+              <td>CAGR</td>
+              <td>
+                Compound Annual Growth Rate: the single annualised return rate that would turn
+                Total Contributed into Final Value over the simulated period. Comparable across
+                windows of different lengths.
+              </td>
+            </tr>
+            <tr>
+              <td>Fees Paid</td>
+              <td>
+                Cumulative AUM fees deducted (and, for Scenario 2, the fund expense ratio
+                component). Zero for no-advisor scenarios.
+              </td>
+            </tr>
+            <tr>
+              <td>Taxes Paid <span class="badge">Taxable only</span></td>
+              <td>
+                Capital-gains taxes already realised — applies only to With-Advisor and Momentum
+                scenarios that trigger gains at each rebalancing event.
+              </td>
+            </tr>
+            <tr>
+              <td>Est. Tax at Sale <span class="badge">Taxable only</span></td>
+              <td>Estimated 20 % LTCG tax owed on unrealised gains if you liquidated the portfolio today.</td>
+            </tr>
+            <tr>
+              <td>After-Tax Value <span class="badge">Taxable only</span></td>
+              <td>Final Value minus Est. Tax at Sale — the net amount you would actually receive on liquidation.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── FUND UNIVERSE ── -->
+    <section id="funds">
+      <h2>Fund universe &amp; selection rationale</h2>
+      <div class="section-body">
+
+        <p>
+          The simulator works with a fixed, curated set of funds chosen to be
+          <strong>representative of broad investment approaches</strong> — not to model any
+          particular investor's portfolio or to identify top-performing funds. The goal is to
+          illustrate structural differences between strategies (passive vs. active, self-directed
+          vs. advisor-managed, buy-and-hold vs. momentum rotation) using funds that are
+          well-known, widely held, and have long enough histories to support multi-decade
+          backtests.
+        </p>
+        <p>
+          Results should be read as evidence about <em>strategies</em>, not as endorsements of
+          the specific funds shown. Swapping in comparable funds from the same category would
+          likely produce similar directional conclusions — but different numbers. The universe
+          is deliberately small so that the simulations remain legible and the cost/return
+          trade-offs stay visible, rather than getting lost in fund-selection noise.
+        </p>
+
+        <h3>Index / DIY funds — two eras</h3>
+        <p>
+          The three-fund DIY portfolio changes with the selected era. Modern ETFs begin in
+          late 2011 (limited by VXUS inception); Pre-ETF mutual funds extend history to 1987.
+        </p>
+        <table class="ctrl-table">
+          <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Era</th></tr></thead>
+          <tbody>
+            <tr><td>VTI</td>  <td>Vanguard Total Stock Market ETF</td>          <td>US Large Blend</td>              <td>Modern</td></tr>
+            <tr><td>VXUS</td> <td>Vanguard Total International Stock ETF</td>   <td>Foreign Large Blend</td>         <td>Modern</td></tr>
+            <tr><td>BND</td>  <td>Vanguard Total Bond Market ETF</td>           <td>Intermediate Core Bond</td>      <td>Modern</td></tr>
+            <tr><td>VFINX</td><td>Vanguard 500 Index Fund</td>                  <td>US Large Blend</td>              <td>Pre-ETF</td></tr>
+            <tr><td>VWIGX</td><td>Vanguard International Growth Fund</td>       <td>Foreign Large Growth</td>        <td>Pre-ETF</td></tr>
+            <tr><td>VBMFX</td><td>Vanguard Total Bond Market Index</td>         <td>Intermediate Core Bond</td>      <td>Pre-ETF</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Active fund families</h3>
+        <p>
+          Four families are available in Modern era; two families in Pre-ETF era (plus T. Rowe
+          Price, which spans both). Each family contributes one US equity, one international
+          equity, and one bond fund — a structure chosen to mirror the three-fund index
+          portfolio and keep the stock/bond split parameter meaningful across all scenarios.
+          Families were selected for long operating histories, broad name recognition, and
+          coverage of different management styles (growth, value, international).
+        </p>
+        <table class="ctrl-table">
+          <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Family / Era</th></tr></thead>
+          <tbody>
+            <tr><td colspan="4" class="tbl-subhead">American / Dodge &amp; Cox — Modern</td></tr>
+            <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>             <td rowspan="3">American/Dodge</td></tr>
+            <tr><td>DODFX</td><td>Dodge &amp; Cox International Stock</td>      <td>Foreign Large Value</td></tr>
+            <tr><td>PTTAX</td><td>PIMCO Total Return A</td>                     <td>Intermediate Core-Plus Bond</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">Fidelity — Modern</td></tr>
+            <tr><td>FCNTX</td><td>Fidelity Contrafund</td>                      <td>US Large Growth</td>            <td rowspan="3">Fidelity</td></tr>
+            <tr><td>FIEUX</td><td>Fidelity Europe Fund</td>                     <td>Europe Stock</td></tr>
+            <tr><td>FTBFX</td><td>Fidelity Total Bond Fund</td>                 <td>Intermediate Core Bond</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">T. Rowe Price — Modern &amp; Pre-ETF</td></tr>
+            <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>            <td rowspan="3">T. Rowe Price</td></tr>
+            <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td></tr>
+            <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">Vanguard Active — Modern</td></tr>
+            <tr><td>VWUSX</td><td>Vanguard U.S. Growth Fund</td>                <td>US Large Growth</td>            <td rowspan="3">Vanguard Active</td></tr>
+            <tr><td>VWILX</td><td>Vanguard Intl Growth Fund (Admiral)</td>      <td>Foreign Large Growth</td></tr>
+            <tr><td>VBTLX</td><td>Vanguard Total Bond Market Index (Admiral)</td><td>Intermediate Core Bond</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">Fidelity Classic — Pre-ETF</td></tr>
+            <tr><td>FMAGX</td><td>Fidelity Magellan Fund</td>                   <td>US Large Growth</td>            <td rowspan="3">Fidelity Classic</td></tr>
+            <tr><td>FOSFX</td><td>Fidelity Overseas Fund</td>                   <td>Foreign Large Growth</td></tr>
+            <tr><td>FBNDX</td><td>Fidelity Investment Grade Bond</td>           <td>Intermediate Core Bond</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">American Funds — Pre-ETF</td></tr>
+            <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>            <td rowspan="3">American Funds</td></tr>
+            <tr><td>ANWPX</td><td>American Funds New Perspective Fund A</td>    <td>World Large-Stock Growth</td></tr>
+            <tr><td>ABNDX</td><td>American Funds Bond Fund of America A</td>    <td>Intermediate Core Bond</td></tr>
+          </tbody>
+        </table>
+
+        <h3>Momentum rotation universe</h3>
+        <p>
+          When momentum scenarios are enabled, the advisor selects each year from a wider pool
+          of funds than the three used in the buy-and-hold scenarios. This pool is era-specific.
+          Sector funds are included to give the momentum strategy more opportunity to rotate
+          into assets with different return drivers — real estate, energy, health care, and
+          technology — while the bond selection shifts each year to whichever bond fund had the
+          best trailing return.
+        </p>
+        <table class="ctrl-table">
+          <thead><tr><th>Ticker</th><th>Name</th><th>Asset Class</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td colspan="4" class="tbl-subhead">Modern ETF era — Equity pool</td></tr>
+            <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>DODFX</td><td>Dodge &amp; Cox International Stock</td>      <td>Foreign Large Value</td>   <td>Equity</td></tr>
+            <tr><td>FCNTX</td><td>Fidelity Contrafund</td>                      <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>FIEUX</td><td>Fidelity Europe Fund</td>                     <td>Europe Stock</td>          <td>Equity</td></tr>
+            <tr><td>VWUSX</td><td>Vanguard U.S. Growth Fund</td>                <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>VWILX</td><td>Vanguard Intl Growth Fund (Admiral)</td>      <td>Foreign Large Growth</td>  <td>Equity</td></tr>
+            <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td>   <td>Equity</td></tr>
+            <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td><td>Equity</td></tr>
+            <tr><td>VNQ</td>  <td>Vanguard Real Estate ETF</td>                 <td>Real Estate</td>           <td>Equity</td></tr>
+            <tr><td>XLE</td>  <td>Energy Select Sector SPDR Fund</td>           <td>Equity Energy</td>         <td>Equity</td></tr>
+            <tr><td>XLV</td>  <td>Health Care Select Sector SPDR Fund</td>      <td>Health</td>                <td>Equity</td></tr>
+            <tr><td>XLK</td>  <td>Technology Select Sector SPDR Fund</td>       <td>Technology</td>            <td>Equity</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">Modern ETF era — Bond pool</td></tr>
+            <tr><td>PTTAX</td><td>PIMCO Total Return A</td>                     <td>Intermediate Core-Plus Bond</td><td>Bond</td></tr>
+            <tr><td>FTBFX</td><td>Fidelity Total Bond Fund</td>                 <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+            <tr><td>VBTLX</td><td>Vanguard Total Bond Market Index (Admiral)</td><td>Intermediate Core Bond</td>   <td>Bond</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">Pre-ETF era — Equity pool</td></tr>
+            <tr><td>FMAGX</td><td>Fidelity Magellan Fund</td>                   <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>FOSFX</td><td>Fidelity Overseas Fund</td>                   <td>Foreign Large Growth</td>  <td>Equity</td></tr>
+            <tr><td>AGTHX</td><td>American Funds Growth Fund of America A</td>  <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>ANWPX</td><td>American Funds New Perspective Fund A</td>    <td>World Large-Stock Growth</td><td>Equity</td></tr>
+            <tr><td>PRGFX</td><td>T. Rowe Price Growth Stock Fund</td>          <td>US Large Growth</td>       <td>Equity</td></tr>
+            <tr><td>PRITX</td><td>T. Rowe Price International Stock Fund</td>   <td>Foreign Large Blend</td>   <td>Equity</td></tr>
+            <tr><td>FRESX</td><td>Fidelity Real Estate Investment Portfolio</td> <td>Real Estate</td>           <td>Equity</td></tr>
+            <tr><td>FSENX</td><td>Fidelity Select Energy Portfolio</td>         <td>Equity Energy</td>         <td>Equity</td></tr>
+            <tr><td>FSPHX</td><td>Fidelity Select Health Care Portfolio</td>    <td>Health</td>                <td>Equity</td></tr>
+            <tr><td>VGSIX</td><td>Vanguard REIT Index Fund</td>                 <td>Real Estate</td>           <td>Equity</td></tr>
+
+            <tr><td colspan="4" class="tbl-subhead">Pre-ETF era — Bond pool</td></tr>
+            <tr><td>FBNDX</td><td>Fidelity Investment Grade Bond</td>           <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+            <tr><td>ABNDX</td><td>American Funds Bond Fund of America A</td>    <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+            <tr><td>PRTIX</td><td>T. Rowe Price U.S. Bond Enhanced Index</td>   <td>Intermediate Core Bond</td>    <td>Bond</td></tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          <b>Why this matters for interpreting results:</b> The simulator is designed to show
+          whether a <em>strategy</em> — momentum rotation, active management, advisor
+          intermediation — tends to add or subtract value relative to a low-cost index baseline.
+          It is not designed to tell you whether FCNTX is a better fund than AGTHX, or whether
+          you should own any of these specific securities. Different representative fund
+          selections from the same categories would shift the numbers while leaving the
+          structural conclusions largely intact.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DATA SOURCES ── -->
+    <section id="data">
+      <h2>Data sources &amp; limitations</h2>
+      <div class="section-body">
+        <p>
+          Monthly adjusted-close prices come from <strong>Yahoo Finance</strong> via the yfinance
+          library; returns are computed from price changes and therefore reflect dividends
+          (reinvested) and stock splits but <em>not</em> sales loads or short-term redemption fees.
+          CPI data and yield curve spreads (T10Y2Y) come from the <strong>FRED API</strong>
+          (Federal Reserve Bank of St. Louis). Data is cached for 24 hours.
+        </p>
+        <p>
+          The common date range for any simulation is limited by the fund with the shortest
+          history among the selected set. Pre-ETF mode extends available history to 1987 at
+          the cost of using older, less-liquid mutual fund proxies.
+        </p>
+        <p>
+          Transaction costs, bid-ask spreads, taxes on dividends, and fund minimum-investment
+          requirements are not modelled. The momentum rotation assumes annual rebalancing is
+          frictionless. No look-ahead is used in momentum weights, but survivorship bias may
+          exist in the universe of funds available to select.
+        </p>
+      </div>
+    </section>
+
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This simulator uses real historical data for educational purposes only.
+      Past performance does not guarantee future results. This is not financial advice.
+      Always consult a qualified financial professional before making investment decisions.
+    </div>
+
+  </div><!-- .guide-main -->
+</div><!-- .guide-layout -->
+
+<script>
+  // ── Collapsible sections ──
+  document.querySelectorAll('section[id]').forEach(section => {
+    const h2 = section.querySelector(':scope > h2');
+    if (!h2) return;
+
+    const chevron = document.createElement('span');
+    chevron.className = 'h2-chevron';
+    chevron.textContent = '▾';
+    h2.appendChild(chevron);
+
+    if (localStorage.getItem('guide-' + section.id) === '1') {
+      section.classList.add('is-collapsed');
+    }
+
+    h2.addEventListener('click', () => {
+      const collapsed = section.classList.toggle('is-collapsed');
+      localStorage.setItem('guide-' + section.id, collapsed ? '1' : '0');
+    });
+  });
+
+  // ── TOC active-link tracking ──
+  const tocLinks = document.querySelectorAll('.toc a');
+  const sections = document.querySelectorAll('section[id]');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(a => a.classList.remove('is-active'));
+        const link = document.querySelector(`.toc a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('is-active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
 </body>
 </html>

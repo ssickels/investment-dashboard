@@ -308,11 +308,21 @@ input[type="range"] {
 }
 
 .guide-link {
-  font-size: 12px;
+  display: inline-block;
+  font-size: 13px;
   color: var(--color-primary);
-  margin-top: -6px;
+  text-decoration: none;
+  border: 1px solid var(--color-border-hi);
+  padding: 5px 14px;
+  border-radius: 6px;
+  background: var(--color-surface);
+  margin-top: 2px;
+  transition: background 0.15s, color 0.15s;
 }
-.guide-link:hover { color: var(--color-primary-hi); }
+.guide-link:hover {
+  background: var(--color-surface-hi);
+  color: var(--color-primary-hi);
+}
 
 .data-note {
   font-size: 11px;
