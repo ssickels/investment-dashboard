@@ -761,6 +761,9 @@ input[type="range"] {
 
 .agg-toggle--disabled {
   opacity: 0.38;
+  cursor: not-allowed;
+}
+.agg-toggle--disabled .agg-option {
   pointer-events: none;
 }
 

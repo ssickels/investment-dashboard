@@ -803,6 +803,27 @@ function setAggEnabled(enabled) {
   });
 }
 
+// Tooltip on aggressiveness toggle when disabled
+(function () {
+  const toggle = document.getElementById("aggToggle");
+  const tip    = document.getElementById("sidebarTooltip");
+  if (!toggle || !tip) return;
+  toggle.addEventListener("mouseenter", () => {
+    if (!toggle.classList.contains("agg-toggle--disabled")) return;
+    tip.textContent = "Available only when Show Momentum Rotation is checked.";
+    tip.style.display = "block";
+    const rect = toggle.getBoundingClientRect();
+    const tipH = tip.getBoundingClientRect().height;
+    let top  = rect.top - tipH - 8;
+    if (top < 8) top = rect.bottom + 8;
+    let left = rect.left;
+    if (left + 448 > window.innerWidth) left = window.innerWidth - 456;
+    tip.style.top  = top  + "px";
+    tip.style.left = left + "px";
+  });
+  toggle.addEventListener("mouseleave", () => { tip.style.display = "none"; });
+})();
+
 // ==================== ERA SELECTION ====================
 
 const ERA_CONFIG = {
