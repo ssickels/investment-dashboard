@@ -722,6 +722,7 @@ input[type="range"] {
 /* ==================== AGGRESSIVENESS TOGGLE ==================== */
 .agg-toggle {
   display: flex;
+  flex-direction: column;
   border: 1px solid var(--gray-200);
   border-radius: 6px;
   overflow: hidden;
@@ -729,7 +730,6 @@ input[type="range"] {
 }
 
 .agg-option {
-  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -739,14 +739,14 @@ input[type="range"] {
   font-weight: 500;
   color: var(--gray-600);
   background: var(--color-surface);
-  border-right: 1px solid var(--gray-200);
+  border-bottom: 1px solid var(--gray-200);
   transition: background 0.15s, color 0.15s;
   user-select: none;
   text-align: center;
 }
 
 .agg-option:last-child {
-  border-right: none;
+  border-bottom: none;
 }
 
 .agg-option input[type="radio"] {
