@@ -423,9 +423,11 @@
               Fee-Adjusted Index — With Advisor
             </div>
             <p>
-              Same index funds, same weights — but an annual AUM fee and the selected active fund
-              family's weighted expense ratio are deducted monthly. Shows the pure cost of advisor
-              intermediation when the underlying portfolio is unchanged.
+              Same index funds, same weights — but an annual AUM fee is deducted monthly.
+              Models an advisor who manages a low-cost index portfolio: handling rebalancing,
+              tax-loss harvesting, and financial planning. The AUM fee slider lets you set a
+              lower rate here to reflect that this kind of advice typically costs less than
+              active fund management.
             </p>
           </div>
 
@@ -549,7 +551,7 @@
             <tr>
               <td>Investment Era</td>
               <td>
-                <em>Modern (ETFs · 2011+)</em> — uses VTI / VXUS / BND for the DIY scenario.
+                <em>Modern (ETFs · 2011+)</em> — uses VTI / VXUS / BND for the Low-Cost Index scenario.
                 History begins when VXUS started trading (late 2011).<br /><br />
                 <em>Pre-ETF (Mutual Funds · 1987+)</em> — uses VFINX / VWIGX / VBMFX, pushing
                 history back to 1987. Changes the available active fund families and the
@@ -583,8 +585,10 @@
               <td>Fund Expense Ratio</td>
               <td>
                 Read-only display. The weighted-average expense ratio of the selected active fund
-                family at your current stock/bond split. Added on top of the AUM fee in Scenario 2
-                only (active fund ERs are already in historical prices for Scenarios 3–6).
+                family at your current stock/bond split. Shown for reference only — active fund
+                ERs are already embedded in historical prices for Scenarios 3 and 4, and index
+                fund ERs (near zero) are embedded in Scenarios 1 and 2. No separate deduction
+                is made.
               </td>
             </tr>
             <tr>
@@ -699,10 +703,11 @@
         <ul class="comparison-list">
           <li>
             <strong>Cost of advice on an index portfolio</strong>
-            Compare Scenario 1 (DIY) with Scenario 2 (Fee-Adjusted Index). The gap is the
-            dollar cost of paying an advisor and buying active funds while still holding
-            essentially the same index-style portfolio. The fee-drag callout at the bottom
-            of the page states this gap explicitly.
+            Compare Scenario 1 (Low-Cost Index) with Scenario 2 (Fee-Adjusted Index). The gap
+            is the pure dollar cost of paying an advisor to manage an otherwise identical
+            index portfolio. The fee-drag callout at the bottom of the page states this gap
+            explicitly. Try lowering the AUM fee for Scenario 2 to reflect the lower rates
+            that index-focused advisors often charge.
           </li>
           <li>
             <strong>Active vs. passive management</strong>
@@ -712,7 +717,7 @@
           </li>
           <li>
             <strong>Full cost of active management plus advice</strong>
-            Compare Scenario 1 (DIY) with Scenario 4 (Fee-Adjusted Active). This is the most
+            Compare Scenario 1 (Low-Cost Index) with Scenario 4 (Fee-Adjusted Active). This is the most
             common real-world comparison: an investor going it alone with index funds versus
             paying a wealth manager who uses active funds.
           </li>
@@ -838,7 +843,7 @@
           trade-offs stay visible, rather than getting lost in fund-selection noise.
         </p>
 
-        <h3>Index / DIY funds — two eras</h3>
+        <h3>Index funds — two eras</h3>
         <p>
           The three-fund DIY portfolio changes with the selected era. Modern ETFs begin in
           late 2011 (limited by VXUS inception); Pre-ETF mutual funds extend history to 1987.

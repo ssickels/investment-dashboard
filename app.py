@@ -138,8 +138,8 @@ def portfolio():
         b = 1.0 - s
         weighted_er = round(0.8 * s * er[0] + 0.2 * s * er[1] + b * er[2], 4)
 
-        # Scenario 2: AUM fee + active fund weighted ER (applied to DIY-fund returns)
-        monthly_managed_fee = (1.0 + (aum_fee + weighted_er) / 100.0) ** (1.0 / 12.0) - 1.0
+        # Scenario 2: AUM fee only (index fund ER already embedded in historical returns)
+        monthly_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
         # Scenario 4: AUM fee only (active fund ER already embedded in historical returns)
         monthly_active_managed_fee = (1.0 + aum_fee / 100.0) ** (1.0 / 12.0) - 1.0
 
