@@ -309,6 +309,7 @@
       line-height: 1.55;
     }
     .tip b { color: var(--color-primary-hi); }
+    .tip a { color: var(--color-primary-hi); text-decoration: underline; }
 
     /* ── Feature badges ── */
     .badge {
@@ -356,6 +357,7 @@
       <li><a href="#comparisons">Comparisons</a></li>
       <li><a href="#stat-cards">Stat cards</a></li>
       <li><a href="#funds">Fund universe</a></li>
+      <li><a href="#limitations">What's not modeled</a></li>
       <li><a href="#data">Data sources</a></li>
     </ul>
   </nav>
@@ -376,6 +378,15 @@
       advisor-mediated, and momentum-driven — would have performed over any historical window
       you choose, using real fund return data.
     </p>
+    <div class="tip" style="margin-bottom: 40px;">
+      <b>A note on scope:</b> All scenarios assume disciplined, rational execution —
+      contributions made on schedule, strategies followed without deviation. Real-world
+      outcomes are shaped just as much by investor behavior and advisor incentives, neither
+      of which this tool models. The results are best read as a map of cost and strategy
+      differences under idealized conditions, not a prediction of what any individual
+      investor would actually experience. See <a href="#limitations">What this simulator
+      doesn't model</a> for a fuller discussion.
+    </div>
 
     <!-- ── OVERVIEW ── -->
     <section id="overview">
@@ -964,6 +975,99 @@
           selections from the same categories would shift the numbers while leaving the
           structural conclusions largely intact.
         </div>
+      </div>
+    </section>
+
+    <!-- ── LIMITATIONS ── -->
+    <section id="limitations">
+      <h2>What this simulator doesn't model</h2>
+      <div class="section-body">
+
+        <h3>The behavior gap</h3>
+        <p>
+          Every scenario here assumes the investor follows their chosen strategy faithfully —
+          contributing regularly, rebalancing on schedule, and never panic-selling. In practice,
+          this is one of the hardest things to do. Research consistently shows that individual
+          investors underperform the very funds they invest in, because they tend to buy after
+          gains and sell after losses.
+        </p>
+        <p>
+          This creates a wide real-world spectrum that the simulator doesn't capture. At one
+          end, the undisciplined DIY investor — panic-selling in downturns, buying back near
+          peaks, triggering unnecessary capital gains — is likely to underperform every scenario
+          shown here, often significantly. At the other end, the conflicted advisor —
+          non-fiduciary, churning accounts, chasing trading commissions, recommending products
+          for personal benefit rather than client outcomes — is also likely to deliver results
+          worse than any modeled scenario. Both failure modes are genuinely common.
+        </p>
+        <p>
+          The scenarios here represent a <em>well-behaved middle band</em>: a disciplined
+          investor working, where applicable, with an advisor acting in good faith. If your
+          concern is whether you (or an advisor) will actually execute a strategy as modeled,
+          this tool can't answer that.
+        </p>
+
+        <h3>What advisors can add that isn't modeled</h3>
+        <p>
+          The simulator captures two things an advisor does: select funds (active vs. index)
+          and charge a fee. A good advisor may also provide:
+        </p>
+        <ul class="comparison-list">
+          <li>
+            <strong>Behavioral coaching</strong>
+            Keeping clients invested through downturns may be the single most valuable thing
+            an advisor does. One prevented panic sale in a major bear market can outweigh
+            years of advisory fees — an effect this simulator cannot quantify.
+          </li>
+          <li>
+            <strong>Tax, estate, and financial planning</strong>
+            Tax-loss harvesting, Roth conversion strategies, insurance review, estate
+            planning, and goal-setting are outside the scope of this tool but can represent
+            substantial value depending on an investor's situation.
+          </li>
+          <li>
+            <strong>Structure and accountability</strong>
+            Some investors genuinely benefit from the discipline that a professional
+            relationship provides — the knowledge that someone is watching and will call
+            if things drift. That has real value for some temperaments and none for others.
+          </li>
+        </ul>
+        <p style="margin-top: 14px;">
+          Whether these benefits justify an advisor's cost depends entirely on the individual —
+          their temperament, financial complexity, and self-discipline. This simulator addresses
+          only the cost and fund-selection dimensions; it should not be used as the sole basis
+          for deciding whether to work with an advisor.
+        </p>
+
+        <h3>Past performance and regime risk</h3>
+        <p>
+          In many of the historical windows available in this simulator, active funds and
+          advisor-mediated strategies have performed competitively or better than the low-cost
+          index baseline. Before drawing strong conclusions from this, it's worth considering
+          a few things.
+        </p>
+        <p>
+          Active managers and advisors who claim predictive expertise may be "tuned" to the
+          particular market conditions of a given era — specific interest rate regimes, sector
+          leadership patterns, or volatility dynamics. When those conditions change, strategies
+          that performed well may not continue to do so. The familiar caveat that "past
+          performance does not predict future results" applies as much to investment strategies
+          and advisor approaches as it does to individual funds.
+        </p>
+        <p>
+          The simulator's historical windows (1987–present and 2011–present) include prolonged
+          bull markets, extended low-rate environments, and specific sector dynamics that may
+          not repeat. Results might look quite different over other periods — or over the
+          period ahead. The simulator's comparisons are most reliable as a measure of
+          <em>cost differences</em>, which are structural and predictable. Return differences
+          between active and passive strategies are real in the historical data, but their
+          persistence is genuinely uncertain.
+        </p>
+        <p>
+          If active strategies appear to do well in a simulation, that's worth noting — but
+          it's a reason to look more carefully, not a reason to expect the pattern to continue.
+        </p>
+
       </div>
     </section>
 
