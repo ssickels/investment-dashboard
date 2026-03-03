@@ -251,8 +251,8 @@ function buildChart(data) {
         content: crash.label.split("\n"),
         display: true,
         position: "start",
-        backgroundColor: "rgba(255,255,255,0.85)",
-        color: "#6b7280",
+        backgroundColor: "rgba(100, 210, 230, 0.12)",
+        color: "#5a9aaa",
         font: { size: 10 },
         padding: 4,
         borderRadius: 3,
@@ -422,6 +422,7 @@ function buildChart(data) {
               if (item.text.includes("Momentum")) return document.getElementById("showMomentum").checked;
               return true;
             },
+            color: "#e4f6fb",
             font: { size: 12 },
             boxWidth: 20,
             usePointStyle: true,
@@ -443,6 +444,7 @@ function buildChart(data) {
           ticks: {
             maxTicksLimit: 10,
             font: { size: 11 },
+            color: "#5a9aaa",
             maxRotation: 0,
             callback: function(value, index, ticks) {
               const label = this.getLabelForValue(value);
@@ -454,14 +456,15 @@ function buildChart(data) {
               return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
             },
           },
-          grid: { color: "rgba(0,0,0,0.04)" },
+          grid: { color: "rgba(100,210,230,0.07)" },
         },
         y: {
           ticks: {
             callback: (v) => fmt$.format(v),
             font: { size: 11 },
+            color: "#5a9aaa",
           },
-          grid: { color: "rgba(0,0,0,0.04)" },
+          grid: { color: "rgba(100,210,230,0.07)" },
         },
       },
     },
@@ -1124,6 +1127,56 @@ document.getElementById("sidebarToggle").addEventListener("click", () => {
   // Let the CSS transition finish before resizing the chart
   setTimeout(() => { if (chart) chart.resize(); }, 260);
 });
+
+// ==================== COLLAPSIBLE SIDEBAR GROUPS ====================
+{
+  const GROUP_TOOLTIPS = {
+    'group-simulation': 'Set your starting balance, contributions, date range, and asset allocation.',
+    'group-portfolio':  'Choose index vs. active funds, investment era, and advisor fee assumptions.',
+    'group-display':    'Control tax treatment, inflation adjustment, and which chart lines are shown.',
+  };
+
+  document.querySelectorAll('.sidebar-group').forEach(group => {
+    const btn     = group.querySelector('.sidebar-group-header');
+    const content = group.querySelector('.sidebar-group-content');
+    const tip     = group.id && GROUP_TOOLTIPS[group.id];
+
+    // Restore saved state
+    const saved = localStorage.getItem('sg-' + group.id);
+    if (saved === 'collapsed') group.classList.add('is-collapsed');
+
+    // Header tooltip
+    if (tip) btn.title = tip;
+
+    btn.addEventListener('click', () => {
+      const collapsed = group.classList.toggle('is-collapsed');
+      localStorage.setItem('sg-' + group.id, collapsed ? 'collapsed' : 'open');
+    });
+  });
+}
+
+// ==================== SIDEBAR TOOLTIPS ====================
+// CSS ::after tooltips are clipped by overflow-y:auto — use JS fixed positioning instead.
+{
+  const tip = document.getElementById('sidebarTooltip');
+  document.querySelectorAll('.sidebar .tooltip-term').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      const text = el.getAttribute('data-tooltip');
+      if (!text) return;
+      tip.textContent = text;
+      tip.style.display = 'block';
+      const rect = el.getBoundingClientRect();
+      const tipH = tip.getBoundingClientRect().height;
+      let top  = rect.top - tipH - 8;
+      if (top < 8) top = rect.bottom + 8;
+      let left = rect.left;
+      if (left + 448 > window.innerWidth) left = window.innerWidth - 456;
+      tip.style.top  = top  + 'px';
+      tip.style.left = left + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tip.style.display = 'none'; });
+  });
+}
 
 // ==================== INIT ====================
 

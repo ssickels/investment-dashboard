@@ -58,13 +58,14 @@ html, body {
   width: 36px;
   min-width: 36px;
   padding: 24px 0;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: hidden;
 }
 
 .sidebar-content {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 10px;
   opacity: 1;
   transition: opacity 0.15s ease;
   min-width: calc(var(--sidebar-w) - 40px);
@@ -117,6 +118,7 @@ html, body {
   color: var(--gray-600);
   line-height: 1.5;
   margin-top: -8px;
+  margin-bottom: 0;
 }
 
 .section-header {
@@ -127,6 +129,61 @@ html, body {
   color: var(--gray-400);
   padding-top: 8px;
   border-top: 1px solid var(--gray-200);
+}
+
+/* ==================== COLLAPSIBLE GROUPS ==================== */
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border-hi);
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(100, 210, 230, 0.04);
+}
+
+.sidebar-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  background: rgba(100, 210, 230, 0.07);
+  border: none;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--color-primary);
+  text-align: left;
+  transition: background 0.15s, color 0.15s;
+}
+.sidebar-group-header:hover {
+  background: rgba(100, 210, 230, 0.12);
+  color: var(--color-primary-hi);
+}
+
+.sg-chevron {
+  font-size: 14px;
+  transition: transform 0.22s ease;
+  flex-shrink: 0;
+}
+.sidebar-group.is-collapsed .sg-chevron { transform: rotate(-90deg); }
+
+.sidebar-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-height: 2000px;
+  overflow: hidden;
+  transition: max-height 0.35s ease, opacity 0.25s ease, padding 0.25s ease;
+  opacity: 1;
+  padding: 12px 12px 12px 12px;
+}
+.sidebar-group.is-collapsed .sidebar-group-content {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0;
+  padding-bottom: 0;
 }
 
 /* ==================== CONTROLS ==================== */
@@ -249,6 +306,13 @@ input[type="range"] {
   font-weight: 600;
   color: var(--gray-800);
 }
+
+.guide-link {
+  font-size: 12px;
+  color: var(--color-primary);
+  margin-top: -6px;
+}
+.guide-link:hover { color: var(--color-primary-hi); }
 
 .data-note {
   font-size: 11px;
@@ -508,8 +572,9 @@ input[type="range"] {
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: var(--gray-800);
-  color: #fff;
+  background: #001520;
+  border: 1px solid var(--color-border-hi);
+  color: var(--color-text);
   font-size: 12px;
   font-weight: 400;
   line-height: 1.6;
@@ -532,18 +597,32 @@ input[type="range"] {
   max-width: 480px;
 }
 
-/* Sidebar tooltips: anchor left so they don't overflow off-screen */
-.sidebar .tooltip-term::after {
-  left: 0;
-  transform: none;
+/* Sidebar tooltips: handled by JS (#sidebarTooltip) to escape overflow clipping */
+.sidebar .tooltip-term::after { display: none; }
+
+#sidebarTooltip {
+  position: fixed;
+  display: none;
+  background: #001520;
+  border: 1px solid var(--color-border-hi);
+  color: var(--color-text);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.6;
+  padding: 8px 12px;
+  border-radius: 6px;
+  max-width: 440px;
+  z-index: 10000;
+  pointer-events: none;
 }
 
 /* Floating tooltip (chart legend + fund hover) — positioned via JS */
 #legendTooltip {
   position: fixed;
   display: none;
-  background: var(--gray-800);
-  color: #fff;
+  background: #001520;
+  border: 1px solid var(--color-border-hi);
+  color: var(--color-text);
   font-size: 11px;
   line-height: 1.6;
   padding: 10px 14px;
