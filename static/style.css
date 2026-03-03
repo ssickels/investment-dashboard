@@ -590,7 +590,7 @@ input[type="range"] {
   line-height: 1.6;
   padding: 8px 12px;
   border-radius: 6px;
-  max-width: 300px;
+  max-width: 440px;
   white-space: pre-line;
   z-index: 100;
   pointer-events: none;
