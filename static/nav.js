@@ -9,13 +9,11 @@
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Investment Simulator</div>
       <a href="/dashboard-one/">Simulator</a>
-      <a href="/dashboard-one/about.html">About</a>
       <a href="/dashboard-one/user-guide.html">User Guide</a>
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">US Economic Dashboard</div>
       <a href="/dashboard-two/">Dashboard</a>
-      <a href="/dashboard-two/about.html">About</a>
     </div>
     <div class="nav-panel-section">
       <a href="/about.html" class="nav-panel-top-link">About This Site</a>
