@@ -63,7 +63,7 @@ ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 def _load_cache(key: str):
     r = _get_redis()
     if r:
-        val = r.get(f"cache:v2:{key}")
+        val = r.get(f"cache:v3:{key}")
         if val is None:
             return None
         # Redis TTL handles freshness; return with a current timestamp so
@@ -80,7 +80,7 @@ def _load_cache(key: str):
 def _save_cache(key: str, data: dict):
     r = _get_redis()
     if r:
-        r.setex(f"cache:v2:{key}", CACHE_TTL_SECONDS, json.dumps(data))
+        r.setex(f"cache:v3:{key}", CACHE_TTL_SECONDS, json.dumps(data))
         return
 
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -119,11 +119,7 @@ def load_price_series(ticker: str) -> pd.Series:
         return s
 
     try:
-        # Mutual funds (5-letter tickers ending in X) report NAV, which already
-        # includes reinvested distributions — applying auto_adjust on top double-counts them.
-        # ETFs report market price (ex-dividend), so auto_adjust=True is needed to get total return.
-        is_mutual_fund = len(ticker) == 5 and ticker.upper().endswith('X')
-        raw = yf.download(ticker, period="max", interval="1mo", auto_adjust=not is_mutual_fund, progress=False)
+        raw = yf.download(ticker, period="max", interval="1mo", auto_adjust=True, progress=False)
         if raw.empty:
             raise ValueError(f"No data returned for {ticker}")
 
