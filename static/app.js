@@ -1079,6 +1079,7 @@ function wireInputs() {
       const idx = parseInt(e.target.dataset.datasetIdx);
       chart.getDatasetMeta(idx).hidden = !e.target.checked;
       e.target.title = e.target.checked ? "Uncheck to hide this line on the chart" : "Check to show this line on the chart";
+      e.target.closest(".stat-card").classList.toggle("line-hidden", !e.target.checked);
       chart.update();
     });
   });

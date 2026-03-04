@@ -514,6 +514,19 @@ input[type="range"] {
   font-size: 14px;
   font-weight: 700;
   color: var(--gray-800);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.graph-swatch {
+  flex-shrink: 0;
+  transition: opacity 0.2s, filter 0.2s;
+}
+
+.stat-card.line-hidden .graph-swatch {
+  opacity: 0.25;
+  filter: grayscale(1);
 }
 
 .stat-card.diy            .stat-card-title { color: var(--blue);   }
