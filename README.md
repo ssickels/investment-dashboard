@@ -14,7 +14,7 @@ Compare three scenarios side by side:
 
 Adjust your starting balance, monthly contributions, time horizon, asset allocation, and fee assumptions. Toggle momentum rotation on or off. Choose between a Modern (ETF-era, from 2011) or Pre-ETF (from 1987) data set. Results update in real time.
 
-A [User Guide](https://stevessite.com/simulator/user-guide.html) explains the methodology, assumptions, and limitations in detail.
+A [User Guide](https://investment-dashboard-aapf.onrender.com/guide) explains the methodology, assumptions, and limitations in detail.
 
 ## Tech stack
 
