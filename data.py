@@ -63,7 +63,7 @@ ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 def _load_cache(key: str):
     r = _get_redis()
     if r:
-        val = r.get(f"cache:{key}")
+        val = r.get(f"cache:v2:{key}")
         if val is None:
             return None
         # Redis TTL handles freshness; return with a current timestamp so
@@ -80,7 +80,7 @@ def _load_cache(key: str):
 def _save_cache(key: str, data: dict):
     r = _get_redis()
     if r:
-        r.setex(f"cache:{key}", CACHE_TTL_SECONDS, json.dumps(data))
+        r.setex(f"cache:v2:{key}", CACHE_TTL_SECONDS, json.dumps(data))
         return
 
     os.makedirs(CACHE_DIR, exist_ok=True)
