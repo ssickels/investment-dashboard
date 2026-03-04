@@ -5,7 +5,7 @@
     <span></span><span></span><span></span>
   </button>
   <div id="nav-panel" aria-hidden="true">
-    <a href="/" class="nav-panel-home">&#8962; Home</a>
+    <a href="https://stevessite.com" class="nav-panel-home">&#8962; Home</a>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Investment Simulator</div>
       <a href="https://investment-dashboard-aapf.onrender.com">Simulator</a>
