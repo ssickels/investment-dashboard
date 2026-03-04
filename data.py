@@ -119,7 +119,11 @@ def load_price_series(ticker: str) -> pd.Series:
         return s
 
     try:
-        raw = yf.download(ticker, period="max", interval="1mo", auto_adjust=True, progress=False)
+        # Mutual funds (5-letter tickers ending in X) report NAV, which already
+        # includes reinvested distributions — applying auto_adjust on top double-counts them.
+        # ETFs report market price (ex-dividend), so auto_adjust=True is needed to get total return.
+        is_mutual_fund = len(ticker) == 5 and ticker.upper().endswith('X')
+        raw = yf.download(ticker, period="max", interval="1mo", auto_adjust=not is_mutual_fund, progress=False)
         if raw.empty:
             raise ValueError(f"No data returned for {ticker}")
 
