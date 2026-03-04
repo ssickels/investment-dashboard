@@ -63,7 +63,7 @@ ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 def _load_cache(key: str):
     r = _get_redis()
     if r:
-        val = r.get(f"cache:v4:{key}")
+        val = r.get(f"cache:v5:{key}")
         if val is None:
             return None
         # Redis TTL handles freshness; return with a current timestamp so
@@ -80,7 +80,7 @@ def _load_cache(key: str):
 def _save_cache(key: str, data: dict):
     r = _get_redis()
     if r:
-        r.setex(f"cache:v4:{key}", CACHE_TTL_SECONDS, json.dumps(data))
+        r.setex(f"cache:v5:{key}", CACHE_TTL_SECONDS, json.dumps(data))
         return
 
     os.makedirs(CACHE_DIR, exist_ok=True)
@@ -119,19 +119,29 @@ def load_price_series(ticker: str) -> pd.Series:
         return s
 
     try:
-        raw = yf.download(ticker, period="max", interval="1d", auto_adjust=True, progress=False)
+        raw = yf.download(ticker, period="max", interval="1d", auto_adjust=False, actions=True, progress=False)
         if raw.empty:
             raise ValueError(f"No data returned for {ticker}")
 
         # Handle multi-level columns from newer yfinance versions
         if isinstance(raw.columns, pd.MultiIndex):
             close = raw["Close"][ticker]
+            dividends = raw["Dividends"][ticker]
         else:
             close = raw["Close"]
+            dividends = raw["Dividends"]
 
         close = close.dropna()
-        # Resample daily → month-end (last trading day of each month)
-        close = close.resample("ME").last().dropna()
+        dividends = dividends.reindex(close.index).fillna(0)
+
+        # Build a total-return index manually: (price + dividend) / prev_price each day.
+        # This avoids yfinance's backward-adjustment which double-counts mutual fund
+        # capital gains distributions, inflating their historical returns by 20-80%.
+        daily_tr = ((close + dividends) / close.shift(1)).dropna()
+        tr_index = (daily_tr.cumprod() * close.iloc[0])
+
+        # Resample daily total-return index → month-end
+        close = tr_index.resample("ME").last().dropna()
         close.index = _normalize_to_month_end(close.index)
         # Remove duplicate month-end dates (keep last)
         close = close[~close.index.duplicated(keep="last")]
