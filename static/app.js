@@ -429,6 +429,12 @@ function buildChart(data) {
           },
         },
         tooltip: {
+          backgroundColor: '#002d3d',
+          borderColor: 'rgba(100, 210, 230, 0.32)',
+          borderWidth: 1,
+          titleColor: '#5a9aaa',
+          bodyColor: '#e4f6fb',
+          padding: 10,
           itemSort: (a, b) => b.parsed.y - a.parsed.y,
           callbacks: {
             label: (ctx) => {
