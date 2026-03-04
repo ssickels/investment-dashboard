@@ -13,10 +13,10 @@
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">US Economic Dashboard</div>
-      <a href="/dashboard-two/">Dashboard</a>
+      <a href="https://stevessite.com/dashboard-two/">Dashboard</a>
     </div>
     <div class="nav-panel-section">
-      <a href="/about.html" class="nav-panel-top-link">About This Site</a>
+      <a href="https://stevessite.com/about.html" class="nav-panel-top-link">About This Site</a>
     </div>
   </div>
 </nav>`;
