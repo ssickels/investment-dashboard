@@ -237,6 +237,8 @@ function buildChart(data) {
   }
 
   for (const crash of CRASHES) {
+    const crashTime = new Date(crash.target).getTime();
+    if (crashTime < chartStartTime || crashTime > chartEndTime) continue;
     const snapped = snapDate(crash.target, labels);
     if (!snapped) continue;
     const id = crash.label.replace(/\W+/g, "_");
