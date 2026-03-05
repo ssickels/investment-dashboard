@@ -179,6 +179,13 @@
       Taxes. The adjusted close price assumes all proceeds are reinvested with no tax drag whatsoever.
       For a taxable brokerage account, we layer those calculations on top — which is where the two scenarios below diverge.
     </div>
+    <p style="font-size:13px; color:var(--color-text-dim); margin-top:10px;">
+      <em>One caveat:</em> Yahoo's adjusted prices work correctly for ETFs, but overstate returns for
+      actively managed mutual funds — large annual capital gain distributions get double-counted in the
+      backward adjustment, inflating historical returns by as much as 80% over long periods. We build
+      our own total-return series from raw prices and distribution records to avoid this.
+      See <a href="/methodology#total-return">Building Total Return</a> in the Methodology for details.
+    </p>
   </section>
 
   <!-- ── SECTION 2: The two flowcharts ── -->
