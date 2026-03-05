@@ -269,7 +269,9 @@ function buildChart(data) {
       borderColor: "#2563eb",
       backgroundColor: "rgba(37,99,235,0.06)",
       borderWidth: 2.5,
+      borderDash: [8, 4],
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       fill: false,
     },
@@ -280,6 +282,7 @@ function buildChart(data) {
       backgroundColor: "rgba(220,38,38,0.06)",
       borderWidth: 2,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       borderDash: [5, 3],
       fill: false,
@@ -291,6 +294,7 @@ function buildChart(data) {
       backgroundColor: "rgba(22,163,74,0.06)",
       borderWidth: 2,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       borderDash: [2, 2],
       fill: false,
@@ -302,6 +306,7 @@ function buildChart(data) {
       backgroundColor: "rgba(217,119,6,0.06)",
       borderWidth: 2,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       borderDash: [2, 2],
       fill: false,
@@ -312,6 +317,7 @@ function buildChart(data) {
       borderColor: "#6b7280",
       borderWidth: 1.5,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0,
       borderDash: [6, 3],
       fill: false,
@@ -324,6 +330,7 @@ function buildChart(data) {
       backgroundColor: "rgba(37,99,235,0.06)",
       borderWidth: 0,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       fill: { target: 2, above: "rgba(37,99,235,0.07)", below: "rgba(22,163,74,0.07)" },
     },
@@ -334,6 +341,7 @@ function buildChart(data) {
       backgroundColor: "rgba(124,58,237,0.06)",
       borderWidth: 2,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       borderDash: [5, 3],
       fill: false,
@@ -346,6 +354,7 @@ function buildChart(data) {
       backgroundColor: "rgba(8,145,178,0.06)",
       borderWidth: 2,
       pointRadius: 0,
+      pointStyle: "line",
       tension: 0.3,
       borderDash: [5, 3],
       fill: false,
@@ -427,7 +436,7 @@ function buildChart(data) {
             },
             color: "#e4f6fb",
             font: { size: 12 },
-            boxWidth: 20,
+            boxWidth: 30,
             usePointStyle: true,
           },
         },
@@ -910,6 +919,11 @@ function setEra(era) {
   if (config.activeFunds.some(f => f.value === prev)) {
     sel.value = prev;
   }
+
+  // Reset start date so initDatePicker will snap to the new era's earliest date
+  pickerYear  = null;
+  pickerMonth = null;
+  document.getElementById("startDate").value = "";
 }
 
 // ==================== DATE PICKER ====================

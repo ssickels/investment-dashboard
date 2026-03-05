@@ -563,6 +563,17 @@ flowchart TD
           (VFINX, VWIGX, VBMFX) extends coverage back to January 1987. When you choose a start date,
           the simulator automatically clips to the earliest date for which all selected funds have data.
         </p>
+        <p>
+          When the Pre-ETF era is selected, the simulation uses VFINX, VWIGX, and VBMFX for the
+          <em>entire</em> date range — including years after 2011 when the modern ETFs (VTI, VXUS, BND)
+          became available. This is intentional. The goal is a single consistent baseline throughout the
+          simulation period. Switching fund families mid-simulation would introduce a return discontinuity
+          that is difficult to interpret. More practically, an investor who started in 1987 with these
+          Vanguard index mutual funds would likely have held them indefinitely rather than converting —
+          transaction costs, tax events, and inertia all favor staying put. The Pre-ETF era is best
+          understood as: <em>what would a patient, low-cost index investor have experienced starting in
+          the late 1980s, using the tools available at the time?</em>
+        </p>
 
         <div class="callout callout-warn">
           <strong>Survivorship bias</strong>
