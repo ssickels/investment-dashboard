@@ -119,6 +119,41 @@
       color: var(--color-primary-hi);
       text-decoration: underline;
     }
+
+    .formula-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 10px;
+      padding: 18px 22px;
+      margin: 18px 0;
+    }
+    .formula-box-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-dim);
+      margin-bottom: 12px;
+    }
+    .formula-eq {
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--color-primary-hi);
+      background: var(--color-bg);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 6px;
+      padding: 10px 16px;
+      margin-bottom: 14px;
+      line-height: 1.7;
+    }
+    .formula-example {
+      font-size: 13px;
+      color: var(--color-text-dim);
+      line-height: 1.7;
+    }
+    .formula-example strong {
+      color: var(--color-text);
+    }
   </style>
 </head>
 <body>
@@ -199,7 +234,22 @@ flowchart TD
   <!-- ── SECTION 3: Matching a real-world chart ── -->
   <section>
     <h2>Matching a real-world chart</h2>
-    <p>Growth charts on Fidelity, Vanguard, or Morningstar show total return for a single fund — starting from a lump sum, dividends reinvested, no taxes, no ongoing contributions. To get our simulator close to one of those charts:</p>
+    <p>Growth charts on Fidelity, Vanguard, or Morningstar show total return for a single fund — starting from a lump sum, dividends reinvested, no taxes, no ongoing contributions. Under the hood, the math is surprisingly simple:</p>
+
+    <div class="formula-box">
+      <div class="formula-box-label">The "growth of $10,000" formula</div>
+      <div class="formula-eq">
+        Value on date N  =  $10,000  ×  (adjusted close on date N  ÷  adjusted close on date 0)
+      </div>
+      <div class="formula-example">
+        <strong>Example:</strong> You invest $10,000 when the fund's adjusted close is $50.00.
+        Five years later it's $75.00. Chart value = $10,000 × ($75.00 / $50.00) = <strong>$15,000</strong>.<br/>
+        That's the whole calculation. Because the adjusted close already folds in reinvested dividends,
+        a single ratio gives you total return — no need to track a growing share count as dividends are paid out.
+      </div>
+    </div>
+
+    <p>This is exactly what our simulator does, extended to multiple funds weighted by your stock/bond allocation, with optional monthly contributions and rebalancing on top.</p>
     <div class="callout">
       <strong>Settings to match a "growth of $10,000" chart</strong>
       Monthly contribution: $0 &nbsp;·&nbsp; Account type: Tax-Deferred &nbsp;·&nbsp; Rebalancing: Never &nbsp;·&nbsp;
