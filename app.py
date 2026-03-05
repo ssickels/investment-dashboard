@@ -97,6 +97,11 @@ def guide():
     return send_from_directory("static", "guide.html")
 
 
+@app.route("/methodology")
+def methodology():
+    return send_from_directory("static", "methodology.html")
+
+
 @app.route("/api/portfolio")
 def portfolio():
     try:

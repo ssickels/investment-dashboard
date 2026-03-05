@@ -1,0 +1,1190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Investment Simulator — Methodology</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sc-diy:        #7dd4e8;
+      --sc-managed:    #e07040;
+      --sc-active:     #4db8a0;
+      --sc-active-mgd: #e8c020;
+      --sc-diy-mom:    #a080d0;
+      --sc-active-mom: #60b8d0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 82px 24px 80px;
+    }
+
+    /* ── Two-column layout ── */
+    .guide-layout {
+      display: flex;
+      gap: 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+      align-items: flex-start;
+    }
+
+    /* ── Table of Contents ── */
+    .toc {
+      width: 180px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 50px;
+      max-height: calc(100vh - 70px);
+      overflow-y: auto;
+    }
+
+    .toc-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-dim);
+      margin-bottom: 10px;
+      padding-left: 10px;
+    }
+
+    .toc ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .toc a {
+      display: block;
+      font-size: 12.5px;
+      color: var(--color-primary);
+      padding: 5px 10px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      text-decoration: none;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      line-height: 1.4;
+    }
+
+    .toc a:hover {
+      color: var(--color-primary);
+      background: rgba(125, 212, 232, 0.07);
+    }
+
+    .toc a.is-active {
+      color: var(--color-primary-hi);
+      border-left-color: var(--color-primary);
+      background: rgba(125, 212, 232, 0.07);
+      font-weight: 500;
+    }
+
+    /* ── Main content ── */
+    .guide-main { flex: 1; min-width: 0; }
+
+    /* ── Back link ── */
+    .topnav {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .topnav a {
+      font-size: 13px;
+      color: var(--color-primary);
+      text-decoration: none;
+      border: 1px solid var(--color-border-hi);
+      padding: 5px 14px;
+      border-radius: 6px;
+      background: var(--color-surface);
+      transition: background 0.15s, color 0.15s;
+    }
+    .topnav a:hover {
+      background: var(--color-surface-hi);
+      color: var(--color-primary-hi);
+    }
+    .topnav-title {
+      font-size: 13px;
+      color: var(--color-text-dim);
+    }
+
+    /* ── Header ── */
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--color-primary-hi);
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--color-text);
+      font-size: 1rem;
+      margin-bottom: 40px;
+      max-width: 680px;
+    }
+
+    /* ── Sections ── */
+    section { margin-bottom: 52px; scroll-margin-top: 50px; }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--color-primary-hi);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--color-border-hi);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .h2-chevron {
+      font-size: 30px;
+      color: var(--color-text-dim);
+      transition: transform 0.25s ease;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    section.is-collapsed .h2-chevron { transform: rotate(-90deg); }
+
+    .section-body {
+      overflow: hidden;
+      transition: max-height 0.35s ease, opacity 0.25s ease;
+      max-height: 8000px;
+      opacity: 1;
+    }
+    section.is-collapsed .section-body {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-primary-hi);
+      margin: 24px 0 6px;
+    }
+
+    p { margin-bottom: 12px; color: var(--color-text); }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Formula blocks ── */
+    .formula {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
+      border-left: 4px solid var(--color-primary);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-family: monospace;
+      font-size: 13.5px;
+      color: var(--color-primary-hi);
+      margin: 12px 0 16px;
+      line-height: 1.8;
+    }
+    .formula .formula-label {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: var(--color-text-dim);
+      margin-bottom: 6px;
+    }
+
+    /* ── Callout boxes ── */
+    .callout {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: var(--color-text);
+      line-height: 1.6;
+      margin: 14px 0;
+    }
+    .callout-plain { border-left: 4px solid var(--color-primary); }
+    .callout-warn  { border-left: 4px solid var(--color-negative); }
+    .callout strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--color-text);
+      margin-bottom: 4px;
+    }
+
+    /* ── Scenario color bars (matching guide) ── */
+    .sc-bar {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 3px;
+      vertical-align: middle;
+      margin-right: 5px;
+      position: relative;
+      top: -1px;
+    }
+
+    /* ── Data table ── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      margin: 12px 0 16px;
+    }
+    .data-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-dim);
+      padding: 0 12px 8px 0;
+      border-bottom: 1px solid var(--color-border-hi);
+    }
+    .data-table td {
+      padding: 9px 12px 9px 0;
+      vertical-align: top;
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+    .data-table td:first-child {
+      font-weight: 600;
+      color: var(--color-primary-hi);
+      white-space: nowrap;
+      width: 30%;
+    }
+
+    /* ── Scenario grid (4-up) ── */
+    .scenario-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 12px 0 16px;
+    }
+    @media (max-width: 600px) { .scenario-grid { grid-template-columns: 1fr; } }
+    .scenario-card {
+      border-radius: 10px;
+      padding: 16px 18px;
+      border-left: 4px solid transparent;
+      background: var(--color-surface);
+    }
+    .sc-diy        { border-color: var(--sc-diy);        background: rgba(125,212,232,0.07); }
+    .sc-managed    { border-color: var(--sc-managed);    background: rgba(224,112, 64,0.07); }
+    .sc-active     { border-color: var(--sc-active);     background: rgba( 77,184,160,0.07); }
+    .sc-active-mgd { border-color: var(--sc-active-mgd); background: rgba(232,192, 32,0.07); }
+    .scenario-card .sc-label {
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-dim);
+      margin-bottom: 2px;
+    }
+    .scenario-card .sc-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--color-text);
+    }
+    .scenario-card p {
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    /* ── Flow diagram ── */
+    .mermaid-wrap {
+      overflow-x: auto;
+      margin: 16px 0;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 8px;
+      padding: 20px 16px;
+    }
+    .mermaid-wrap svg { display: block; margin: 0 auto; overflow: visible; }
+
+    .flow-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px 24px;
+      margin-top: 14px;
+      font-size: 12.5px;
+      color: var(--color-text-dim);
+    }
+    .flow-legend-item { display: flex; align-items: center; gap: 7px; }
+    .flow-legend-dot {
+      width: 14px; height: 14px;
+      border-radius: 3px;
+      border: 2px solid;
+      flex-shrink: 0;
+      background: transparent;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 800px) {
+      .guide-layout { flex-direction: column; }
+      .toc { width: 100%; position: static; max-height: none; }
+    }
+  </style>
+</head>
+<body>
+<script src="/static/nav.js"></script>
+
+<div class="guide-layout">
+
+  <!-- TABLE OF CONTENTS -->
+  <nav class="toc" id="toc">
+    <div class="toc-title">Contents</div>
+    <ul>
+      <li><a href="#overview">Overview</a></li>
+      <li><a href="#pipeline">The Full Pipeline</a></li>
+      <li><a href="#data-sources">Data Sources</a></li>
+      <li><a href="#total-return">Building Total Return</a></li>
+      <li><a href="#alignment">Aligning the Data</a></li>
+      <li><a href="#portfolio">Portfolio Construction</a></li>
+      <li><a href="#scenarios">The Four Scenarios</a></li>
+      <li><a href="#rebalancing">Rebalancing</a></li>
+      <li><a href="#fees">Advisor Fees</a></li>
+      <li><a href="#taxes">Tax Modeling</a></li>
+      <li><a href="#inflation">Inflation Adjustment</a></li>
+      <li><a href="#momentum">Momentum Rotation</a></li>
+      <li><a href="#limitations">Known Limitations</a></li>
+    </ul>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <main class="guide-main">
+    <div class="topnav">
+      <a href="/">← Simulator</a>
+      <a href="/guide">User Guide</a>
+      <span class="topnav-title">Methodology &amp; Technical Notes</span>
+    </div>
+
+    <h1>Methodology &amp; Technical Notes</h1>
+    <p class="subtitle">
+      How the simulator gets from raw financial data to comparable portfolio values —
+      including the assumptions made at each step. Written for readers who want to
+      understand the math and modeling choices, not just the controls.
+    </p>
+
+    <!-- ── OVERVIEW ── -->
+    <section id="overview">
+      <h2>Overview <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          Your brokerage account shows a dollar value that changes every month. But if you wanted to
+          <em>reconstruct</em> that value from scratch — starting only with publicly available fund data —
+          you'd quickly run into a series of non-obvious problems. The price you see on Yahoo Finance
+          for a mutual fund or ETF is not the same as what you'd have in your account if you'd invested
+          in that fund. Distributions, expense ratios, advisor fees, rebalancing, and taxes all wedge
+          between "the fund's reported price" and "what an investor actually experienced."
+        </p>
+        <p>
+          This page explains exactly what the simulator does to bridge that gap for each of its four
+          scenarios — and where it makes simplifying assumptions. The goal is transparency: if you want
+          to evaluate whether the simulator's outputs are meaningful, or whether its assumptions match
+          your situation, everything you need to know is here.
+        </p>
+        <p>
+          The sections below follow the data's journey from raw source through each modeling step.
+          Each section opens with a plain-English summary of what's happening and why it matters,
+          followed by the specific mechanics for readers who want the details.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── PIPELINE DIAGRAM ── -->
+    <section id="pipeline">
+      <h2>The Full Pipeline <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          The diagram below shows how the simulator moves from raw data to final output —
+          and where your parameter settings shape that process. Each section of this page
+          covers one stage in detail; this is the map.
+        </p>
+        <p>
+          <strong>Reading the diagram:</strong> rectangular boxes are process steps;
+          diamonds are decision points. Lines labeled <em>[param: …]</em> inside a box
+          identify the simulator setting that controls that step. The monthly loop
+          repeats for every month in your selected date range.
+        </p>
+
+        <div class="mermaid-wrap">
+<pre class="mermaid">
+%%{init: {'theme': 'base', 'flowchart': {'useMaxWidth': false, 'htmlLabels': false}, 'themeVariables': {
+  'background': '#001e2a',
+  'mainBkg': '#002d3d',
+  'primaryColor': '#002d3d',
+  'primaryTextColor': '#e4f6fb',
+  'primaryBorderColor': '#7dd4e8',
+  'lineColor': '#5a9aaa',
+  'secondaryColor': '#001e2a',
+  'tertiaryColor': '#001420',
+  'clusterBkg': '#001420',
+  'clusterBorder': '#2a5a70',
+  'titleColor': '#c8f0f8',
+  'edgeLabelBackground': '#001e2a',
+  'fontSize': '12px'
+}}}%%
+flowchart TD
+  classDef src    fill:#002d3d,stroke:#7dd4e8,color:#c8f0f8
+  classDef proc   fill:#001e30,stroke:#4db8a0,color:#e4f6fb
+  classDef dec    fill:#2a1800,stroke:#e07040,color:#f8d8c0
+  classDef param  fill:#180d28,stroke:#a080d0,color:#d8c8f8
+  classDef out    fill:#1a2800,stroke:#e8c020,color:#f8f0c0
+  classDef hdr    fill:#001e2a,stroke:#5a9aaa,color:#5a9aaa,stroke-dasharray:3 2
+
+  HDR1[["— Data Sources —"]]:::hdr
+  YF[/"Yahoo Finance\n(prices + distributions)"/]:::src
+  FRED[/"FRED — CPI, T10Y2Y"/]:::src
+
+  HDR2[["— Data Preparation —"]]:::hdr
+  TR["Build Total Return Index"]:::proc
+  ME["Resample to month-end"]:::proc
+  AL["Align to common period\n[param: start / end dates]"]:::proc
+  INIT["Initialize portfolio by weights\n[param: stock/bond split, initial $]"]:::proc
+
+  HDR3[["— Monthly Simulation Loop —"]]:::hdr
+  RET["Apply monthly returns\n[param: monthly contribution $]"]:::proc
+  FEE{"advisor fee > 0?\n[param: advisor fee %]"}:::dec
+  FDED["Deduct monthly fee"]:::proc
+  CON["Add monthly contribution"]:::proc
+  RBM{"rebalance this month?\n[param: rebalancing frequency]"}:::dec
+  MOM{"momentum enabled?\n[param: momentum on/off]"}:::dec
+  RANK["Rank funds by 12-mo return\n[param: aggressiveness level]"]:::proc
+  YCI{"yield curve inverted?\n[data: T10Y2Y from FRED]"}:::dec
+  SHIFT["Shift equity allocation\nto bonds"]:::proc
+  RBAL["Rebalance to target weights"]:::proc
+  TXRB{"taxable account + advisor?\n[param: account type]"}:::dec
+  RTAX["Apply rebalance tax (20%)"]:::proc
+  LOOP{"more months?"}:::dec
+
+  HDR4[["— Post-Processing —"]]:::hdr
+  INFL{"show real dollars?\n[param: inflation toggle]"}:::dec
+  CPID["Apply CPI deflator"]:::proc
+  ATOG{"show after-tax?\n[param: after-tax toggle]"}:::dec
+  ATXV["Mark-to-market after-tax value"]:::proc
+  OUT[["Chart · Stat Cards"]]:::out
+
+  HDR1 --> YF & FRED
+  YF --> HDR2
+  FRED --> HDR2
+  HDR2 --> TR --> ME --> AL --> INIT --> HDR3
+  HDR3 --> RET --> FEE
+  FEE -- yes --> FDED --> CON
+  FEE -- no --> CON
+  CON --> RBM
+  RBM -- no --> LOOP
+  RBM -- yes --> MOM
+  MOM -- no --> RBAL
+  MOM -- yes --> RANK --> YCI
+  YCI -- yes --> SHIFT --> RBAL
+  YCI -- no --> RBAL
+  RBAL --> TXRB
+  TXRB -- yes --> RTAX --> LOOP
+  TXRB -- no --> LOOP
+  LOOP -- yes --> RET
+  LOOP -- no --> HDR4
+  HDR4 --> INFL
+  INFL -- yes --> CPID --> ATOG
+  INFL -- no --> ATOG
+  ATOG -- yes --> ATXV --> OUT
+  ATOG -- no --> OUT
+</pre>
+        </div>
+
+        <div class="flow-legend">
+          <span class="flow-legend-item"><span class="flow-legend-dot" style="border-color:#7dd4e8"></span>Data source</span>
+          <span class="flow-legend-item"><span class="flow-legend-dot" style="border-color:#4db8a0"></span>Process step</span>
+          <span class="flow-legend-item"><span class="flow-legend-dot" style="border-color:#e07040; border-radius:50%"></span>Decision point</span>
+          <span class="flow-legend-item"><span class="flow-legend-dot" style="border-color:#e8c020"></span>Output</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── DATA SOURCES ── -->
+    <section id="data-sources">
+      <h2>Data Sources <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          The simulator uses two external data sources: Yahoo Finance for fund price and distribution
+          history, and the Federal Reserve (FRED) for inflation and yield curve data.
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Source</th><th>What we use</th><th>Frequency</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Yahoo Finance</td>
+              <td>Daily closing prices and distributions (dividends + capital gains) for each fund ticker</td>
+              <td>Daily, resampled to month-end</td>
+            </tr>
+            <tr>
+              <td>FRED — CPIAUCSL</td>
+              <td>Consumer Price Index for All Urban Consumers, used for inflation adjustment</td>
+              <td>Monthly</td>
+            </tr>
+            <tr>
+              <td>FRED — T10Y2Y</td>
+              <td>10-Year minus 2-Year Treasury spread, used to identify yield curve inversions</td>
+              <td>Daily, averaged to monthly</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Why Yahoo Finance, and what exactly do we fetch?</h3>
+        <p>
+          Yahoo Finance provides free access to the full history of fund NAV (net asset value) prices
+          and distribution records. Critically, we fetch these as <em>two separate data streams</em>:
+          raw unadjusted closing prices, and a separate record of every distribution (dividend or capital
+          gains payout) on its ex-dividend date. We do <strong>not</strong> use Yahoo's pre-adjusted price
+          series — see the next section for why.
+        </p>
+
+        <h3>Coverage dates</h3>
+        <p>
+          Different funds have different inception dates, which limits how far back any comparison can go.
+          The simulator's default (Modern / ETF) portfolio uses VTI, VXUS, and BND; the earliest common
+          date for all three is around September 2011, driven by VXUS's inception. The Pre-ETF portfolio
+          (VFINX, VWIGX, VBMFX) extends coverage back to January 1987. When you choose a start date,
+          the simulator automatically clips to the earliest date for which all selected funds have data.
+        </p>
+
+        <div class="callout callout-warn">
+          <strong>Survivorship bias</strong>
+          The funds available in the simulator are well-known, long-surviving funds. The full population
+          of actively managed funds from 1987 included many others that quietly closed or merged after
+          poor performance and are therefore absent from any comparison like this. This is a real
+          limitation and is discussed further in the Known Limitations section.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── TOTAL RETURN ── -->
+    <section id="total-return">
+      <h2>Building a Total Return Index <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          If you look up a fund's price chart on Yahoo Finance, you're seeing its NAV — the per-share
+          value of the fund's holdings. But when a fund pays out a dividend or capital gains distribution,
+          that payment <em>leaves the fund</em>: the NAV drops by the distribution amount on the
+          ex-dividend date, even though investors who reinvest receive new shares that offset the drop.
+          A price chart that doesn't account for reinvested distributions will therefore show the fund
+          significantly underperforming its actual investor experience over time.
+        </p>
+        <p>
+          <strong>The simulator builds a total return index manually for every fund.</strong>
+          This means we assume all distributions are immediately reinvested — which is the standard
+          assumption for comparing investment strategies and matches what happens in most tax-deferred
+          accounts and many taxable accounts.
+        </p>
+
+        <h3>The construction formula</h3>
+        <p>
+          For each trading day, we compute a one-day total return that includes any distribution
+          paid that day:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Daily total return</div>
+          daily_return<sub>t</sub> = (close<sub>t</sub> + distribution<sub>t</sub>) / close<sub>t-1</sub>
+        </div>
+        <p>
+          We then compound these daily returns into a cumulative total return index, anchored to
+          the fund's first available closing price:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Cumulative index</div>
+          TR_index<sub>t</sub> = close<sub>0</sub> × ∏ daily_return<sub>1..t</sub>
+        </div>
+        <p>
+          Monthly returns are then derived by taking the percentage change between consecutive
+          month-end values of this index.
+        </p>
+
+        <h3>Why not use Yahoo's pre-adjusted prices?</h3>
+        <p>
+          Yahoo Finance offers a "adjusted close" price series that attempts to account for
+          distributions by adjusting all historical prices backward. For ETFs and many stocks this
+          works reasonably well. For <strong>actively managed mutual funds, it does not</strong> — because
+          these funds distribute large capital gains annually, and Yahoo's backward adjustment
+          double-counts these distributions, making the fund's historical record appear significantly
+          better than it actually was. In tests, using adjusted close prices for active mutual funds
+          inflated their apparent returns by 20–80% over multi-decade periods. The manual construction
+          above avoids this entirely.
+        </p>
+
+        <h3>Reinvestment timing assumption</h3>
+        <p>
+          Yahoo records distributions on the <strong>ex-dividend date</strong>, which is when the distribution
+          amount is reflected in NAV. In practice, investors receive the cash on the <em>payable date</em>,
+          typically two to four weeks later. The simulator assumes reinvestment at the ex-dividend date's
+          closing price rather than the payable date's. For monthly-resolution results this introduces
+          a negligible timing imprecision.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ALIGNMENT ── -->
+    <section id="alignment">
+      <h2>Aligning the Data <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          To compare multiple funds on equal footing, their return series must cover exactly the
+          same dates. Two steps are needed: normalizing each fund's data to a common calendar,
+          and clipping all series to the period where every fund has data.
+        </p>
+
+        <h3>Month-end normalization</h3>
+        <p>
+          Daily total return indices are resampled to month-end: we take the last available value
+          in each calendar month. All series are then normalized to standard month-end timestamps
+          (the last calendar day of each month), which ensures that February 28 in one series
+          aligns with February 28 in every other, regardless of whether the fund had a trading
+          day on that exact date.
+        </p>
+
+        <h3>Common-period alignment (inner join)</h3>
+        <p>
+          Monthly returns are computed for each fund individually. The four base scenarios then
+          use an <em>inner join</em>: only months where every selected fund has a return value are
+          included. This means the simulation period is determined by the fund with the latest
+          inception date in the comparison set. For the default ETF portfolio, that's VXUS
+          (September 2011). Any month where any fund is missing data is excluded entirely, which
+          prevents the simulator from implicitly assuming a fund existed before it did.
+        </p>
+
+        <div class="callout callout-plain">
+          <strong>What this means in practice</strong>
+          If you select a start date earlier than the latest fund's inception, the simulator
+          silently moves your start date forward to the first month of common data. The displayed
+          date range always reflects what was actually simulated.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── PORTFOLIO CONSTRUCTION ── -->
+    <section id="portfolio">
+      <h2>Portfolio Construction <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          Each scenario is built around a three-fund portfolio: a US equity fund, an international
+          equity fund, and a bond fund. Your stock/bond split slider determines the overall equity
+          and bond allocations; within the equity portion, the split is fixed at 80% US / 20%
+          international.
+        </p>
+
+        <div class="formula">
+          <div class="formula-label">Target weights (example: 80% stocks)</div>
+          US equity weight    = 0.80 × stock_pct  →  64% of portfolio<br>
+          Intl equity weight  = 0.20 × stock_pct  →  16% of portfolio<br>
+          Bond weight         = 1 − stock_pct      →  20% of portfolio
+        </div>
+
+        <h3>Per-fund holding tracking</h3>
+        <p>
+          Rather than tracking a single aggregate portfolio value, the simulator tracks a separate
+          dollar balance for each fund at every time step. This matters for rebalancing: when the
+          portfolio drifts away from target weights, the simulator can correctly identify which
+          positions to grow and which to trim, and can apply taxes only to the positions being
+          reduced.
+        </p>
+
+        <h3>How monthly returns are applied</h3>
+        <p>
+          At each monthly time step, each fund's balance is multiplied by <code>(1 + that fund's
+          monthly return)</code>. Returns come from the total return index constructed in the
+          previous section and therefore include reinvested distributions. The sequence within each
+          month is: apply returns → deduct advisor fee (if any) → add monthly contribution →
+          rebalance (if scheduled).
+        </p>
+      </div>
+    </section>
+
+    <!-- ── THE FOUR SCENARIOS ── -->
+    <section id="scenarios">
+      <h2>The Four Scenarios <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          The simulator runs four parallel portfolios simultaneously, using the same start date,
+          contribution schedule, and stock/bond split for all four. The scenarios differ in which
+          funds they hold and what fees are applied on top of those funds' underlying returns.
+        </p>
+
+        <div class="scenario-grid">
+          <div class="scenario-card sc-diy">
+            <div class="sc-label">Scenario 1</div>
+            <div class="sc-name">Low-Cost Index</div>
+            <p>Index funds (e.g. VTI / VXUS / BND). No advisor. No fees beyond the funds'
+            own expense ratios, which are already embedded in their historical NAV prices.
+            This is the baseline.</p>
+          </div>
+          <div class="scenario-card sc-managed">
+            <div class="sc-label">Scenario 2</div>
+            <div class="sc-name">Fee-Adjusted Index</div>
+            <p>Same index funds as Scenario 1, but with an annual advisor AUM fee
+            deducted monthly. Represents using index funds but paying for a financial advisor.</p>
+          </div>
+          <div class="scenario-card sc-active">
+            <div class="sc-label">Scenario 3</div>
+            <div class="sc-name">Actively Managed</div>
+            <p>Active mutual funds (e.g. AGTHX / DODFX / PTTAX). No advisor. The funds'
+            expense ratios are already embedded in their historical NAV prices — no separate
+            fee deduction is needed.</p>
+          </div>
+          <div class="scenario-card sc-active-mgd">
+            <div class="sc-label">Scenario 4</div>
+            <div class="sc-name">Fee-Adjusted Active</div>
+            <p>Same active funds as Scenario 3, plus an annual advisor AUM fee deducted
+            monthly. The fund ERs are still embedded in returns; only the advisor fee is
+            added on top.</p>
+          </div>
+        </div>
+
+        <h3>How expense ratios are handled</h3>
+        <p>
+          <strong>Fund expense ratios are not explicitly deducted by the simulator.</strong> Instead,
+          they are already "baked in" to the funds' historical return data: every day's NAV already
+          reflects the fund's management expenses being deducted from the portfolio. This is how
+          fund expenses actually work — they are accrued daily against the fund's assets, not billed
+          separately to investors. The weighted expense ratio displayed in the sidebar is informational
+          only; it shows how much of your return is being silently absorbed by fund costs, but the
+          simulation doesn't double-count it.
+        </p>
+        <p>
+          This also means that when comparing index funds to active funds, the comparison is genuinely
+          apples-to-apples: both sets of returns already reflect their respective cost structures.
+          The index funds' low expense ratios (around 0.03–0.05%/year) contribute only trivially to
+          their NAV drag; the active funds' higher ratios (often 0.4–1.0%/year) are already reducing
+          their displayed historical performance.
+        </p>
+
+        <h3>The advisor AUM fee as a separate variable</h3>
+        <p>
+          Because advisor fees vary widely (typically 0.5–1.5%/year) and are not embedded in any
+          fund's returns, they are applied as an explicit monthly deduction. This allows you to
+          dial in your actual or hypothetical advisor cost and see its compounding impact over time.
+          See the Advisor Fees section below for the exact mechanics.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── REBALANCING ── -->
+    <section id="rebalancing">
+      <h2>Rebalancing <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          Over time, funds grow at different rates and the portfolio drifts away from its target
+          weights. Rebalancing restores those weights by selling the overweight positions and buying
+          the underweight ones. The simulator supports three rebalancing frequencies: annually,
+          quarterly, and never.
+        </p>
+
+        <h3>What happens at a rebalance</h3>
+        <p>
+          At each rebalance event, the simulator computes the new target dollar amount for each fund
+          based on current portfolio value plus the month's contribution:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Rebalance targets</div>
+          target<sub>fund</sub> = (portfolio_value + monthly_contribution) × weight<sub>fund</sub>
+        </div>
+        <p>
+          Each fund's balance is then set to its target. In a taxable account, positions being
+          <em>reduced</em> trigger realized capital gains (see Tax Modeling). Positions being increased
+          do not.
+        </p>
+
+        <h3>Between rebalances: proportional contribution</h3>
+        <p>
+          In months without a scheduled rebalance, the monthly contribution is added to each fund
+          proportionally to its current weight in the portfolio. This means contributions naturally
+          provide some drift-offsetting without triggering a formal rebalance. It also means
+          the "never rebalance" option still allocates new money proportionally rather than
+          sending it all to a fixed allocation — the portfolio drifts, and contributions
+          follow the drift.
+        </p>
+
+        <h3>First month</h3>
+        <p>
+          In the first month, the initial investment is distributed to all three funds according
+          to the target weights. No contribution is added in month one — the first monthly
+          contribution begins in month two.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── ADVISOR FEES ── -->
+    <section id="fees">
+      <h2>Advisor Fees <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          Advisor fees are expressed as an annual percentage of assets under management (AUM).
+          In reality, most advisors charge quarterly (billing on the prior quarter's ending balance),
+          but for modeling purposes a monthly accrual against the current balance is equivalent and
+          simpler to implement consistently.
+        </p>
+
+        <h3>Monthly fee conversion</h3>
+        <p>
+          The annual rate is converted to a monthly equivalent using geometric (not simple) division,
+          which correctly accounts for compounding:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Monthly fee rate</div>
+          monthly_rate = (1 + annual_rate / 100)<sup>1/12</sup> − 1
+        </div>
+        <p>
+          For example, a 1.0% annual fee becomes approximately 0.0830% per month.
+        </p>
+
+        <h3>Application sequence</h3>
+        <p>
+          The fee is deducted <em>before</em> the monthly contribution is added. It is applied to
+          the current portfolio value by scaling all fund holdings down proportionally:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Fee deduction</div>
+          fee = portfolio_value × monthly_rate<br>
+          holdings<sub>fund</sub> ×= (portfolio_value − fee) / portfolio_value
+        </div>
+        <p>
+          This preserves the relative weights across funds while reducing total portfolio value by
+          exactly the fee amount. The cumulative fees paid are tracked and displayed in the stat cards.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── TAX MODELING ── -->
+    <section id="taxes">
+      <h2>Tax Modeling <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          Real after-tax wealth — what you'd actually net if you liquidated your portfolio —
+          depends on both the account type and the investment strategy's trading behavior.
+          The simulator models this with three distinct tax modes, applied differently
+          across the four scenarios.
+        </p>
+
+        <div class="callout callout-plain">
+          <strong>Tax-deferred accounts (401k, IRA)</strong>
+          No capital gains tax is applied at any point. All values shown are pre-tax gross values,
+          which is the appropriate measure for retirement accounts where taxes are deferred or
+          eliminated.
+        </div>
+
+        <h3>Taxable accounts: two behaviors</h3>
+        <p>
+          In taxable mode, the simulator distinguishes between strategies that trigger capital gains
+          continuously (via active rebalancing) versus those that defer realization until sale:
+        </p>
+
+        <table class="data-table">
+          <thead>
+            <tr><th>Scenario</th><th>When gains are taxed</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Low-Cost Index &amp; Active (no advisor)</td>
+              <td>At liquidation only. Gains accumulate unrealized throughout the simulation period and are taxed in full when you "sell" at the end.</td>
+            </tr>
+            <tr>
+              <td>Fee-Adjusted Index &amp; Active (with advisor)</td>
+              <td>At each rebalancing event (on positions being reduced) <em>and</em> at final liquidation for any remaining unrealized gains. Advisors typically trigger annual rebalancing, which realizes gains.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>The capital gains tax rate</h3>
+        <p>
+          A flat 20% long-term capital gains rate is applied throughout. In reality, the rate
+          depends on your income (0%, 15%, or 20% federally, plus potential state taxes and the
+          3.8% Net Investment Income Tax for high earners). The 20% rate represents the upper
+          federal bracket and is intended as a conservative estimate for illustrative purposes.
+        </p>
+
+        <h3>Cost basis tracking and rebalance taxation</h3>
+        <p>
+          The simulator tracks a single aggregate cost basis for the entire portfolio — the
+          cumulative sum of all contributions made so far. At each rebalancing event, it estimates
+          what fraction of the current portfolio value represents unrealized gains:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Gain rate at rebalance</div>
+          gain_rate = max(0, (portfolio_value − cost_basis) / portfolio_value)
+        </div>
+        <p>
+          Tax is then applied only to the dollar value of positions being reduced (sold), multiplied
+          by the gain rate:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Rebalance tax</div>
+          tax = Σ (amount_sold<sub>fund</sub> × gain_rate × 0.20)   [for funds being trimmed]
+        </div>
+        <p>
+          After paying rebalance taxes, the cost basis is stepped up by the after-tax value of the
+          gains that were just recognized, so those gains aren't taxed again at liquidation.
+        </p>
+
+        <h3>After-tax wealth display</h3>
+        <p>
+          The "Show after-tax wealth" toggle causes chart lines to reflect mark-to-market
+          after-tax wealth: the value you would net at any given point if you liquidated the
+          entire portfolio on that date and paid taxes on all remaining unrealized gains.
+          This is a useful way to see the real cost of deferred taxes building up over time.
+        </p>
+
+        <h3>Simplifications</h3>
+        <p>
+          The tax model uses a single aggregate cost basis rather than per-lot tracking (which
+          would support specific identification or FIFO methods). It also uses a uniform 20% rate.
+          Both simplifications mean the numbers are illustrative, not tax advice — actual tax
+          outcomes will differ based on your specific situation.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── INFLATION ADJUSTMENT ── -->
+    <section id="inflation">
+      <h2>Inflation Adjustment <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          Portfolio values in nominal dollars can be misleading over long periods because a dollar
+          in 1987 bought significantly more than a dollar today. The inflation adjustment converts
+          all values to today's purchasing power — "real dollars" — so that growth curves reflect
+          genuine increases in wealth rather than partly just the shrinking value of money.
+        </p>
+
+        <h3>CPI deflator construction</h3>
+        <p>
+          The simulator uses the Consumer Price Index for All Urban Consumers (CPIAUCSL) from FRED.
+          A deflator series is computed by dividing the CPI value at the simulation's base date
+          (the end of the simulation period) by the CPI value at each earlier date:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Deflator</div>
+          deflator<sub>t</sub> = CPI<sub>end</sub> / CPI<sub>t</sub>
+        </div>
+        <p>
+          Multiplying a nominal portfolio value by this deflator converts it to the equivalent
+          purchasing power in today's dollars. Values after the base date have a deflator of 1.0
+          (by definition, today's dollars are today's dollars). Values in earlier periods have
+          deflators greater than 1.0, inflating them to reflect their higher purchasing power.
+        </p>
+        <p>
+          Inflation adjustment is applied as a final step, after all fee and tax calculations,
+          so that the real-dollar values accurately represent real-dollar wealth after costs.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── MOMENTUM ── -->
+    <section id="momentum">
+      <h2>Momentum Rotation <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          The optional momentum scenarios simulate an advisor strategy that annually reallocates
+          toward recent winners within a larger universe of funds. Both momentum scenarios include
+          the advisor AUM fee and are run in taxable rebalance mode (gains realized annually),
+          since active rotation is fundamentally an advisor-driven strategy.
+        </p>
+
+        <h3>Fund universe</h3>
+        <p>
+          Rather than the fixed three-fund portfolio used in the base scenarios, momentum uses an
+          expanded universe: up to 12 equity funds and 3 bond funds in ETF mode (fewer in Pre-ETF
+          mode, constrained by data availability). Only funds with a full 12 months of return history
+          at the time of each rebalance are eligible — this prevents look-ahead bias from using
+          funds that didn't yet exist.
+        </p>
+
+        <h3>Rank-based weighting</h3>
+        <p>
+          At each annual rebalance, equity funds are ranked by their trailing 12-month cumulative
+          return. The best-performing fund receives <em>N</em> points, the next receives
+          <em>N−1</em>, and so on down to 1 point for the worst. Portfolio weights are then
+          proportional to point totals. This gives the top performers a larger allocation while
+          maintaining exposure to all eligible funds — a smoother approach than pure
+          "winner takes all" rotation.
+        </p>
+        <p>
+          The bond allocation always goes entirely to the single best-performing bond fund.
+        </p>
+
+        <h3>Aggressiveness levels</h3>
+        <p>
+          Three aggressiveness settings modify the equity concentration:
+        </p>
+        <table class="data-table">
+          <thead>
+            <tr><th>Level</th><th>Modification</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Conservative</td>
+              <td>A floor of 5% of the equity allocation is applied to every eligible fund before normalizing weights. This reduces concentration in top performers and ensures all funds retain meaningful exposure.</td>
+            </tr>
+            <tr>
+              <td>Moderate</td>
+              <td>Standard N-point weighting with no floor or amplification.</td>
+            </tr>
+            <tr>
+              <td>Aggressive</td>
+              <td>The top three ranked funds have their point totals doubled before normalization, significantly concentrating the portfolio in the recent winners.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Yield curve tactical overlay</h3>
+        <p>
+          If the yield curve (the 10-Year minus 2-Year Treasury spread, T10Y2Y from FRED) was
+          negative at <em>any point</em> during the prior 12 months, the strategy shifts a portion
+          of the equity allocation to bonds at the next rebalance. The shift amount depends on
+          aggressiveness: 10% of the equity allocation for Conservative, 20% for Moderate, 35%
+          for Aggressive. The red-shaded regions on the chart mark historical inversion periods.
+        </p>
+        <p>
+          This overlay is defensive in nature — yield curve inversions have historically preceded
+          recessions, so the strategy reduces equity exposure after a signal has appeared. Note that
+          this is backward-looking (uses prior 12 months) and does not use any forward-looking information.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── KNOWN LIMITATIONS ── -->
+    <section id="limitations">
+      <h2>Known Limitations <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          The simulator is designed to be as rigorous as a free public-data tool can be, but
+          several significant simplifications and caveats apply.
+        </p>
+
+        <h3>Survivorship bias</h3>
+        <p>
+          The active funds in the simulator are well-known, large, long-surviving funds. They were
+          selected precisely because they have long histories — and they have long histories partly
+          because they performed well enough to survive. The full universe of actively managed funds
+          from 1987 or 2011 included many others that quietly closed or merged after poor performance.
+          Any comparison between the curated set here and the index therefore overstates how well
+          a randomly chosen active fund would have done. This is a structural limitation of any
+          comparison using publicly available data, not a flaw specific to this tool.
+        </p>
+        <p>
+          Note: Yahoo Finance generally does <em>not</em> delete historical price data for closed or
+          merged funds — a closed fund's ticker typically retains its full history up to the closure
+          date. The survivorship bias here is in which funds were chosen for comparison, not in
+          data deletion.
+        </p>
+
+        <h3>Ex-dividend vs. payable date timing</h3>
+        <p>
+          As described in the Total Return section, distributions are assumed reinvested on the
+          ex-dividend date at that day's closing price. Actual cash is received on the payable date
+          (typically 2–4 weeks later). This introduces a minor timing imprecision that has negligible
+          impact at monthly resolution.
+        </p>
+
+        <h3>Month-end pricing</h3>
+        <p>
+          All simulations use the last available trading day's price in each calendar month. Returns
+          are therefore computed month-over-month on end-of-month NAVs. Intra-month price movements —
+          including any that occurred on the actual calendar month-end when no trading occurred — are
+          not captured.
+        </p>
+
+        <h3>No transaction costs on rebalancing</h3>
+        <p>
+          The simulator does not deduct trading commissions, bid-ask spreads, or fund redemption fees
+          when rebalancing. For modern ETFs and no-load mutual funds at major brokerages, transaction
+          costs are now effectively zero, making this a reasonable assumption for the default fund set.
+          For older fund families or advisor-managed accounts, some cost drag may be missing.
+        </p>
+
+        <h3>CAGR calculation</h3>
+        <p>
+          The CAGR displayed in the stat cards is computed as:
+        </p>
+        <div class="formula">
+          <div class="formula-label">CAGR (simplified)</div>
+          CAGR = (final_value / total_contributions)<sup>12 / n_months</sup> − 1
+        </div>
+        <p>
+          This uses total contributions as the denominator rather than a true money-weighted
+          internal rate of return (IRR). For portfolios with significant monthly contributions
+          relative to the initial investment, this overstates the return compared to a true IRR,
+          because early contributions had more time to compound than later ones. The CAGR shown
+          is best interpreted as a rough annualized growth indicator, not a precise per-dollar
+          return measure.
+        </p>
+
+        <h3>Single capital gains rate</h3>
+        <p>
+          The tax model uses a flat 20% federal long-term capital gains rate. Actual rates range
+          from 0% to 20% depending on income, and state taxes vary widely. The after-tax values
+          shown are illustrative; consult a tax professional for planning purposes.
+        </p>
+
+        <h3>This is not financial advice</h3>
+        <p>
+          The simulator uses real historical data for educational purposes only. Past performance
+          does not guarantee future results. Nothing here should be construed as a recommendation
+          to buy, sell, or hold any security or to use or avoid any particular investment strategy.
+        </p>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: false, flowchart: { useMaxWidth: false, htmlLabels: false } });
+  await mermaid.run();
+  document.querySelectorAll('.mermaid svg').forEach(svg => {
+    const bb = svg.getBBox();
+    const pad = 20;
+    svg.setAttribute('viewBox', `${bb.x - pad} ${bb.y - pad} ${bb.width + pad * 2} ${bb.height + pad * 2}`);
+    svg.style.width  = (bb.width  + pad * 2) + 'px';
+    svg.style.height = (bb.height + pad * 2) + 'px';
+  });
+</script>
+
+<script>
+  // ── Collapsible sections ──
+  document.querySelectorAll("section h2").forEach(h2 => {
+    h2.addEventListener("click", () => {
+      h2.closest("section").classList.toggle("is-collapsed");
+    });
+  });
+
+  // ── TOC active highlight on scroll ──
+  const tocLinks = document.querySelectorAll(".toc a");
+  const sections = document.querySelectorAll("section[id]");
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(a => a.classList.remove("is-active"));
+        const active = document.querySelector(`.toc a[href="#${entry.target.id}"]`);
+        if (active) active.classList.add("is-active");
+      }
+    });
+  }, { rootMargin: "-20% 0px -70% 0px" });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>
