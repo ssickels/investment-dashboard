@@ -397,6 +397,22 @@ input[type="range"] {
   background: var(--blue-bg);
 }
 
+.chart-theme-btn {
+  font-size: 15px;
+  padding: 3px 7px;
+  border: 1px solid var(--gray-200);
+  border-radius: 5px;
+  background: var(--color-surface);
+  color: var(--gray-400);
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s, border-color 0.15s;
+}
+.chart-theme-btn:hover {
+  color: var(--gray-800);
+  border-color: var(--gray-400);
+}
+
 .error-banner {
   background: rgba(224, 112, 64, 0.12);
   border: 1px solid rgba(224, 112, 64, 0.4);

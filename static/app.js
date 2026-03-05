@@ -124,6 +124,49 @@ function wireFundHover(el, html) {
 
 let chart = null;
 let scaleLocked = false;
+let lightChart  = false;
+
+const CHART_DARK = {
+  legendColor:   '#e4f6fb',
+  tooltipBg:     '#002d3d',
+  tooltipBorder: 'rgba(100,210,230,0.32)',
+  tooltipTitle:  '#5a9aaa',
+  tooltipBody:   '#e4f6fb',
+  tickColor:     '#5a9aaa',
+  gridColor:     'rgba(100,210,230,0.07)',
+  containerBg:   '',
+};
+const CHART_LIGHT = {
+  legendColor:   '#1f2937',
+  tooltipBg:     '#ffffff',
+  tooltipBorder: 'rgba(0,0,0,0.15)',
+  tooltipTitle:  '#6b7280',
+  tooltipBody:   '#1f2937',
+  tickColor:     '#4b5563',
+  gridColor:     'rgba(0,0,0,0.08)',
+  containerBg:   '#f5f4f0',
+};
+
+function applyChartTheme(light) {
+  const t = light ? CHART_LIGHT : CHART_DARK;
+  document.querySelector('.chart-container').style.background = t.containerBg;
+  const btn = document.getElementById('chartThemeBtn');
+  if (btn) {
+    btn.textContent = light ? '◑' : '☀';
+    btn.title = light ? 'Switch to dark chart background' : 'Switch to light chart background';
+  }
+  if (!chart) return;
+  chart.options.plugins.legend.labels.color        = t.legendColor;
+  chart.options.plugins.tooltip.backgroundColor    = t.tooltipBg;
+  chart.options.plugins.tooltip.borderColor        = t.tooltipBorder;
+  chart.options.plugins.tooltip.titleColor         = t.tooltipTitle;
+  chart.options.plugins.tooltip.bodyColor          = t.tooltipBody;
+  chart.options.scales.x.ticks.color              = t.tickColor;
+  chart.options.scales.y.ticks.color              = t.tickColor;
+  chart.options.scales.x.grid.color               = t.gridColor;
+  chart.options.scales.y.grid.color               = t.gridColor;
+  chart.update('none');
+}
 let lockedYMin  = null;
 let lockedYMax  = null;
 let lastData    = null;
@@ -537,6 +580,7 @@ function buildChart(data) {
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
     chart.update("none");
+    applyChartTheme(lightChart);
   }
 }
 
@@ -1170,6 +1214,12 @@ function wireInputs() {
       document.getElementById("rescaleBtn").style.display = "none";
     }
     chart.update("none");
+  });
+
+  // Chart theme toggle (light / dark background)
+  document.getElementById("chartThemeBtn").addEventListener("click", () => {
+    lightChart = !lightChart;
+    applyChartTheme(lightChart);
   });
 
   // Rescale button: auto-scale then re-lock at new bounds
