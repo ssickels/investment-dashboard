@@ -10,6 +10,7 @@
       <div class="nav-panel-heading">Investment Simulator</div>
       <a href="https://investment-dashboard-aapf.onrender.com">Simulator</a>
       <a href="https://investment-dashboard-aapf.onrender.com/guide">User Guide</a>
+      <a href="https://investment-dashboard-aapf.onrender.com/methodology">Methodology</a>
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">US Economic Dashboard</div>
