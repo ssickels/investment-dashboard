@@ -7,8 +7,8 @@
   <div id="nav-tabs">
     <a href="/" class="nav-tab" data-path="/">Simulator</a>
     <a href="/guide" class="nav-tab" data-path="/guide">User Guide</a>
-    <a href="/methodology" class="nav-tab" data-path="/methodology">Methodology</a>
     <a href="/reading-charts" class="nav-tab" data-path="/reading-charts">What the Charts Show</a>
+    <a href="/methodology" class="nav-tab" data-path="/methodology">Methodology</a>
   </div>
   <div id="nav-panel" aria-hidden="true">
     <a href="https://stevessite.com" class="nav-panel-home">&#8962; Home</a>
@@ -16,8 +16,8 @@
       <div class="nav-panel-heading">Investment Simulator</div>
       <a href="https://investment-dashboard-aapf.onrender.com">Simulator</a>
       <a href="https://investment-dashboard-aapf.onrender.com/guide">User Guide</a>
-      <a href="https://investment-dashboard-aapf.onrender.com/methodology">Methodology</a>
       <a href="https://investment-dashboard-aapf.onrender.com/reading-charts">What the Charts Show</a>
+      <a href="https://investment-dashboard-aapf.onrender.com/methodology">Methodology</a>
       <a href="https://github.com/ssickels/investment-dashboard" target="_blank" class="nav-panel-github">GitHub ↗</a>
     </div>
     <div class="nav-panel-section">
