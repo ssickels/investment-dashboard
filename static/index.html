@@ -37,7 +37,7 @@
             <label for="initialAmount">Starting Amount</label>
             <div class="input-prefix-wrap">
               <span class="prefix">$</span>
-              <input type="number" id="initialAmount" value="10000" min="100" step="100" />
+              <input type="number" id="initialAmount" value="10000" min="1" max="10000000" step="100" />
             </div>
           </div>
 
@@ -45,7 +45,7 @@
             <label for="monthlyContrib">Monthly Contribution</label>
             <div class="input-prefix-wrap">
               <span class="prefix">$</span>
-              <input type="number" id="monthlyContrib" value="500" min="0" step="50" />
+              <input type="number" id="monthlyContrib" value="500" min="0" max="100000" step="50" />
             </div>
           </div>
 
@@ -146,7 +146,7 @@
               <span class="tooltip-term" data-tooltip="AUM fee (Assets Under Management): an annual fee charged by a financial advisor, typically 0.5%–1.5% of your portfolio value each year.">Advisor AUM Fee</span>
               <span class="pct-label">%/yr</span>
             </label>
-            <input type="number" id="aumFee" value="1.0" min="0" max="5" step="0.1" />
+            <input type="number" id="aumFee" value="1.0" min="0" max="10" step="0.1" />
           </div>
 
           <div class="control-group">

@@ -102,15 +102,36 @@ def methodology():
     return send_from_directory("static", "methodology.html")
 
 
+def _safe_float(val, default):
+    """Return float(val), or default if val is non-numeric or out of sane range."""
+    try:
+        v = float(val)
+        if not (-1e12 < v < 1e12):
+            return default
+        return v
+    except (TypeError, ValueError):
+        return None   # signals invalid input
+
+
 @app.route("/api/portfolio")
 def portfolio():
     try:
-        # Parse query params with defaults
-        initial_amount = float(request.args.get("initial_amount", 10000))
-        monthly_contrib = float(request.args.get("monthly_contrib", 500))
-        stock_pct = float(request.args.get("stock_pct", 80))
+        # Parse query params — return 400 with a friendly message on bad input
+        def require_float(key, default, label):
+            raw = request.args.get(key)
+            if raw is None:
+                return default
+            v = _safe_float(raw, default)
+            if v is None:
+                from flask import abort
+                raise ValueError(f"{label}: please enter a number.")
+            return v
+
+        initial_amount  = require_float("initial_amount",  10000, "Starting Amount")
+        monthly_contrib = require_float("monthly_contrib",    500, "Monthly Contribution")
+        stock_pct       = require_float("stock_pct",           80, "Stock %")
+        aum_fee         = require_float("aum_fee",            1.0, "Advisor Fee")
         rebalance = request.args.get("rebalance", "annually")
-        aum_fee = float(request.args.get("aum_fee", 1.0))
         inflation_adj = request.args.get("inflation_adj", "false").lower() == "true"
         aggressiveness = request.args.get("aggressiveness", "moderate")
         if aggressiveness not in ("conservative", "moderate", "aggressive"):
@@ -129,11 +150,11 @@ def portfolio():
         diy_portfolio = DIY_PORTFOLIO_SETS[diy_portfolio_key]
         diy_tickers = diy_portfolio["tickers"]
 
-        # Validate
-        initial_amount = max(1.0, initial_amount)
-        monthly_contrib = max(0.0, monthly_contrib)
-        stock_pct = max(0.0, min(100.0, stock_pct))
-        aum_fee = max(0.0, aum_fee)
+        # Clamp to sensible ranges
+        initial_amount  = max(1.0,   min(10_000_000.0, initial_amount))
+        monthly_contrib = max(0.0,   min(100_000.0,    monthly_contrib))
+        stock_pct       = max(0.0,   min(100.0,        stock_pct))
+        aum_fee         = max(0.0,   min(10.0,         aum_fee))
         if rebalance not in ("never", "annually", "quarterly"):
             rebalance = "annually"
 
@@ -334,6 +355,8 @@ def portfolio():
 
         return jsonify(response)
 
+    except ValueError as e:
+        return jsonify({"error": str(e), "scenarios": None}), 400
     except Exception as e:
         return jsonify({"error": str(e), "scenarios": None}), 500
 

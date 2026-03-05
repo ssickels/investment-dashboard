@@ -420,6 +420,7 @@ function buildChart(data) {
               if (item.text === "_fill") return false;
               if (item.text === "Total Invested") return document.getElementById("showContrib").checked;
               if (item.text.includes("Momentum")) return document.getElementById("showMomentum").checked;
+              if (item.hidden) return false;
               return true;
             },
             color: "#e4f6fb",
@@ -731,12 +732,35 @@ function getParams() {
   };
 }
 
+function validateInputs() {
+  const fields = [
+    { id: "initialAmount",  label: "Starting Amount",      min: 1,      max: 10_000_000 },
+    { id: "monthlyContrib", label: "Monthly Contribution", min: 0,      max: 100_000 },
+    { id: "aumFee",         label: "Advisor Fee",          min: 0,      max: 10 },
+  ];
+  for (const { id, label, min, max } of fields) {
+    const raw = document.getElementById(id).value.trim();
+    const v = parseFloat(raw);
+    if (raw === "" || isNaN(v)) return `${label}: please enter a number.`;
+    if (v < min) return `${label}: minimum value is ${min.toLocaleString()}.`;
+    if (v > max) return `${label}: maximum value is ${max.toLocaleString()}.`;
+  }
+  return null;
+}
+
 async function fetchAndRender() {
   const overlay = document.getElementById("loadingOverlay");
   const errBanner = document.getElementById("errorBanner");
-  overlay.style.display = "flex";
   errBanner.style.display = "none";
 
+  const validationError = validateInputs();
+  if (validationError) {
+    errBanner.textContent = validationError;
+    errBanner.style.display = "block";
+    return;
+  }
+
+  overlay.style.display = "flex";
   const params = getParams();
   const qs = new URLSearchParams(params).toString();
 
