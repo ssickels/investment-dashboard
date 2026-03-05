@@ -210,9 +210,9 @@ function buildChart(data) {
 
   // Crash annotation dates — snapped to available labels
   const CRASHES = [
-    { label: "Dot-com\nPeak",         target: "2001-03-31" },
-    { label: "Financial\nCrisis",     target: "2008-09-30" },
-    { label: "COVID-19\nCrash",       target: "2020-02-29" },
+    { label: "Dot-com Peak",       target: "2001-03-31" },
+    { label: "Financial Crisis",   target: "2008-09-30" },
+    { label: "COVID-19 Crash",     target: "2020-02-29" },
   ];
 
   const annotations = {};
@@ -248,7 +248,7 @@ function buildChart(data) {
       borderWidth: 1,
       borderDash: [4, 4],
       label: {
-        content: crash.label.split("\n"),
+        content: crash.label,
         display: true,
         position: "start",
         backgroundColor: "rgba(100, 210, 230, 0.12)",
