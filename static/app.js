@@ -249,16 +249,18 @@ function buildChart(data) {
       borderColor: "rgba(156,163,175,0.7)",
       borderWidth: 1,
       borderDash: [4, 4],
-      label: {
-        content: crash.label,
-        display: true,
-        position: "start",
-        backgroundColor: "rgba(100, 210, 230, 0.12)",
-        color: "#5a9aaa",
-        font: { size: 10 },
-        padding: 4,
-        borderRadius: 3,
-      },
+    };
+    annotations[id + "_lbl"] = {
+      type: "label",
+      xValue: snapped,
+      yAdjust: -4,
+      position: { x: "center", y: "start" },
+      content: crash.label,
+      backgroundColor: "rgba(100, 210, 230, 0.12)",
+      color: "#5a9aaa",
+      font: { size: 10 },
+      padding: { top: 3, bottom: 3, left: 5, right: 5 },
+      borderRadius: 3,
     };
   }
 
