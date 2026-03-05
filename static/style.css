@@ -476,6 +476,14 @@ input[type="range"] {
 
 .stat-group-diy    .stat-group-label { color: var(--color-primary); }
 .stat-group-active .stat-group-label { color: var(--color-positive); }
+.stat-group-diy-momentum    .stat-group-label { color: var(--orange); }
+.stat-group-active-momentum .stat-group-label { color: var(--orange); }
+
+.stats-grid-momentum {
+  grid-template-columns: repeat(4, 1fr);
+}
+.stats-grid-momentum .stat-group-diy-momentum    { grid-column: 2; }
+.stats-grid-momentum .stat-group-active-momentum { grid-column: 4; }
 
 .stat-group-cards {
   display: grid;
@@ -495,6 +503,8 @@ input[type="range"] {
 .stat-card.managed        { border-top: 4px solid var(--red);    }
 .stat-card.active         { border-top: 4px solid var(--green);  }
 .stat-card.active-managed { border-top: 4px solid var(--orange); }
+.stat-card.diy-momentum    { border-top: 4px solid var(--orange); }
+.stat-card.active-momentum { border-top: 4px solid var(--orange); }
 
 .stat-card-toggle {
   position: absolute;
@@ -533,6 +543,8 @@ input[type="range"] {
 .stat-card.managed        .stat-card-title { color: var(--red);    }
 .stat-card.active         .stat-card-title { color: var(--green);  }
 .stat-card.active-managed .stat-card-title { color: var(--orange); }
+.stat-card.diy-momentum    .stat-card-title { color: var(--orange); }
+.stat-card.active-momentum .stat-card-title { color: var(--orange); }
 
 .stat-card-sub {
   font-size: 11px;
@@ -618,6 +630,15 @@ input[type="range"] {
 
 .tooltip-term--wide::after {
   max-width: 620px;
+}
+
+.tooltip-term--below-right::after {
+  bottom: auto;
+  top: calc(100% + 6px);
+  left: auto;
+  right: 0;
+  transform: none;
+  width: 360px;
 }
 
 /* Sidebar tooltips: handled by JS (#sidebarTooltip) to escape overflow clipping */

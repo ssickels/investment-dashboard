@@ -23,8 +23,6 @@
       <div class="sidebar-content" id="sidebarContent">
       <h1 class="sidebar-title">Investment Simulator</h1>
       <p class="sidebar-subtitle">Compare three real-world investment strategies using historical data.</p>
-      <a href="/guide" target="_blank" class="guide-link">User Guide →</a>
-      <a href="/methodology" target="_blank" class="guide-link">Methodology →</a>
 
       <!-- ── GROUP 1: Simulation Parameters ── -->
       <div class="sidebar-group" id="group-simulation">
@@ -256,7 +254,7 @@
           <div class="chart-header-controls">
             <label class="scale-lock-label">
               <input type="checkbox" id="lockScale" />
-              Fix Y-axis scale
+              <span class="tooltip-term tooltip-term--below-right" data-tooltip="Lock the vertical scale while you adjust settings. Without this, the chart rescales automatically, making it hard to see how much a change actually moves the lines.">Fix Y-axis scale</span>
             </label>
             <button id="rescaleBtn" class="rescale-btn" style="display:none;">Rescale</button>
           </div>
@@ -390,13 +388,13 @@
 
       <!-- MOMENTUM STATS (hidden until checkbox checked) -->
       <div id="momentumStats" style="display:none;">
-        <div class="stats-grid">
+        <div class="stats-grid stats-grid-momentum">
 
           <div class="stat-group stat-group-diy-momentum">
-            <div class="stat-group-label" id="diyMomentumGroupLabel">Index Momentum (With Advisor)</div>
+            <div class="stat-group-label" id="diyMomentumGroupLabel">Index Momentum</div>
             <div class="stat-group-cards">
               <div class="stat-card diy-momentum" id="statsDiyMomentum">
-                <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 3"/></svg>Momentum Rotation</div>
+                <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 3"/></svg>With Advisor</div>
                 <div class="stat-card-sub" id="diyMomentumCardSub">Rank-based annual rotation</div>
                 <dl>
                   <dt>Final Value</dt>
@@ -423,10 +421,10 @@
           </div>
 
           <div class="stat-group stat-group-active-momentum">
-            <div class="stat-group-label" id="activeMomentumGroupLabel">Active Momentum (With Advisor)</div>
+            <div class="stat-group-label" id="activeMomentumGroupLabel">Active Momentum</div>
             <div class="stat-group-cards">
               <div class="stat-card active-momentum" id="statsActiveMomentum">
-                <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#0891b2" stroke-width="2" stroke-dasharray="5 3"/></svg>Momentum Rotation</div>
+                <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#0891b2" stroke-width="2" stroke-dasharray="5 3"/></svg>With Advisor</div>
                 <div class="stat-card-sub" id="activeMomentumCardSub">Rank-based annual rotation</div>
                 <dl>
                   <dt>Final Value</dt>

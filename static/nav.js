@@ -4,6 +4,12 @@
   <button id="nav-hamburger" title="Menu" aria-label="Open site menu">
     <span></span><span></span><span></span>
   </button>
+  <div id="nav-tabs">
+    <a href="/" class="nav-tab" data-path="/">Simulator</a>
+    <a href="/guide" class="nav-tab" data-path="/guide">User Guide</a>
+    <a href="/methodology" class="nav-tab" data-path="/methodology">Methodology</a>
+    <a href="/reading-charts" class="nav-tab" data-path="/reading-charts">What the Charts Show</a>
+  </div>
   <div id="nav-panel" aria-hidden="true">
     <a href="https://stevessite.com" class="nav-panel-home">&#8962; Home</a>
     <div class="nav-panel-section">
@@ -11,6 +17,8 @@
       <a href="https://investment-dashboard-aapf.onrender.com">Simulator</a>
       <a href="https://investment-dashboard-aapf.onrender.com/guide">User Guide</a>
       <a href="https://investment-dashboard-aapf.onrender.com/methodology">Methodology</a>
+      <a href="https://investment-dashboard-aapf.onrender.com/reading-charts">What the Charts Show</a>
+      <a href="https://github.com/ssickels/investment-dashboard" target="_blank" class="nav-panel-github">GitHub ↗</a>
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">US Economic Dashboard</div>
@@ -35,6 +43,28 @@
   z-index: 9999;
   border-bottom: 1px solid rgba(100, 210, 230, 0.12);
   box-sizing: border-box;
+}
+#nav-tabs {
+  display: flex;
+  align-items: stretch;
+  height: 34px;
+  margin-left: 8px;
+}
+.nav-tab {
+  color: rgba(125, 212, 232, 0.55);
+  text-decoration: none;
+  font-size: 12px;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-bottom: 2px solid transparent;
+  transition: color 0.15s, border-color 0.15s;
+}
+.nav-tab:hover { color: #c8f0f8; }
+.nav-tab.nav-tab-active {
+  color: #7dd4e8;
+  border-bottom: 2px solid #7dd4e8;
 }
 #nav-hamburger {
   background: none;
@@ -108,6 +138,13 @@
 .nav-panel-top-link {
   padding-left: 18px !important;
 }
+.nav-panel-github {
+  color: rgba(100, 210, 230, 0.4) !important;
+  font-size: 11.5px;
+}
+.nav-panel-github:hover {
+  color: rgba(100, 210, 230, 0.75) !important;
+}
 `;
 
   const style = document.createElement('style');
@@ -129,5 +166,13 @@
   document.addEventListener('click', function () {
     panel.classList.remove('is-open');
     panel.setAttribute('aria-hidden', 'true');
+  });
+
+  // Highlight the active tab
+  const path = window.location.pathname;
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    if (tab.getAttribute('data-path') === path) {
+      tab.classList.add('nav-tab-active');
+    }
   });
 })();

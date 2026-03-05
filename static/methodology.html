@@ -10,12 +10,12 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --sc-diy:        #7dd4e8;
-      --sc-managed:    #e07040;
-      --sc-active:     #4db8a0;
-      --sc-active-mgd: #e8c020;
-      --sc-diy-mom:    #a080d0;
-      --sc-active-mom: #60b8d0;
+      --sc-diy:        #2563eb;
+      --sc-managed:    #dc2626;
+      --sc-active:     #16a34a;
+      --sc-active-mgd: #d97706;
+      --sc-diy-mom:    #7c3aed;
+      --sc-active-mom: #0891b2;
     }
 
     body {
@@ -279,10 +279,10 @@
       border-left: 4px solid transparent;
       background: var(--color-surface);
     }
-    .sc-diy        { border-color: var(--sc-diy);        background: rgba(125,212,232,0.07); }
-    .sc-managed    { border-color: var(--sc-managed);    background: rgba(224,112, 64,0.07); }
-    .sc-active     { border-color: var(--sc-active);     background: rgba( 77,184,160,0.07); }
-    .sc-active-mgd { border-color: var(--sc-active-mgd); background: rgba(232,192, 32,0.07); }
+    .sc-diy        { border-color: var(--sc-diy);        background: rgba( 37, 99,235,0.07); }
+    .sc-managed    { border-color: var(--sc-managed);    background: rgba(220, 38, 38,0.07); }
+    .sc-active     { border-color: var(--sc-active);     background: rgba( 22,163, 74,0.07); }
+    .sc-active-mgd { border-color: var(--sc-active-mgd); background: rgba(217,119,  6,0.07); }
     .scenario-card .sc-label {
       font-size: 11px;
       font-weight: 600;
@@ -346,7 +346,7 @@
 
   <!-- TABLE OF CONTENTS -->
   <nav class="toc" id="toc">
-    <div class="toc-title">Contents</div>
+    <div class="toc-title">On this page</div>
     <ul>
       <li><a href="#overview">Overview</a></li>
       <li><a href="#pipeline">The Full Pipeline</a></li>
@@ -366,12 +366,6 @@
 
   <!-- MAIN CONTENT -->
   <main class="guide-main">
-    <div class="topnav">
-      <a href="/">← Simulator</a>
-      <a href="/guide">User Guide</a>
-      <span class="topnav-title">Methodology &amp; Technical Notes</span>
-    </div>
-
     <h1>Methodology &amp; Technical Notes</h1>
     <p class="subtitle">
       How the simulator gets from raw financial data to comparable portfolio values —

@@ -102,6 +102,11 @@ def methodology():
     return send_from_directory("static", "methodology.html")
 
 
+@app.route("/reading-charts")
+def reading_charts():
+    return send_from_directory("static", "what-charts-show.html")
+
+
 def _safe_float(val, default):
     """Return float(val), or default if val is non-numeric or out of sane range."""
     try:

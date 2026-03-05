@@ -427,6 +427,14 @@ function buildChart(data) {
             }
           },
           labels: {
+            generateLabels: (chart) => {
+              const defaults = Chart.defaults.plugins.legend.labels.generateLabels(chart);
+              defaults.forEach((item) => {
+                const ds = chart.data.datasets[item.datasetIndex];
+                if (ds && ds.borderDash) item.lineDash = ds.borderDash;
+              });
+              return defaults;
+            },
             filter: (item) => {
               if (item.text === "_fill") return false;
               if (item.text === "Total Invested") return document.getElementById("showContrib").checked;
