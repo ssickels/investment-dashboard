@@ -4,6 +4,8 @@ An interactive dashboard for exploring how different investment strategies perfo
 
 **Live site:** [stevessite.com/simulator](https://stevessite.com/simulator)
 
+![Preview of the live Boids Playground, with the "Show spheres and distances" option selected](https://stevessite.com/investment_simulator_preview.jpg)
+
 ## What it does
 
 Compare three scenarios side by side:
