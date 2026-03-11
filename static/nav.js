@@ -27,8 +27,9 @@
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Boids / Fish</div>
       <a href="https://stevessite.com/playground.html">Playground</a>
-      <a href="https://stevessite.com/boids-about.html">About Boids</a>
-      <a href="https://stevessite.com/boids-impl.html">Under the Hood</a>
+      <a href="https://stevessite.com/boids-explain.html">How It Works</a>
+      <a href="https://stevessite.com/boids-about.html">About</a>
+      <a href="https://stevessite.com/boids-impl.html">Dev Notes</a>
       <a href="https://github.com/ssickels/boids-playground" target="_blank" class="nav-panel-github">GitHub (Playground) ↗</a>
       <a href="https://stevessite.com/about.html" class="nav-panel-top-link">About This Site</a>
     </div>
