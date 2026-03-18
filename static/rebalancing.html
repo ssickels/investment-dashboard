@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Investment Strategy Comparison</title>
-  <meta property="og:title" content="Investment Strategy Simulator" />
-  <meta property="og:description" content="Compare index funds, active management, and advisor fees using real historical data going back to 1987." />
+  <title>Rebalancing Impact — Investment Simulator</title>
+  <meta property="og:title" content="Rebalancing Impact — Investment Simulator" />
+  <meta property="og:description" content="See how rebalancing frequency affects portfolio outcomes using real historical data." />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
-  <meta property="og:url" content="https://stevessite.com/simulator" />
+  <meta property="og:url" content="https://stevessite.com/simulator/rebalancing" />
   <meta property="og:type" content="website" />
   <meta name="twitter:card" content="summary_large_image" />
   <link rel="stylesheet" href="/static/theme.css" />
@@ -21,9 +21,9 @@
     <aside class="sidebar" id="sidebar">
       <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">&#8249;</button>
       <div class="sidebar-content" id="sidebarContent">
-      <h1 class="sidebar-title">Investment Simulator</h1>
-      <p class="sidebar-subtitle">Compare three real-world investment strategies using historical data.</p>
-      <p class="sidebar-see-also">To compare rebalancing frequencies for one strategy, see <a href="/rebalancing">Rebalancing Impact</a>.</p>
+      <h1 class="sidebar-title">Rebalancing Impact</h1>
+      <p class="sidebar-subtitle">Compare how rebalancing frequency affects a selected strategy.</p>
+      <p class="sidebar-see-also">To compare different strategies at one rebalancing frequency, see <a href="/">Comparing Strategies</a>.</p>
 
       <!-- ── GROUP 1: Simulation Parameters ── -->
       <div class="sidebar-group" id="group-simulation">
@@ -86,14 +86,37 @@
           </div>
 
           <div class="control-group">
-            <label for="rebalance">
-              <span class="tooltip-term" data-tooltip="Rebalancing restores your target stock/bond split by selling winners and buying laggards.">Rebalancing</span>
+            <label>
+              <span class="tooltip-term" data-tooltip="Choose which investment strategy to examine. The chart will compare three rebalancing frequencies (never, quarterly, annually) for this single strategy.">Strategy to Compare</span>
             </label>
-            <select id="rebalance">
-              <option value="annually" selected>Annually</option>
-              <option value="quarterly">Quarterly</option>
-              <option value="never">Never</option>
-            </select>
+            <div class="strategy-toggle">
+              <div class="strategy-group">
+                <div class="strategy-group-label">Low-Cost Index</div>
+                <div class="strategy-group-options">
+                  <label class="strategy-option strategy-option--selected" id="stratDiyLabel">
+                    <input type="radio" name="strategy" id="stratDiy" value="diy" checked />
+                    <span>No Advisor</span>
+                  </label>
+                  <label class="strategy-option" id="stratManagedLabel">
+                    <input type="radio" name="strategy" id="stratManaged" value="managed" />
+                    <span>With Advisor</span>
+                  </label>
+                </div>
+              </div>
+              <div class="strategy-group">
+                <div class="strategy-group-label">Actively Managed</div>
+                <div class="strategy-group-options">
+                  <label class="strategy-option" id="stratActiveLabel">
+                    <input type="radio" name="strategy" id="stratActive" value="active" />
+                    <span>No Advisor</span>
+                  </label>
+                  <label class="strategy-option" id="stratActiveManagedLabel">
+                    <input type="radio" name="strategy" id="stratActiveManaged" value="active_managed" />
+                    <span>With Advisor</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
 
         </div><!-- end group-content -->
@@ -138,9 +161,9 @@
             <select id="activeFundSet"></select>
           </div>
 
-          <div class="section-header">Advisor Costs (&#8220;With Advisor&#8221; Scenarios)</div>
+          <div class="section-header" id="advisorCostsHeader">Advisor Costs (&#8220;With Advisor&#8221; Strategies)</div>
 
-          <div class="control-group">
+          <div class="control-group" id="aumFeeGroup">
             <label for="aumFee">
               <span class="tooltip-term" data-tooltip="AUM fee (Assets Under Management): an annual fee charged by a financial advisor, typically 0.5%–1.5% of your portfolio value each year.">Advisor AUM Fee</span>
               <span class="pct-label">%/yr</span>
@@ -150,7 +173,7 @@
 
           <div class="control-group">
             <label>
-              <span class="tooltip-term" data-tooltip="Weighted average expense ratio of the selected active fund family, calculated using your stock/bond split. Applied to the Fee-Adjusted Index scenario on top of the index fund returns. The Fee-Adjusted Active scenario does not add this separately — active fund expense ratios are already embedded in historical NAV prices.">Fund Expense Ratio (weighted)</span>
+              <span class="tooltip-term" data-tooltip="Weighted average expense ratio of the selected active fund family, calculated using your stock/bond split. Applied to the Fee-Adjusted Index scenario on top of the index fund returns.">Fund Expense Ratio (weighted)</span>
             </label>
             <div class="er-display" id="erDisplay">—</div>
           </div>
@@ -167,7 +190,7 @@
 
           <div class="control-group">
             <label>
-              <span class="tooltip-term" data-tooltip="Taxable: simulates a brokerage account where capital gains tax (20% long-term rate) applies. No-Advisor scenarios defer tax to final liquidation. With-Advisor &amp; Momentum scenarios trigger capital gains at each annual rebalancing. Tax-Deferred: simulates a 401(k) or IRA — no capital gains tax during the simulation.">Account Type</span>
+              <span class="tooltip-term" data-tooltip="Taxable: simulates a brokerage account where capital gains tax (20% long-term rate) applies. Tax-Deferred: simulates a 401(k) or IRA — no capital gains tax during the simulation.">Account Type</span>
             </label>
             <div class="agg-toggle" id="taxToggle">
               <label class="agg-option agg-option--selected" id="taxTaxableLabel">
@@ -207,7 +230,7 @@
             </label>
           </div>
 
-          <div class="momentum-group">
+          <div class="momentum-group" id="momentumGroup" style="display:none;">
             <div class="control-group checkbox-group">
               <label>
                 <input type="checkbox" id="showMomentum" />
@@ -251,7 +274,7 @@
     <main class="chart-area">
       <div class="chart-header">
         <div class="chart-header-row">
-          <h2>Portfolio Growth Over Time</h2>
+          <h2>Portfolio Growth by Rebalancing Frequency</h2>
           <div class="chart-header-controls">
             <label class="scale-lock-label">
               <input type="checkbox" id="logScale" />
@@ -277,193 +300,147 @@
         </div>
       </div>
 
-      <!-- STATS GRID -->
-      <div class="stats-grid">
+      <!-- STATS GRID — 3 rebalancing cards -->
+      <div class="stats-grid stats-grid-rebal">
 
-        <div class="stat-group stat-group-diy">
-          <div class="stat-group-label">Low-Cost Index Funds</div>
-          <div class="stat-group-cards">
-            <div class="stat-card diy" id="statsDiy">
+        <div class="stat-group stat-group-rebal" id="rebalGroup">
+          <div class="stat-group-label" id="rebalGroupLabel">Low-Cost Index / No Advisor</div>
+          <div class="stat-group-cards stat-group-cards-rebal">
+
+            <div class="stat-card rebal-card" id="statsNever">
               <input type="checkbox" class="stat-card-toggle" data-dataset-idx="0" checked title="Uncheck to hide this line on the chart">
-              <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#2563eb" stroke-width="2.5" stroke-dasharray="8 4"/></svg>No Advisor</div>
-              <div class="stat-card-sub" id="diyCardSub">VTI / VXUS / BND</div>
+              <div class="stat-card-title">
+                <svg class="graph-swatch" id="neverSwatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#93c5fd" stroke-width="2.5" stroke-dasharray="8 4"/></svg>
+                No Rebalancing
+              </div>
+              <div class="stat-card-sub" id="neverCardSub">Portfolio drifts with market movements</div>
               <dl>
                 <dt>Final Value</dt>
-                <dd id="diyFinal">—</dd>
+                <dd id="neverFinal">—</dd>
                 <dt>Total Contributed</dt>
-                <dd id="diyContrib">—</dd>
+                <dd id="neverContrib">—</dd>
                 <dt>Total Gain</dt>
-                <dd id="diyGain">—</dd>
+                <dd id="neverGain">—</dd>
                 <dt>
                   <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
                 </dt>
-                <dd id="diyCagr">—</dd>
+                <dd id="neverCagr">—</dd>
                 <dt>Fees Paid</dt>
-                <dd id="diyFees">—</dd>
+                <dd id="neverFees">—</dd>
+                <dt class="tax-row tax-paid-row">Taxes Paid</dt>
+                <dd class="tax-row tax-paid-row" id="neverTaxesPaid">—</dd>
                 <dt class="tax-row">Est. Tax at Sale</dt>
-                <dd class="tax-row" id="diyTaxDue">—</dd>
+                <dd class="tax-row" id="neverTaxDue">—</dd>
                 <dt class="tax-row">After-Tax Value</dt>
-                <dd class="tax-row" id="diyAfterTax">—</dd>
+                <dd class="tax-row" id="neverAfterTax">—</dd>
               </dl>
             </div>
 
-            <div class="stat-card managed line-hidden" id="statsManaged">
-              <input type="checkbox" class="stat-card-toggle" data-dataset-idx="1" title="Check to show this line on the chart">
-              <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#dc2626" stroke-width="2" stroke-dasharray="5 3"/></svg>With Advisor</div>
-              <div class="stat-card-sub" id="managedCardSub">Same funds + advisor fees</div>
+            <div class="stat-card rebal-card" id="statsQuarterly">
+              <input type="checkbox" class="stat-card-toggle" data-dataset-idx="1" checked title="Uncheck to hide this line on the chart">
+              <div class="stat-card-title">
+                <svg class="graph-swatch" id="quarterlySwatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#60a5fa" stroke-width="2" stroke-dasharray="3 3"/></svg>
+                Quarterly Rebalancing
+              </div>
+              <div class="stat-card-sub" id="quarterlyCardSub">Target allocation restored every 3 months</div>
               <dl>
                 <dt>Final Value</dt>
-                <dd id="managedFinal">—</dd>
+                <dd id="quarterlyFinal">—</dd>
                 <dt>Total Contributed</dt>
-                <dd id="managedContrib">—</dd>
+                <dd id="quarterlyContrib">—</dd>
                 <dt>Total Gain</dt>
-                <dd id="managedGain">—</dd>
+                <dd id="quarterlyGain">—</dd>
                 <dt>
                   <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
                 </dt>
-                <dd id="managedCagr">—</dd>
+                <dd id="quarterlyCagr">—</dd>
                 <dt>Fees Paid</dt>
-                <dd id="managedFees">—</dd>
-                <dt class="tax-row">Taxes Paid</dt>
-                <dd class="tax-row" id="managedTaxesPaid">—</dd>
+                <dd id="quarterlyFees">—</dd>
+                <dt class="tax-row tax-paid-row">Taxes Paid</dt>
+                <dd class="tax-row tax-paid-row" id="quarterlyTaxesPaid">—</dd>
                 <dt class="tax-row">Est. Tax at Sale</dt>
-                <dd class="tax-row" id="managedTaxDue">—</dd>
+                <dd class="tax-row" id="quarterlyTaxDue">—</dd>
                 <dt class="tax-row">After-Tax Value</dt>
-                <dd class="tax-row" id="managedAfterTax">—</dd>
-              </dl>
-            </div>
-          </div>
-        </div>
-
-        <div class="stat-group stat-group-active">
-          <div class="stat-group-label">Actively Managed Funds</div>
-          <div class="stat-group-cards">
-            <div class="stat-card active line-hidden" id="statsActive">
-              <input type="checkbox" class="stat-card-toggle" data-dataset-idx="2" title="Check to show this line on the chart">
-              <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#16a34a" stroke-width="2" stroke-dasharray="2 2"/></svg>No Advisor</div>
-              <div class="stat-card-sub" id="activeCardSub">AGTHX / DODFX / PTTAX</div>
-              <dl>
-                <dt>Final Value</dt>
-                <dd id="activeFinal">—</dd>
-                <dt>Total Contributed</dt>
-                <dd id="activeContrib">—</dd>
-                <dt>Total Gain</dt>
-                <dd id="activeGain">—</dd>
-                <dt>
-                  <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
-                </dt>
-                <dd id="activeCagr">—</dd>
-                <dt>Fees Paid</dt>
-                <dd id="activeFees">—</dd>
-                <dt class="tax-row">Est. Tax at Sale</dt>
-                <dd class="tax-row" id="activeTaxDue">—</dd>
-                <dt class="tax-row">After-Tax Value</dt>
-                <dd class="tax-row" id="activeAfterTax">—</dd>
+                <dd class="tax-row" id="quarterlyAfterTax">—</dd>
               </dl>
             </div>
 
-            <div class="stat-card active-managed" id="statsActiveManaged">
-              <input type="checkbox" class="stat-card-toggle" data-dataset-idx="3" checked title="Uncheck to hide this line on the chart">
-              <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#d97706" stroke-width="2" stroke-dasharray="2 2"/></svg>With Advisor</div>
-              <div class="stat-card-sub" id="activeManagedCardSub">Active funds + advisor fees</div>
+            <div class="stat-card rebal-card" id="statsAnnually">
+              <input type="checkbox" class="stat-card-toggle" data-dataset-idx="2" checked title="Uncheck to hide this line on the chart">
+              <div class="stat-card-title">
+                <svg class="graph-swatch" id="annuallySwatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#2563eb" stroke-width="2.5"/></svg>
+                Annual Rebalancing
+              </div>
+              <div class="stat-card-sub" id="annuallyCardSub">Target allocation restored once per year</div>
               <dl>
                 <dt>Final Value</dt>
-                <dd id="activeManagedFinal">—</dd>
+                <dd id="annuallyFinal">—</dd>
                 <dt>Total Contributed</dt>
-                <dd id="activeManagedContrib">—</dd>
+                <dd id="annuallyContrib">—</dd>
                 <dt>Total Gain</dt>
-                <dd id="activeManagedGain">—</dd>
+                <dd id="annuallyGain">—</dd>
                 <dt>
                   <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
                 </dt>
-                <dd id="activeManagedCagr">—</dd>
+                <dd id="annuallyCagr">—</dd>
                 <dt>Fees Paid</dt>
-                <dd id="activeManagedFees">—</dd>
-                <dt class="tax-row">Taxes Paid</dt>
-                <dd class="tax-row" id="activeManagedTaxesPaid">—</dd>
+                <dd id="annuallyFees">—</dd>
+                <dt class="tax-row tax-paid-row">Taxes Paid</dt>
+                <dd class="tax-row tax-paid-row" id="annuallyTaxesPaid">—</dd>
                 <dt class="tax-row">Est. Tax at Sale</dt>
-                <dd class="tax-row" id="activeManagedTaxDue">—</dd>
+                <dd class="tax-row" id="annuallyTaxDue">—</dd>
                 <dt class="tax-row">After-Tax Value</dt>
-                <dd class="tax-row" id="activeManagedAfterTax">—</dd>
+                <dd class="tax-row" id="annuallyAfterTax">—</dd>
               </dl>
             </div>
+
           </div>
         </div>
 
       </div>
 
-      <!-- MOMENTUM STATS (hidden until checkbox checked) -->
+      <!-- MOMENTUM STATS (hidden unless With Advisor + momentum checked) -->
       <div id="momentumStats" style="display:none;">
-        <div class="stats-grid stats-grid-momentum">
-
-          <div class="stat-group stat-group-diy-momentum">
-            <div class="stat-group-label" id="diyMomentumGroupLabel">Index Momentum</div>
+        <div class="stats-grid stats-grid-momentum-rebal">
+          <div class="stat-group stat-group-momentum-rebal">
+            <div class="stat-group-label" id="momentumGroupLabel">Momentum Rotation</div>
             <div class="stat-group-cards">
-              <div class="stat-card diy-momentum" id="statsDiyMomentum">
-                <input type="checkbox" class="stat-card-toggle" data-dataset-idx="6" checked title="Uncheck to hide this line on the chart">
-                <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 3"/></svg>With Advisor</div>
-                <div class="stat-card-sub" id="diyMomentumCardSub">Rank-based annual rotation</div>
+              <div class="stat-card momentum-rebal" id="statsMomentum">
+                <input type="checkbox" class="stat-card-toggle" data-dataset-idx="4" checked title="Uncheck to hide this line on the chart">
+                <div class="stat-card-title">
+                  <svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#7c3aed" stroke-width="2" stroke-dasharray="5 3"/></svg>
+                  Momentum Rotation
+                </div>
+                <div class="stat-card-sub" id="momentumCardSub">Annual rotation based on trailing 12-month momentum</div>
                 <dl>
                   <dt>Final Value</dt>
-                  <dd id="diyMomentumFinal">—</dd>
+                  <dd id="momentumFinal">—</dd>
                   <dt>Total Contributed</dt>
-                  <dd id="diyMomentumContrib">—</dd>
+                  <dd id="momentumContrib">—</dd>
                   <dt>Total Gain</dt>
-                  <dd id="diyMomentumGain">—</dd>
+                  <dd id="momentumGain">—</dd>
                   <dt>
                     <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
                   </dt>
-                  <dd id="diyMomentumCagr">—</dd>
+                  <dd id="momentumCagr">—</dd>
                   <dt>Fees Paid</dt>
-                  <dd id="diyMomentumFees">—</dd>
+                  <dd id="momentumFees">—</dd>
                   <dt class="tax-row">Taxes Paid</dt>
-                  <dd class="tax-row" id="diyMomentumTaxesPaid">—</dd>
+                  <dd class="tax-row" id="momentumTaxesPaid">—</dd>
                   <dt class="tax-row">Est. Tax at Sale</dt>
-                  <dd class="tax-row" id="diyMomentumTaxDue">—</dd>
+                  <dd class="tax-row" id="momentumTaxDue">—</dd>
                   <dt class="tax-row">After-Tax Value</dt>
-                  <dd class="tax-row" id="diyMomentumAfterTax">—</dd>
+                  <dd class="tax-row" id="momentumAfterTax">—</dd>
                 </dl>
               </div>
             </div>
           </div>
-
-          <div class="stat-group stat-group-active-momentum">
-            <div class="stat-group-label" id="activeMomentumGroupLabel">Active Momentum</div>
-            <div class="stat-group-cards">
-              <div class="stat-card active-momentum" id="statsActiveMomentum">
-                <input type="checkbox" class="stat-card-toggle" data-dataset-idx="7" checked title="Uncheck to hide this line on the chart">
-                <div class="stat-card-title"><svg class="graph-swatch" width="22" height="10" viewBox="0 0 22 10" aria-hidden="true"><line x1="1" y1="5" x2="21" y2="5" stroke="#0891b2" stroke-width="2" stroke-dasharray="5 3"/></svg>With Advisor</div>
-                <div class="stat-card-sub" id="activeMomentumCardSub">Rank-based annual rotation</div>
-                <dl>
-                  <dt>Final Value</dt>
-                  <dd id="activeMomentumFinal">—</dd>
-                  <dt>Total Contributed</dt>
-                  <dd id="activeMomentumContrib">—</dd>
-                  <dt>Total Gain</dt>
-                  <dd id="activeMomentumGain">—</dd>
-                  <dt>
-                    <span class="tooltip-term" data-tooltip="Compound Annual Growth Rate: the annualized rate of return assuming steady growth each year.">CAGR</span>
-                  </dt>
-                  <dd id="activeMomentumCagr">—</dd>
-                  <dt>Fees Paid</dt>
-                  <dd id="activeMomentumFees">—</dd>
-                  <dt class="tax-row">Taxes Paid</dt>
-                  <dd class="tax-row" id="activeMomentumTaxesPaid">—</dd>
-                  <dt class="tax-row">Est. Tax at Sale</dt>
-                  <dd class="tax-row" id="activeMomentumTaxDue">—</dd>
-                  <dt class="tax-row">After-Tax Value</dt>
-                  <dd class="tax-row" id="activeMomentumAfterTax">—</dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-
         </div>
       </div>
 
-      <!-- FEE DRAG CALLOUT -->
-      <div class="fee-drag-callout" id="feeDragCallout">
-        <div id="feeDragText">—</div>
+      <!-- REBALANCING IMPACT CALLOUT -->
+      <div class="fee-drag-callout" id="rebalCallout">
+        <div id="rebalCalloutText">—</div>
       </div>
 
       <!-- DISCLAIMER -->
@@ -480,6 +457,6 @@
   <div id="sidebarTooltip"></div>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
-  <script src="/static/app.js"></script>
+  <script src="/static/rebalancing.js"></script>
 </body>
 </html>

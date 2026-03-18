@@ -549,7 +549,10 @@
               <td>
                 <em>Annually</em> — portfolio is rebalanced to target weights once per year.<br />
                 <em>Quarterly</em> — rebalanced every three months.<br />
-                <em>Never</em> — portfolio drifts; contributions only loosely track targets.
+                <em>Never</em> — portfolio drifts; contributions only loosely track targets.<br /><br />
+                To see all three frequencies compared side by side for a single strategy, use the
+                <a href="/rebalancing">Rebalancing Impact</a> page
+                (<a href="/rebalancing-guide">guide</a>).
               </td>
             </tr>
           </tbody>
@@ -660,7 +663,20 @@
               </td>
             </tr>
             <tr>
-              <td>Disable Y-axis auto-scale</td>
+              <td>Log scale</td>
+              <td>
+                Switches the vertical axis to a logarithmic scale, where equal vertical
+                distances represent equal <em>percentage</em> changes rather than equal dollar
+                amounts. On a log scale, a portfolio doubling from $10,000 to $20,000 takes the
+                same vertical space as a doubling from $100,000 to $200,000. This makes it
+                easier to compare growth rates across different time periods and portfolio sizes,
+                and to spot whether a strategy's rate of growth is accelerating, steady, or
+                slowing. Particularly useful over long time horizons where early-period
+                differences are compressed on a linear scale.
+              </td>
+            </tr>
+            <tr>
+              <td>Disable auto-scale</td>
               <td>
                 Locks the vertical axis so it doesn't re-scale when you adjust settings — useful
                 for comparing across eras or date ranges. A <em>Rescale</em> button appears if
@@ -760,7 +776,9 @@
             In Taxable mode, compare the "After-Tax Value" rows across stat cards. Strategies
             that rebalance more frequently (With Advisor / Momentum) realise gains annually and
             pay tax sooner, while buy-and-hold strategies defer the entire tax bill to
-            liquidation — this difference can be material over long horizons.
+            liquidation — this difference can be material over long horizons. To isolate the
+            tax impact of rebalancing frequency alone, see the
+            <a href="/rebalancing">Rebalancing Impact</a> page.
           </li>
           <li>
             <strong>Real vs. nominal wealth</strong>

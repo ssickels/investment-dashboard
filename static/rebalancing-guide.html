@@ -1,0 +1,1003 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rebalancing Impact — User Guide</title>
+  <meta property="og:title" content="Rebalancing Impact — User Guide" />
+  <meta property="og:description" content="How to use the Rebalancing Impact simulator: choosing a strategy, comparing rebalancing frequencies, and understanding the results." />
+  <meta property="og:url" content="https://investment-dashboard-aapf.onrender.com/rebalancing-guide" />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --sc-diy:        #2563eb;
+      --sc-managed:    #dc2626;
+      --sc-active:     #16a34a;
+      --sc-active-mgd: #d97706;
+      --sc-momentum:   #7c3aed;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.7;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 82px 24px 80px;
+    }
+
+    /* ── Two-column layout ── */
+    .guide-layout {
+      display: flex;
+      gap: 40px;
+      max-width: 1100px;
+      margin: 0 auto;
+      align-items: flex-start;
+    }
+
+    /* ── Table of Contents ── */
+    .toc {
+      width: 180px;
+      flex-shrink: 0;
+      position: sticky;
+      top: 50px;
+      max-height: calc(100vh - 70px);
+      overflow-y: auto;
+    }
+
+    .toc-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--color-text-dim);
+      margin-bottom: 10px;
+      padding-left: 10px;
+    }
+
+    .toc ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+    }
+
+    .toc a {
+      display: block;
+      font-size: 12.5px;
+      color: var(--color-primary);
+      padding: 5px 10px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      text-decoration: none;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      line-height: 1.4;
+    }
+
+    .toc a:hover {
+      color: var(--color-primary);
+      background: rgba(125, 212, 232, 0.07);
+    }
+
+    .toc a.is-active {
+      color: var(--color-primary-hi);
+      border-left-color: var(--color-primary);
+      background: rgba(125, 212, 232, 0.07);
+      font-weight: 500;
+    }
+
+    /* ── Main content ── */
+    .guide-main { flex: 1; min-width: 0; }
+
+    /* ── Header ── */
+    h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      color: var(--color-primary-hi);
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: var(--color-text);
+      font-size: 1rem;
+      margin-bottom: 40px;
+      max-width: 620px;
+    }
+
+    /* ── Sections ── */
+    section { margin-bottom: 52px; scroll-margin-top: 50px; }
+
+    h2 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--color-primary-hi);
+      margin-bottom: 14px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid var(--color-border-hi);
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .h2-chevron {
+      font-size: 30px;
+      color: var(--color-text-dim);
+      transition: transform 0.25s ease;
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+    section.is-collapsed .h2-chevron { transform: rotate(-90deg); }
+
+    .section-body {
+      overflow: hidden;
+      transition: max-height 0.35s ease, opacity 0.25s ease;
+      max-height: 8000px;
+      opacity: 1;
+    }
+    section.is-collapsed .section-body {
+      max-height: 0;
+      opacity: 0;
+    }
+
+    h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--color-primary-hi);
+      margin: 20px 0 6px;
+    }
+
+    p { margin-bottom: 12px; color: var(--color-text); }
+    p:last-child { margin-bottom: 0; }
+
+    /* ── Strategy cards ── */
+    .strategy-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    @media (max-width: 600px) { .strategy-grid { grid-template-columns: 1fr; } }
+
+    .strategy-card {
+      border-radius: 10px;
+      padding: 16px 18px;
+      border-left: 4px solid transparent;
+      background: var(--color-surface);
+    }
+    .stc-diy        { border-color: var(--sc-diy);        background: rgba( 37, 99,235,0.07); }
+    .stc-managed    { border-color: var(--sc-managed);    background: rgba(220, 38, 38,0.07); }
+    .stc-active     { border-color: var(--sc-active);     background: rgba( 22,163, 74,0.07); }
+    .stc-active-mgd { border-color: var(--sc-active-mgd); background: rgba(217,119,  6,0.07); }
+
+    .strategy-card .stc-name {
+      font-size: 1rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--color-text);
+    }
+    .strategy-card p {
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    /* ── Rebalancing frequency cards ── */
+    .freq-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+      margin-top: 4px;
+    }
+    @media (max-width: 700px) { .freq-grid { grid-template-columns: 1fr; } }
+
+    .freq-card {
+      border-radius: 10px;
+      padding: 16px 18px;
+      border-top: 3px solid var(--sc-diy);
+      background: var(--color-surface);
+    }
+    .freq-card .freq-name {
+      font-size: 0.95rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+      color: var(--color-text);
+    }
+    .freq-card p {
+      font-size: 13px;
+      line-height: 1.55;
+      margin: 0;
+      color: var(--color-text);
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 22px;
+      height: 4px;
+      border-radius: 2px;
+      vertical-align: middle;
+      margin-right: 6px;
+      position: relative;
+      top: -1px;
+    }
+    .swatch-dash   { background: repeating-linear-gradient(90deg, currentColor 0 6px, transparent 6px 10px); }
+    .swatch-dotted { background: repeating-linear-gradient(90deg, currentColor 0 3px, transparent 3px 6px); }
+
+    /* ── Control table ── */
+    .ctrl-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13.5px;
+      margin-top: 4px;
+    }
+    .ctrl-table th {
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--color-text-dim);
+      padding: 0 12px 8px 0;
+      border-bottom: 1px solid var(--color-border-hi);
+    }
+    .ctrl-table td {
+      padding: 9px 12px 9px 0;
+      vertical-align: top;
+      border-bottom: 1px solid var(--color-border);
+      color: var(--color-text);
+      line-height: 1.5;
+    }
+    .ctrl-table td:first-child {
+      font-weight: 600;
+      color: var(--color-text);
+      white-space: nowrap;
+      width: 34%;
+    }
+    .ctrl-table .tbl-subhead {
+      padding-top: 10px;
+      font-weight: 600;
+      color: var(--color-text-dim);
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+
+    /* ── Comparison callouts ── */
+    .comparison-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .comparison-list li {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13.5px;
+      color: var(--color-text);
+      line-height: 1.55;
+    }
+    .comparison-list li strong {
+      display: block;
+      font-size: 14px;
+      color: var(--color-text);
+      margin-bottom: 3px;
+    }
+
+    /* ── Tip boxes ── */
+    .tip {
+      background: rgba(125, 212, 232, 0.07);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 8px;
+      padding: 14px 16px;
+      font-size: 13px;
+      color: var(--color-text);
+      margin-top: 14px;
+      line-height: 1.55;
+    }
+    .tip b { color: var(--color-primary-hi); }
+    .tip a { color: var(--color-primary-hi); text-decoration: underline; }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: var(--color-surface-hi);
+      color: var(--color-text-dim);
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+
+    /* ── Footer ── */
+    .disclaimer {
+      margin-top: 60px;
+      padding-top: 20px;
+      border-top: 1px solid var(--color-border-hi);
+      font-size: 12px;
+      color: var(--color-text-dim);
+      line-height: 1.6;
+    }
+
+    /* ── Mobile: hide TOC ── */
+    @media (max-width: 768px) {
+      .toc { display: none; }
+      .guide-layout { display: block; }
+    }
+  </style>
+</head>
+<body>
+<script src="/static/nav.js"></script>
+
+<div class="guide-layout">
+
+  <!-- ── Table of Contents ── -->
+  <nav class="toc" id="guide-toc">
+    <div class="toc-title">On this page</div>
+    <ul>
+      <li><a href="#overview">What it does</a></li>
+      <li><a href="#strategies">Choosing a strategy</a></li>
+      <li><a href="#frequencies">The three frequencies</a></li>
+      <li><a href="#controls">Controls &amp; settings</a></li>
+      <li><a href="#chart">Reading the chart</a></li>
+      <li><a href="#stat-cards">Stat cards</a></li>
+      <li><a href="#momentum">Momentum rotation</a></li>
+      <li><a href="#callout">Impact callout</a></li>
+      <li><a href="#comparisons">Comparisons to try</a></li>
+      <li><a href="#tax">Tax &amp; rebalancing</a></li>
+      <li><a href="#data">Data sources</a></li>
+    </ul>
+  </nav>
+
+  <!-- ── Main content ── -->
+  <div class="guide-main">
+
+    <!-- Header -->
+    <h1>Rebalancing Impact — User Guide</h1>
+    <p class="subtitle">
+      This page isolates one question the main simulator leaves tangled with other variables:
+      how much does rebalancing frequency actually matter? Pick a single strategy and compare
+      three frequencies — never, quarterly, and annually — with all other inputs held constant.
+    </p>
+    <div class="tip" style="margin-bottom: 40px;">
+      <b>How this page relates to the main simulator:</b> The
+      <a href="/">Comparing Strategies</a> page compares up to six different investment
+      strategies side by side, all at the same rebalancing frequency. This page flips the
+      perspective: it holds the strategy constant and varies the rebalancing frequency. Together
+      the two pages let you understand both <em>what</em> you invest in and <em>how often</em>
+      you rebalance. See the <a href="/guide">Strategies User Guide</a> for details on the
+      main simulator.
+    </div>
+
+    <!-- ── OVERVIEW ── -->
+    <section id="overview">
+      <h2>What the page does</h2>
+      <div class="section-body">
+        <p>
+          The Rebalancing Impact page takes the same inputs as the main simulator — starting
+          amount, monthly contribution, date range, stock/bond split, fund selections, and
+          account type — but instead of comparing different strategies, it runs a single
+          strategy at three rebalancing frequencies simultaneously.
+        </p>
+        <p>
+          Three parallel API calls fetch results for never-rebalance, quarterly, and annually.
+          The chart overlays all three growth paths so you can see exactly where — and by how
+          much — rebalancing frequency made a difference for the selected strategy.
+        </p>
+        <p>
+          Because the only variable changing is rebalancing frequency, any gap between the three
+          lines is attributable entirely to the timing and frequency of portfolio rebalancing.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── STRATEGIES ── -->
+    <section id="strategies">
+      <h2>Choosing a strategy</h2>
+      <div class="section-body">
+        <p>
+          The strategy selector in the sidebar presents the same four core strategies available
+          in the main simulator. Picking one determines which funds are used and whether an
+          advisor AUM fee is applied. The chart then compares three rebalancing frequencies
+          for that one strategy.
+        </p>
+
+        <div class="strategy-grid">
+          <div class="strategy-card stc-diy">
+            <div class="stc-name">
+              <span class="swatch" style="background:#2563eb;"></span>
+              Low-Cost Index — No Advisor
+            </div>
+            <p>
+              Three-fund index portfolio (e.g. VTI / VXUS / BND). No advisory fee.
+              Chart lines appear in shades of blue.
+            </p>
+          </div>
+
+          <div class="strategy-card stc-managed">
+            <div class="stc-name">
+              <span class="swatch" style="background:#dc2626;"></span>
+              Low-Cost Index — With Advisor
+            </div>
+            <p>
+              Same index funds, but with an annual AUM fee deducted monthly. Enables the
+              momentum rotation option. Chart lines appear in shades of red.
+            </p>
+          </div>
+
+          <div class="strategy-card stc-active">
+            <div class="stc-name">
+              <span class="swatch" style="background:#16a34a;"></span>
+              Actively Managed — No Advisor
+            </div>
+            <p>
+              Uses the selected active fund family instead of index funds. No AUM fee.
+              Chart lines appear in shades of green.
+            </p>
+          </div>
+
+          <div class="strategy-card stc-active-mgd">
+            <div class="stc-name">
+              <span class="swatch" style="background:#d97706;"></span>
+              Actively Managed — With Advisor
+            </div>
+            <p>
+              Active funds plus an advisor AUM fee. The full-cost arrangement. Enables the
+              momentum rotation option. Chart lines appear in shades of orange.
+            </p>
+          </div>
+        </div>
+
+        <div class="tip">
+          <b>Family colors:</b> Each strategy uses a color family — blue, red, green, or
+          orange — so you can instantly tell which strategy you're examining. The three
+          rebalancing lines within that family use different shades and dash patterns
+          (see <a href="#chart">Reading the chart</a>).
+        </div>
+
+        <p style="margin-top: 14px;">
+          Switching strategies is instant — the page caches all four strategies from the API
+          response, so changing the selector re-renders immediately without a new data fetch.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── FREQUENCIES ── -->
+    <section id="frequencies">
+      <h2>The three rebalancing frequencies</h2>
+      <div class="section-body">
+        <p>
+          Rebalancing means selling some holdings that have grown beyond their target weight
+          and buying those that have fallen below it, restoring the portfolio to its original
+          stock/bond split. The simulator models three approaches:
+        </p>
+
+        <div class="freq-grid">
+          <div class="freq-card">
+            <div class="freq-name">
+              <span class="swatch swatch-dash" style="color:#93c5fd;"></span>
+              No Rebalancing
+            </div>
+            <p>
+              The portfolio drifts with market movements. After a stock rally, the portfolio
+              becomes more equity-heavy; after a downturn, more bond-heavy. Monthly contributions
+              are allocated proportionally to current holdings, but no active rebalancing occurs.
+            </p>
+          </div>
+
+          <div class="freq-card">
+            <div class="freq-name">
+              <span class="swatch swatch-dotted" style="color:#60a5fa;"></span>
+              Quarterly Rebalancing
+            </div>
+            <p>
+              Every three months the entire portfolio (including that month's contribution) is
+              rebalanced to the target stock/bond split. Between rebalancing dates, the portfolio
+              drifts naturally.
+            </p>
+          </div>
+
+          <div class="freq-card">
+            <div class="freq-name">
+              <span class="swatch" style="background:#2563eb;"></span>
+              Annual Rebalancing
+            </div>
+            <p>
+              Once per year the portfolio is restored to target weights. This is the most common
+              rebalancing frequency recommended by financial advisors and the default on the
+              main simulator.
+            </p>
+          </div>
+        </div>
+
+        <div class="tip">
+          <b>What the simulator shows:</b> In long bull markets, no-rebalancing portfolios
+          tend to accumulate more equity exposure and can outperform — but they also take on
+          more risk. In volatile or sideways markets, rebalancing can add value by systematically
+          buying low and selling high. The magnitude of these effects depends heavily on the
+          time period and stock/bond split.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CONTROLS ── -->
+    <section id="controls">
+      <h2>Controls &amp; settings</h2>
+      <div class="section-body">
+        <p>
+          The sidebar controls are identical to the
+          <a href="/">main simulator</a>, with one addition: the strategy selector. For full
+          descriptions of each control, see the
+          <a href="/guide#controls">Strategies User Guide</a>. Here's a summary of what each
+          group contains:
+        </p>
+
+        <h3>Simulation Parameters</h3>
+        <table class="ctrl-table">
+          <thead>
+            <tr><th>Control</th><th>What it does</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Starting Amount</td>
+              <td>Lump-sum invested on day one.</td>
+            </tr>
+            <tr>
+              <td>Monthly Contribution</td>
+              <td>Added at the start of each month. In non-rebalancing months, allocated proportionally to current holdings.</td>
+            </tr>
+            <tr>
+              <td>Start / End Date</td>
+              <td>Arrow pickers select any month within the available historical window. Reset the end date with the &#10005; button.</td>
+            </tr>
+            <tr>
+              <td>Stock / Bond Split</td>
+              <td>Target allocation from 0% to 100% stocks. Within equity: 80% domestic, 20% international.</td>
+            </tr>
+            <tr>
+              <td>Strategy to Compare</td>
+              <td>Picks which of the four strategies to examine. See <a href="#strategies">Choosing a strategy</a> above.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Portfolio &amp; Costs</h3>
+        <table class="ctrl-table">
+          <tbody>
+            <tr>
+              <td>Investment Era</td>
+              <td>Modern (ETFs, 2011+) or Pre-ETF (mutual funds, 1987+). Changes the available fund universe.</td>
+            </tr>
+            <tr>
+              <td>Active Fund Family</td>
+              <td>Selects which active funds to use for the Actively Managed strategies.</td>
+            </tr>
+            <tr>
+              <td>Advisor AUM Fee</td>
+              <td>Annual fee applied to With Advisor strategies. Deducted monthly.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Display Options</h3>
+        <table class="ctrl-table">
+          <tbody>
+            <tr>
+              <td>Account Type</td>
+              <td>Taxable (20% LTCG applies) or Tax-Deferred (no capital gains tax). See <a href="#tax">Tax &amp; rebalancing</a>.</td>
+            </tr>
+            <tr>
+              <td>Inflation-adjust</td>
+              <td>Deflates values to today's purchasing power using CPI data.</td>
+            </tr>
+            <tr>
+              <td>Show Total Invested</td>
+              <td>Adds a grey dashed line showing cumulative contributions.</td>
+            </tr>
+            <tr>
+              <td>Show After-Tax Wealth</td>
+              <td>Switches chart lines to estimated after-tax net. Disabled in Tax-Deferred mode.</td>
+            </tr>
+            <tr>
+              <td>Show Momentum Rotation</td>
+              <td>Appears only for With Advisor strategies. Adds a momentum line. See <a href="#momentum">Momentum rotation</a>.</td>
+            </tr>
+            <tr>
+              <td>Log scale</td>
+              <td>
+                Switches to a logarithmic vertical axis, where equal vertical distances
+                represent equal percentage changes. A portfolio doubling from $10k to $20k takes
+                the same space as $100k to $200k. This reveals whether growth rates differ
+                between rebalancing frequencies — something hard to see on a linear scale when
+                early values are small. Especially useful over long horizons.
+              </td>
+            </tr>
+            <tr>
+              <td>Disable auto-scale</td>
+              <td>Locks the vertical axis. A <em>Rescale</em> button appears if data exceeds the locked range.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── CHART ── -->
+    <section id="chart">
+      <h2>Reading the chart</h2>
+      <div class="section-body">
+        <p>
+          The chart shows portfolio growth over time with up to five lines. Three rebalancing
+          lines are always available; the Total Invested and Momentum lines are optional.
+        </p>
+
+        <h3>Line styles</h3>
+        <table class="ctrl-table">
+          <thead>
+            <tr><th>Line</th><th>Style</th><th>What it shows</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>No Rebalancing</td>
+              <td>Lightest shade, long dashes</td>
+              <td>Portfolio value if you never rebalance after the initial investment.</td>
+            </tr>
+            <tr>
+              <td>Quarterly</td>
+              <td>Medium shade, short dots</td>
+              <td>Portfolio value with rebalancing every three months.</td>
+            </tr>
+            <tr>
+              <td>Annual</td>
+              <td>Darkest shade, solid line</td>
+              <td>Portfolio value with once-per-year rebalancing.</td>
+            </tr>
+            <tr>
+              <td>Total Invested</td>
+              <td>Grey, dashed</td>
+              <td>Cumulative contributions (your breakeven line).</td>
+            </tr>
+            <tr>
+              <td>Momentum</td>
+              <td>Purple, dashed</td>
+              <td>Annual momentum rotation result (With Advisor only).</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Crash annotations</h3>
+        <p>
+          Vertical dashed lines mark three major market events — the Dot-com peak (March 2001),
+          the 2008 Financial Crisis (September 2008), and the COVID-19 crash (February 2020).
+          They appear only if your date range includes them.
+        </p>
+
+        <h3>Yield curve inversions</h3>
+        <p>
+          Red-tinted bands mark periods when the 10-year Treasury yield fell below the 2-year
+          yield. These inversions have historically preceded recessions and provide context for
+          drawdowns visible in the chart.
+        </p>
+
+        <h3>Interactive features</h3>
+        <p>
+          Hover anywhere on the chart to see a tooltip with all visible scenario values for
+          that month. Click legend entries or use the stat-card checkboxes to toggle individual
+          lines on and off.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── STAT CARDS ── -->
+    <section id="stat-cards">
+      <h2>Reading the stat cards</h2>
+      <div class="section-body">
+        <p>
+          Below the chart, three stat cards show side-by-side results for each rebalancing
+          frequency. Each card has a checkbox that toggles its chart line, and a colored
+          swatch matching the line style on the chart.
+        </p>
+        <table class="ctrl-table">
+          <thead>
+            <tr><th>Field</th><th>Meaning</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Final Value</td>
+              <td>Portfolio value at the end of the simulation (gross, before liquidation tax).</td>
+            </tr>
+            <tr>
+              <td>Total Contributed</td>
+              <td>Starting amount plus all monthly contributions — your breakeven point.</td>
+            </tr>
+            <tr>
+              <td>Total Gain</td>
+              <td>Final Value minus Total Contributed.</td>
+            </tr>
+            <tr>
+              <td>CAGR</td>
+              <td>Compound Annual Growth Rate — the annualized return that would produce the final value.</td>
+            </tr>
+            <tr>
+              <td>Fees Paid</td>
+              <td>Cumulative AUM fees (zero for No Advisor strategies).</td>
+            </tr>
+            <tr>
+              <td>Taxes Paid <span class="badge">Taxable only</span></td>
+              <td>
+                Capital-gains taxes already realized during the simulation. Visible only for
+                With Advisor strategies, which trigger gains at each rebalancing event.
+              </td>
+            </tr>
+            <tr>
+              <td>Est. Tax at Sale <span class="badge">Taxable only</span></td>
+              <td>Estimated 20% LTCG tax on unrealized gains if you liquidated today.</td>
+            </tr>
+            <tr>
+              <td>After-Tax Value <span class="badge">Taxable only</span></td>
+              <td>Final Value minus Est. Tax at Sale — the net amount on liquidation.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          <b>Comparing across cards:</b> Because all three cards share the same strategy, fund
+          selection, and fee structure, the differences come entirely from rebalancing frequency.
+          Look at the Final Value and CAGR rows to see the magnitude, and the Taxes Paid rows
+          to see the tax cost of more frequent rebalancing.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── MOMENTUM ── -->
+    <section id="momentum">
+      <h2>Momentum rotation</h2>
+      <div class="section-body">
+        <p>
+          When you select a With Advisor strategy (Low-Cost Index or Actively Managed), a
+          "Show momentum rotation" checkbox appears in Display Options. Checking it adds a
+          purple dashed line to the chart and a separate Momentum stat card below.
+        </p>
+        <p>
+          The momentum strategy rotates annually among a universe of equity and bond funds
+          based on trailing 12-month performance — the best-performing fund gets the largest
+          weight, the worst gets the smallest. An optional yield-curve tactical overlay can
+          shift allocation toward bonds during inversions.
+        </p>
+        <p>
+          Momentum always uses annual rotation regardless of the three rebalancing frequencies
+          being compared, so the momentum line is independent of the rebalancing frequency
+          selector. It provides a reference point: you can see whether the best rebalancing
+          frequency for a buy-and-hold strategy beats or trails a momentum approach.
+        </p>
+
+        <h3>Aggressiveness levels</h3>
+        <table class="ctrl-table">
+          <tbody>
+            <tr>
+              <td>Conservative</td>
+              <td>Smaller concentration in top-ranked funds; shifts 10% of equity to bonds during yield curve inversions.</td>
+            </tr>
+            <tr>
+              <td>Moderate</td>
+              <td>Standard rank-proportional weights; 20% tactical shift during inversions.</td>
+            </tr>
+            <tr>
+              <td>Aggressive</td>
+              <td>Doubles weight of top three equity funds; 35% tactical shift during inversions.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="tip">
+          <b>Why momentum appears here:</b> Since momentum strategies always rebalance
+          annually, they don't vary with the three frequencies being tested. The line is
+          included as a benchmark — if quarterly or no-rebalancing outperforms momentum,
+          that's a meaningful finding.
+        </div>
+
+        <div class="tip">
+          <b>A simplification worth noting:</b> The simulator models momentum rotation as a
+          once-per-year rebalancing event — ranking funds by trailing 12-month return and
+          reallocating accordingly. In practice, many active advisors using momentum or tactical
+          strategies trade far more frequently: monthly, or even opportunistically in response
+          to market signals. Annual rotation is a deliberate simplification that makes the
+          strategy comparable across both simulator pages, but it likely understates both the
+          turnover costs and the potential responsiveness of a real momentum approach. The result
+          is best read as an illustration of the general effect of trend-following active
+          management rather than a precise model of any particular advisor's strategy. For a
+          fuller discussion of what the simulator does and doesn't capture about advisor
+          behavior, see the
+          <a href="/guide#limitations">Strategies User Guide</a>.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── CALLOUT ── -->
+    <section id="callout">
+      <h2>The rebalancing impact callout</h2>
+      <div class="section-body">
+        <p>
+          Below the stat cards, a plain-English callout summarizes the rebalancing comparison.
+          It tells you:
+        </p>
+        <ul class="comparison-list">
+          <li>
+            <strong>Best and worst frequency</strong>
+            Which rebalancing approach produced the highest and lowest final value, and the
+            dollar spread between them.
+          </li>
+          <li>
+            <strong>Annual vs. quarterly</strong>
+            Whether annual or quarterly rebalancing came out ahead, and by how much — since
+            these are the two most common real-world options.
+          </li>
+        </ul>
+        <p style="margin-top: 14px;">
+          The callout updates automatically when you change strategy, date range, or any
+          other input.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── COMPARISONS ── -->
+    <section id="comparisons">
+      <h2>Comparisons to try</h2>
+      <div class="section-body">
+        <ul class="comparison-list">
+          <li>
+            <strong>Does rebalancing matter more for aggressive allocations?</strong>
+            Move the stock/bond slider to 100% stocks, then to 60/40. The spread between
+            the three rebalancing lines often widens at higher equity allocations because
+            there's more drift to correct.
+          </li>
+          <li>
+            <strong>Bull market vs. full cycle</strong>
+            Set the date range to cover only a bull run (e.g. 2012–2019), then expand it to
+            include the COVID crash. In sustained rallies, no-rebalancing often wins because
+            it lets equities compound. Over full cycles, rebalancing can add value by
+            systematically taking profits.
+          </li>
+          <li>
+            <strong>Does the strategy change the answer?</strong>
+            Click through all four strategies. Some fund families respond differently to
+            rebalancing — particularly active funds whose equity and bond components may
+            have different return patterns than their index counterparts.
+          </li>
+          <li>
+            <strong>Tax cost of rebalancing</strong>
+            In Taxable mode, compare the Taxes Paid rows. More frequent rebalancing realizes
+            more capital gains, which costs money in a taxable account. Is the pre-tax
+            rebalancing benefit large enough to survive the tax drag? See
+            <a href="#tax">Tax &amp; rebalancing</a> for details.
+          </li>
+          <li>
+            <strong>Rebalancing vs. momentum</strong>
+            For With Advisor strategies, enable momentum. Does the best rebalancing frequency
+            beat the momentum approach? If so, a simpler strategy may be preferable.
+          </li>
+          <li>
+            <strong>Cross-check with the main simulator</strong>
+            Once you've found an interesting rebalancing frequency, switch to the
+            <a href="/">Comparing Strategies</a> page and set the rebalancing control to that
+            frequency. Now you can see how your preferred frequency performs across all six
+            strategies.
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- ── TAX ── -->
+    <section id="tax">
+      <h2>Tax &amp; rebalancing</h2>
+      <div class="section-body">
+        <p>
+          In a taxable account, rebalancing triggers capital gains. The simulator models this
+          with a 20% long-term capital gains rate. The tax treatment differs by strategy type:
+        </p>
+
+        <h3>No Advisor strategies</h3>
+        <p>
+          Without an advisor, the simulator assumes you hold all positions until the end of the
+          simulation. Rebalancing still occurs at the chosen frequency, but capital gains tax is
+          deferred to final liquidation. The "Est. Tax at Sale" row shows the full tax bill.
+        </p>
+
+        <h3>With Advisor strategies</h3>
+        <p>
+          With an advisor, capital gains are recognized at each rebalancing event. Quarterly
+          rebalancing recognizes gains four times per year; annual rebalancing once per year.
+          The "Taxes Paid" row accumulates the total tax paid over the simulation, while
+          "Est. Tax at Sale" covers the remaining unrealized gains.
+        </p>
+
+        <div class="tip">
+          <b>Tax-Deferred accounts:</b> If you switch to Tax-Deferred mode, the tax rows
+          disappear entirely. This models a 401(k) or IRA where rebalancing has no tax
+          consequences — making the rebalancing comparison purely about return differences.
+        </div>
+
+        <p style="margin-top: 14px;">
+          For a fuller discussion of the tax model and its limitations, see the
+          <a href="/guide#limitations">Strategies User Guide</a>.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── DATA SOURCES ── -->
+    <section id="data">
+      <h2>Data sources</h2>
+      <div class="section-body">
+        <p>
+          The Rebalancing Impact page uses the same data and simulation engine as the
+          <a href="/">Comparing Strategies</a> page. Monthly adjusted-close prices come
+          from <strong>Yahoo Finance</strong>, CPI and yield curve data from the
+          <strong>FRED API</strong>.
+        </p>
+        <p>
+          For complete details on data sourcing, fund selection rationale, and simulation
+          limitations, see the
+          <a href="/guide#data">Data sources</a> and
+          <a href="/guide#funds">Fund universe</a> sections of the Strategies User Guide.
+        </p>
+      </div>
+    </section>
+
+    <div class="disclaimer">
+      <strong>Disclaimer:</strong> This simulator uses real historical data for educational purposes only.
+      Past performance does not guarantee future results. This is not financial advice.
+      Always consult a qualified financial professional before making investment decisions.
+    </div>
+
+  </div><!-- .guide-main -->
+</div><!-- .guide-layout -->
+
+<script>
+  // ── Collapsible sections ──
+  document.querySelectorAll('section[id]').forEach(section => {
+    const h2 = section.querySelector(':scope > h2');
+    if (!h2) return;
+
+    const chevron = document.createElement('span');
+    chevron.className = 'h2-chevron';
+    chevron.textContent = '▾';
+    h2.appendChild(chevron);
+
+    if (localStorage.getItem('rguide-' + section.id) === '1') {
+      section.classList.add('is-collapsed');
+    }
+
+    h2.addEventListener('click', () => {
+      const collapsed = section.classList.toggle('is-collapsed');
+      localStorage.setItem('rguide-' + section.id, collapsed ? '1' : '0');
+    });
+  });
+
+  // ── TOC active-link tracking ──
+  const tocLinks = document.querySelectorAll('.toc a');
+  const sections = document.querySelectorAll('section[id]');
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        tocLinks.forEach(a => a.classList.remove('is-active'));
+        const link = document.querySelector(`.toc a[href="#${entry.target.id}"]`);
+        if (link) link.classList.add('is-active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -75% 0px' });
+
+  sections.forEach(s => observer.observe(s));
+</script>
+</body>
+</html>

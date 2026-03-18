@@ -102,6 +102,16 @@ def methodology():
     return send_from_directory("static", "methodology.html")
 
 
+@app.route("/rebalancing")
+def rebalancing():
+    return send_from_directory("static", "rebalancing.html")
+
+
+@app.route("/rebalancing-guide")
+def rebalancing_guide():
+    return send_from_directory("static", "rebalancing-guide.html")
+
+
 @app.route("/reading-charts")
 def reading_charts():
     return send_from_directory("static", "what-charts-show.html")

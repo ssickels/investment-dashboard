@@ -13,7 +13,6 @@ function debounce(fn, ms) {
   };
 }
 
-/** Snap a target date string (YYYY-MM-DD) to the nearest date in the dates array. */
 function snapDate(target, dates) {
   const t = new Date(target).getTime();
   let best = null;
@@ -28,56 +27,49 @@ function snapDate(target, dates) {
   return best;
 }
 
+function hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
 // ==================== FUND INFO ====================
 
 const FUND_INFO = {
-  // Modern DIY index
   VTI:   { name: "Vanguard Total Stock Market ETF",               cat: "US Large Blend" },
   VXUS:  { name: "Vanguard Total International Stock ETF",        cat: "Foreign Large Blend" },
   BND:   { name: "Vanguard Total Bond Market ETF",                cat: "Intermediate Core Bond" },
-  // Pre-ETF DIY index
   VFINX: { name: "Vanguard 500 Index Fund",                       cat: "US Large Blend" },
   VWIGX: { name: "Vanguard International Growth Fund",            cat: "Foreign Large Growth" },
   VBMFX: { name: "Vanguard Total Bond Market Index",              cat: "Intermediate Core Bond" },
-  // Active — American / Dodge
   AGTHX: { name: "American Funds Growth Fund of America A",       cat: "US Large Growth" },
   DODFX: { name: "Dodge & Cox International Stock",               cat: "Foreign Large Value" },
   PTTAX: { name: "PIMCO Total Return A",                          cat: "Intermediate Core-Plus Bond" },
-  // Active — Fidelity (modern)
   FCNTX: { name: "Fidelity Contrafund",                           cat: "US Large Growth" },
   FIEUX: { name: "Fidelity Europe Fund",                          cat: "Europe Stock" },
   FTBFX: { name: "Fidelity Total Bond Fund",                      cat: "Intermediate Core Bond" },
-  // Active — T. Rowe Price
   PRGFX: { name: "T. Rowe Price Growth Stock Fund",               cat: "US Large Growth" },
   PRITX: { name: "T. Rowe Price International Stock Fund",        cat: "Foreign Large Blend" },
   PRTIX: { name: "T. Rowe Price U.S. Bond Enhanced Index",        cat: "Intermediate Core Bond" },
-  // Active — Vanguard active
   VWUSX: { name: "Vanguard U.S. Growth Fund",                     cat: "US Large Growth" },
   VWILX: { name: "Vanguard International Growth Fund (Admiral)",  cat: "Foreign Large Growth" },
   VBTLX: { name: "Vanguard Total Bond Market Index (Admiral)",    cat: "Intermediate Core Bond" },
-  // Pre-ETF classic — Fidelity
   FMAGX: { name: "Fidelity Magellan Fund",                        cat: "US Large Growth" },
   FOSFX: { name: "Fidelity Overseas Fund",                        cat: "Foreign Large Growth" },
   FBNDX: { name: "Fidelity Investment Grade Bond",                cat: "Intermediate Core Bond" },
-  // Pre-ETF classic — American Funds
   ANWPX: { name: "American Funds New Perspective Fund A",         cat: "World Large-Stock Growth" },
   ABNDX: { name: "American Funds Bond Fund of America A",         cat: "Intermediate Core Bond" },
-  // Sector — pre-ETF mutual funds
   FRESX: { name: "Fidelity Real Estate Investment Portfolio",     cat: "Real Estate" },
   FSENX: { name: "Fidelity Select Energy Portfolio",              cat: "Equity Energy" },
   FSPHX: { name: "Fidelity Select Health Care Portfolio",         cat: "Health" },
   VGSIX: { name: "Vanguard REIT Index Fund",                      cat: "Real Estate" },
-  // Sector ETFs — modern
   VNQ:   { name: "Vanguard Real Estate ETF",                      cat: "Real Estate" },
   XLE:   { name: "Energy Select Sector SPDR Fund",                cat: "Equity Energy" },
   XLV:   { name: "Health Care Select Sector SPDR Fund",           cat: "Health" },
   XLK:   { name: "Technology Select Sector SPDR Fund",            cat: "Technology" },
 };
 
-/**
- * Build a 3-column HTML table (Ticker / Name / Class) for one or more fund groups.
- * sections: [{heading, tickers}]  — heading may be null/falsy to omit the group header row.
- */
 function fundTable(sections) {
   let html = '<table class="fund-tbl"><tr><th>Ticker</th><th>Name</th><th>Class</th></tr>';
   for (const { heading, tickers } of sections) {
@@ -92,11 +84,6 @@ function fundTable(sections) {
   return html + '</table>';
 }
 
-/**
- * Position the floating tooltip near the cursor, clamping so it never
- * overflows the right or bottom edge of the viewport.
- * Must be called after tip.style.display = "block" so offsetWidth is non-zero.
- */
 function positionTip(tip, clientX, clientY) {
   const x = Math.min(clientX + 14, window.innerWidth  - tip.offsetWidth  - 8);
   const y = Math.min(clientY + 14, window.innerHeight - tip.offsetHeight - 8);
@@ -104,10 +91,6 @@ function positionTip(tip, clientX, clientY) {
   tip.style.top  = y + "px";
 }
 
-/**
- * Wire a floating fund-table tooltip to an element.
- * Assigns onmouse* properties so repeated calls on the same element overwrite cleanly.
- */
 function wireFundHover(el, html) {
   if (!el) return;
   el.style.cursor = "help";
@@ -120,11 +103,51 @@ function wireFundHover(el, html) {
   el.onmouseleave = ()  => { tip.style.display = "none"; };
 }
 
+// ==================== STRATEGY CONFIG ====================
+
+const STRATEGIES = {
+  diy: {
+    label: "Low-Cost Index / No Advisor",
+    scenarioKey: "diy",
+    hasAdvisor: false,
+    momentumKey: null,
+    // [No Rebalancing, Quarterly, Annually]
+    colors: ["#93c5fd", "#60a5fa", "#2563eb"],
+  },
+  managed: {
+    label: "Low-Cost Index / With Advisor",
+    scenarioKey: "managed",
+    hasAdvisor: true,
+    momentumKey: "diy_momentum",
+    colors: ["#fca5a5", "#f87171", "#dc2626"],
+  },
+  active: {
+    label: "Actively Managed / No Advisor",
+    scenarioKey: "active",
+    hasAdvisor: false,
+    momentumKey: null,
+    colors: ["#86efac", "#4ade80", "#16a34a"],
+  },
+  active_managed: {
+    label: "Actively Managed / With Advisor",
+    scenarioKey: "active_managed",
+    hasAdvisor: true,
+    momentumKey: "active_momentum",
+    colors: ["#fdba74", "#fb923c", "#d97706"],
+  },
+};
+
+const REBAL_MODES  = ["never", "quarterly", "annually"];
+const REBAL_LABELS = ["No Rebalancing", "Quarterly Rebalancing", "Annual Rebalancing"];
+const REBAL_DASHES = [[8, 4], [3, 3], []];
+const REBAL_WIDTHS = [2.5, 2, 2.5];
+
 // ==================== CHART SETUP ====================
 
 let chart = null;
 let scaleLocked = false;
 let lightChart  = false;
+let currentChartStrategy = null;
 
 const CHART_DARK = {
   legendColor:   '#e4f6fb',
@@ -167,26 +190,72 @@ function applyChartTheme(light) {
   chart.options.scales.y.grid.color               = t.gridColor;
   chart.update('none');
 }
+
 let lockedYMin  = null;
 let lockedYMax  = null;
-let lastData    = null;
+let lastResults = null;   // { never: data, quarterly: data, annually: data, ref: data }
+let selectedStrategy = "diy";
 let legendTooltips = [];
 
-function getDataExtremes(data) {
+// ==================== STRATEGY SELECTION ====================
+
+function setStrategy(value) {
+  selectedStrategy = value;
+  const strategy = STRATEGIES[value];
+
+  // Update radio buttons
+  document.querySelectorAll("input[name='strategy']").forEach(r => {
+    r.checked = r.value === value;
+  });
+  document.querySelectorAll(".strategy-option").forEach(el => {
+    el.classList.toggle("strategy-option--selected",
+      el.querySelector("input[name='strategy']").value === value);
+  });
+
+  // Show/hide momentum checkbox (only for With Advisor strategies)
+  const momGroup = document.getElementById("momentumGroup");
+  if (momGroup) {
+    momGroup.style.display = strategy.hasAdvisor ? "" : "none";
+    if (!strategy.hasAdvisor) {
+      document.getElementById("showMomentum").checked = false;
+      document.getElementById("momentumStats").style.display = "none";
+      setAggEnabled(false);
+    }
+  }
+
+  // Dim advisor costs section for No Advisor strategies
+  const aumGroup = document.getElementById("aumFeeGroup");
+  const aumHeader = document.getElementById("advisorCostsHeader");
+  if (aumGroup) aumGroup.style.opacity = strategy.hasAdvisor ? "1" : "0.4";
+  if (aumHeader) aumHeader.style.opacity = strategy.hasAdvisor ? "1" : "0.4";
+
+  // Re-render from cached data (no re-fetch needed)
+  if (lastResults) {
+    buildChart(lastResults);
+    handleScaleAfterRender(lastResults);
+    updateStats(lastResults);
+    updateCallout(lastResults);
+  }
+}
+
+// ==================== CHART BUILDING ====================
+
+function getDataExtremes(results) {
+  const strategy = STRATEGIES[selectedStrategy];
+  const key = strategy.scenarioKey;
   const allVals = [
-    ...data.scenarios.diy.values,
-    ...data.scenarios.managed.values,
-    ...data.scenarios.active.values,
-    ...data.scenarios.active_managed.values,
+    ...results.never.scenarios[key].values,
+    ...results.quarterly.scenarios[key].values,
+    ...results.annually.scenarios[key].values,
   ];
-  if (document.getElementById("showMomentum").checked && data.scenarios.diy_momentum && data.scenarios.active_momentum) {
-    allVals.push(...data.scenarios.diy_momentum.values);
-    allVals.push(...data.scenarios.active_momentum.values);
+  const momKey = strategy.momentumKey;
+  if (document.getElementById("showMomentum").checked && momKey && results.annually.scenarios[momKey]) {
+    allVals.push(...results.annually.scenarios[momKey].values);
   }
   return { min: Math.min(...allVals), max: Math.max(...allVals) };
 }
 
-function handleScaleAfterRender(data) {
+function handleScaleAfterRender(results) {
   if (!chart) return;
   const rescaleBtn = document.getElementById("rescaleBtn");
   if (!scaleLocked) {
@@ -195,75 +264,79 @@ function handleScaleAfterRender(data) {
     rescaleBtn.style.display = "none";
     return;
   }
-  const { min, max } = getDataExtremes(data);
+  const { min, max } = getDataExtremes(results);
   rescaleBtn.style.display = (max > lockedYMax || min < lockedYMin) ? "inline-block" : "none";
 }
 
-function buildLegendTooltips(data) {
-  const mu  = data.momentum_universe || {};
-  const diy = data.diy_portfolio.tickers   || [];
-  const act = data.active_fund_set.tickers || [];
+function buildLegendTooltips(results) {
+  const strategy = STRATEGIES[selectedStrategy];
+  const ref = results.ref;
+  const diy = ref.diy_portfolio.tickers || [];
+  const act = ref.active_fund_set.tickers || [];
+  const mu  = ref.momentum_universe || {};
+  const isIndex = (strategy.scenarioKey === "diy" || strategy.scenarioKey === "managed");
+  const tickers = isIndex ? diy : act;
+  const advisorNote = strategy.hasAdvisor ? " + AUM fee" : "";
+  const heading = isIndex ? "Index funds" : "Actively Managed funds";
+
+  const baseTip = fundTable([{ heading: heading + advisorNote, tickers }]);
+
+  // Build momentum tooltip
+  let momTip = null;
+  if (strategy.momentumKey === "diy_momentum" && mu.diy_equity) {
+    momTip = fundTable([{ heading: "Equity universe", tickers: mu.diy_equity }, { heading: "Bond universe", tickers: mu.diy_bond }]);
+  } else if (strategy.momentumKey === "active_momentum" && mu.active_equity) {
+    momTip = fundTable([{ heading: "Equity universe", tickers: mu.active_equity }, { heading: "Bond universe", tickers: mu.active_bond }]);
+  }
 
   return [
-    fundTable([{ heading: "No Advisor · Index funds · No fees", tickers: diy }]),
-    fundTable([{ heading: "Index funds + AUM fee + fund expense ratio", tickers: diy }]),
-    fundTable([{ heading: "No Advisor · Actively Managed", tickers: act }]),
-    fundTable([{ heading: "Active funds + AUM fee", tickers: act }]),
-    `<em>Total Invested</em><br><span style="color:#9ca3af;font-size:10px">Initial investment + monthly contributions</span>`,
-    null,  // _fill dataset (hidden)
-    (mu.diy_equity && mu.diy_equity.length)
-      ? fundTable([{ heading: "Equity universe", tickers: mu.diy_equity }, { heading: "Bond universe", tickers: mu.diy_bond }])
-      : null,
-    (mu.active_equity && mu.active_equity.length)
-      ? fundTable([{ heading: "Equity universe", tickers: mu.active_equity }, { heading: "Bond universe", tickers: mu.active_bond }])
-      : null,
-    // Yield curve inversion shading entry (index 8)
+    baseTip,  // 0: No Rebalancing
+    baseTip,  // 1: Quarterly
+    baseTip,  // 2: Annually
+    `<em>Total Invested</em><br><span style="color:#9ca3af;font-size:10px">Initial investment + monthly contributions</span>`,  // 3
+    momTip,   // 4: Momentum
+    // 5: Yield curve inversion
     `<strong>Yield Curve Inversion</strong><br>` +
     `<span style="color:#9ca3af;font-size:10px;line-height:1.6">` +
     `Periods when the 10-year Treasury yield fell below the 2-year yield.<br>` +
     `An inverted yield curve has historically preceded recessions by 6–24 months.<br>` +
-    `Shading is approximate; not all inversions lead to recessions.<br>` +
     `Source: FRED T10Y2Y series.</span>`,
   ];
 }
 
-function buildChart(data) {
+function buildChart(results) {
   const ctx = document.getElementById("mainChart").getContext("2d");
+  const strategy = STRATEGIES[selectedStrategy];
+  const colors = strategy.colors;
+  const scenarioKey = strategy.scenarioKey;
+  const needsRecreate = !chart || currentChartStrategy !== selectedStrategy;
 
-  // Rebuild legend tooltip content for this render
-  legendTooltips = buildLegendTooltips(data);
+  legendTooltips = buildLegendTooltips(results);
 
-  const labels = data.dates;
-
-  const showAfterTax = data.taxable && document.getElementById("showAfterTax").checked;
+  const labels = results.ref.dates;
+  const showAfterTax = results.ref.taxable && document.getElementById("showAfterTax").checked;
   const pick = (sc) => showAfterTax ? sc.after_tax_values : sc.values;
 
-  const diyVals            = pick(data.scenarios.diy);
-  const managedVals        = pick(data.scenarios.managed);
-  const activeVals         = pick(data.scenarios.active);
-  const activeManagedVals  = pick(data.scenarios.active_managed);
-  const momentumAvailable  = !!(data.scenarios.diy_momentum && data.scenarios.active_momentum);
-  const diyMomentumVals    = momentumAvailable ? pick(data.scenarios.diy_momentum) : [];
-  const activeMomentumVals = momentumAvailable ? pick(data.scenarios.active_momentum) : [];
-  const momentumVisible    = momentumAvailable && document.getElementById("showMomentum").checked;
+  const neverVals     = pick(results.never.scenarios[scenarioKey]);
+  const quarterlyVals = pick(results.quarterly.scenarios[scenarioKey]);
+  const annuallyVals  = pick(results.annually.scenarios[scenarioKey]);
+
+  const momKey = strategy.momentumKey;
+  const momentumAvailable = !!(momKey && results.annually.scenarios[momKey]);
+  const momentumVisible   = momentumAvailable && document.getElementById("showMomentum").checked;
+  const momentumVals      = momentumAvailable ? pick(results.annually.scenarios[momKey]) : [];
 
   const initialAmount  = parseFloat(document.getElementById("initialAmount").value) || 0;
   const monthlyContrib = parseFloat(document.getElementById("monthlyContrib").value) || 0;
-  const contribVals    = data.dates.map((_, i) => initialAmount + i * monthlyContrib);
+  const contribVals    = labels.map((_, i) => initialAmount + i * monthlyContrib);
 
-  // Crash annotation dates — snapped to available labels
-  const CRASHES = [
-    { label: "Dot-com Peak",       target: "2001-03-31" },
-    { label: "Financial Crisis",   target: "2008-09-30" },
-    { label: "COVID-19 Crash",     target: "2020-02-29" },
-  ];
-
+  // Annotations
   const annotations = {};
-
-  // Yield curve inversion shading (drawn behind chart lines)
   const chartStartTime = labels.length ? new Date(labels[0]).getTime() : 0;
   const chartEndTime   = labels.length ? new Date(labels[labels.length - 1]).getTime() : 0;
-  for (const period of (data.yield_curve_inversions || [])) {
+
+  // Yield curve inversions
+  for (const period of (results.ref.yield_curve_inversions || [])) {
     const pStart = new Date(period.start).getTime();
     const pEnd   = new Date(period.end).getTime();
     if (pEnd < chartStartTime || pStart > chartEndTime) continue;
@@ -279,13 +352,18 @@ function buildChart(data) {
     };
   }
 
+  // Crash markers
+  const CRASHES = [
+    { label: "Dot-com Peak",       target: "2001-03-31" },
+    { label: "Financial Crisis",   target: "2008-09-30" },
+    { label: "COVID-19 Crash",     target: "2020-02-29" },
+  ];
   for (const crash of CRASHES) {
     const crashTime = new Date(crash.target).getTime();
     if (crashTime < chartStartTime || crashTime > chartEndTime) continue;
     const snapped = snapDate(crash.target, labels);
     if (!snapped) continue;
-    const id = crash.label.replace(/\W+/g, "_");
-    annotations[id] = {
+    annotations[crash.label.replace(/\W+/g, "_")] = {
       type: "line",
       xMin: snapped,
       xMax: snapped,
@@ -306,54 +384,46 @@ function buildChart(data) {
   }
 
   const datasets = [
+    // 0: No Rebalancing
     {
-      label: data.scenarios.diy.label,
-      data: diyVals,
-      borderColor: "#2563eb",
-      backgroundColor: "rgba(37,99,235,0.06)",
-      borderWidth: 2.5,
-      borderDash: [8, 4],
+      label: REBAL_LABELS[0],
+      data: neverVals,
+      borderColor: colors[0],
+      backgroundColor: "transparent",
+      borderWidth: REBAL_WIDTHS[0],
+      borderDash: REBAL_DASHES[0],
       pointRadius: 0,
       pointStyle: "line",
       tension: 0.3,
       fill: false,
     },
+    // 1: Quarterly
     {
-      label: data.scenarios.managed.label,
-      data: managedVals,
-      borderColor: "#dc2626",
-      backgroundColor: "rgba(220,38,38,0.06)",
-      borderWidth: 2,
+      label: REBAL_LABELS[1],
+      data: quarterlyVals,
+      borderColor: colors[1],
+      backgroundColor: "transparent",
+      borderWidth: REBAL_WIDTHS[1],
+      borderDash: REBAL_DASHES[1],
       pointRadius: 0,
       pointStyle: "line",
       tension: 0.3,
-      borderDash: [5, 3],
       fill: false,
     },
+    // 2: Annually
     {
-      label: data.scenarios.active.label,
-      data: activeVals,
-      borderColor: "#16a34a",
-      backgroundColor: "rgba(22,163,74,0.06)",
-      borderWidth: 2,
+      label: REBAL_LABELS[2],
+      data: annuallyVals,
+      borderColor: colors[2],
+      backgroundColor: "transparent",
+      borderWidth: REBAL_WIDTHS[2],
+      borderDash: REBAL_DASHES[2],
       pointRadius: 0,
       pointStyle: "line",
       tension: 0.3,
-      borderDash: [2, 2],
       fill: false,
     },
-    {
-      label: data.scenarios.active_managed.label,
-      data: activeManagedVals,
-      borderColor: "#d97706",
-      backgroundColor: "rgba(217,119,6,0.06)",
-      borderWidth: 2,
-      pointRadius: 0,
-      pointStyle: "line",
-      tension: 0.3,
-      borderDash: [2, 2],
-      fill: false,
-    },
+    // 3: Total Invested
     {
       label: "Total Invested",
       data: contribVals,
@@ -365,23 +435,12 @@ function buildChart(data) {
       borderDash: [6, 3],
       fill: false,
     },
-    // Invisible fill dataset between DIY (idx 0) and Active (idx 2)
+    // 4: Momentum
     {
-      label: "_fill",
-      data: diyVals,
-      borderColor: "transparent",
-      backgroundColor: "rgba(37,99,235,0.06)",
-      borderWidth: 0,
-      pointRadius: 0,
-      pointStyle: "line",
-      tension: 0.3,
-      fill: { target: 2, above: "rgba(37,99,235,0.07)", below: "rgba(22,163,74,0.07)" },
-    },
-    {
-      label: momentumAvailable ? data.scenarios.diy_momentum.label : "Index Momentum",
-      data: diyMomentumVals,
+      label: momentumAvailable ? results.annually.scenarios[momKey].label : "Momentum Rotation",
+      data: momentumVals,
       borderColor: "#7c3aed",
-      backgroundColor: "rgba(124,58,237,0.06)",
+      backgroundColor: "transparent",
       borderWidth: 2,
       pointRadius: 0,
       pointStyle: "line",
@@ -390,20 +449,7 @@ function buildChart(data) {
       fill: false,
       hidden: !momentumVisible,
     },
-    {
-      label: momentumAvailable ? data.scenarios.active_momentum.label : "Active Momentum",
-      data: activeMomentumVals,
-      borderColor: "#0891b2",
-      backgroundColor: "rgba(8,145,178,0.06)",
-      borderWidth: 2,
-      pointRadius: 0,
-      pointStyle: "line",
-      tension: 0.3,
-      borderDash: [5, 3],
-      fill: false,
-      hidden: !momentumVisible,
-    },
-    // Index 8 — legend-only entry for yield curve inversion shading (no data points)
+    // 5: Yield Curve Inversion (legend-only)
     {
       label: "Yield Curve Inversion",
       data: [],
@@ -413,7 +459,7 @@ function buildChart(data) {
       pointRadius: 0,
       pointStyle: "rect",
       fill: false,
-      hidden: !(data.yield_curve_inversions && data.yield_curve_inversions.length > 0),
+      hidden: !(results.ref.yield_curve_inversions && results.ref.yield_curve_inversions.length > 0),
     },
   ];
 
@@ -438,29 +484,26 @@ function buildChart(data) {
             document.getElementById("legendTooltip").style.display = "none";
           },
           onClick: (e, legendItem, legend) => {
-            // Yield curve entry is informational only — clicking does nothing
             if (legendItem.text === "Yield Curve Inversion") return;
-            // Default Chart.js toggle
             const idx = legendItem.datasetIndex;
             const ci = legend.chart;
             if (ci.isDatasetVisible(idx)) { ci.hide(idx); } else { ci.show(idx); }
             const nowVisible = ci.isDatasetVisible(idx);
 
-            // Sync stat card checkbox (datasets 0–3)
+            // Sync stat card checkbox (datasets 0–2)
             const cb = document.querySelector(`.stat-card-toggle[data-dataset-idx="${idx}"]`);
             if (cb) {
               cb.checked = nowVisible;
               cb.title = nowVisible
                 ? "Uncheck to hide this line on the chart"
                 : "Check to show this line on the chart";
+              cb.closest(".stat-card").classList.toggle("line-hidden", !nowVisible);
             }
 
-            // Sync "Show total invested" checkbox
             if (legendItem.text === "Total Invested") {
               document.getElementById("showContrib").checked = nowVisible;
             }
 
-            // Sync "Show momentum" checkbox — uncheck only when both momentum lines are hidden
             if (legendItem.text.includes("Momentum")) {
               const anyMom = ci.data.datasets.some((ds, i) =>
                 ds.label && ds.label.includes("Momentum") && ci.isDatasetVisible(i)
@@ -479,7 +522,7 @@ function buildChart(data) {
               return defaults;
             },
             filter: (item) => {
-              if (item.text === "_fill") return false;
+
               if (item.text === "Total Invested") return document.getElementById("showContrib").checked;
               if (item.text.includes("Momentum")) return document.getElementById("showMomentum").checked;
               if (item.hidden) return false;
@@ -501,7 +544,7 @@ function buildChart(data) {
           itemSort: (a, b) => b.parsed.y - a.parsed.y,
           callbacks: {
             label: (ctx) => {
-              if (ctx.dataset.label === "_fill") return null;
+
               return ` ${ctx.dataset.label}: ${fmt$.format(ctx.parsed.y)}`;
             },
           },
@@ -515,13 +558,11 @@ function buildChart(data) {
             font: { size: 11 },
             color: "#5a9aaa",
             maxRotation: 0,
-            callback: function(value, index, ticks) {
+            callback: function(value) {
               const label = this.getLabelForValue(value);
               const date = new Date(label + "T00:00:00");
               const totalMonths = this.chart.data.labels.length;
-              if (totalMonths > 48) {
-                return String(date.getFullYear());
-              }
+              if (totalMonths > 48) return String(date.getFullYear());
               return date.toLocaleDateString("en-US", { month: "short", year: "numeric" });
             },
           },
@@ -529,6 +570,8 @@ function buildChart(data) {
         },
         y: {
           type: document.getElementById("logScale").checked ? "logarithmic" : "linear",
+          min: (scaleLocked && lockedYMin !== null) ? lockedYMin : undefined,
+          max: (scaleLocked && lockedYMax !== null) ? lockedYMax : undefined,
           ticks: {
             callback: (v) => fmt$.format(v),
             font: { size: 11 },
@@ -540,9 +583,27 @@ function buildChart(data) {
     },
   };
 
-  const contribVisible = document.getElementById("showContrib").checked;
+  const contribVisible  = document.getElementById("showContrib").checked;
 
-  if (chart) {
+  if (needsRecreate) {
+    if (chart) { chart.destroy(); chart = null; }
+    chart = new Chart(ctx, config);
+    // Initial visibility
+    document.querySelectorAll(".stat-card-toggle").forEach(cb => {
+      const idx = parseInt(cb.dataset.datasetIdx);
+      if (idx < chart.data.datasets.length) {
+        chart.getDatasetMeta(idx).hidden = !cb.checked;
+      }
+    });
+    const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
+    if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
+    const momIdx = chart.data.datasets.findIndex(ds => ds.label && ds.label.includes("Momentum") && ds.label !== "Yield Curve Inversion");
+    if (momIdx !== -1) chart.getDatasetMeta(momIdx).hidden = !momentumVisible;
+    chart.update("none");
+    applyChartTheme(lightChart);
+    currentChartStrategy = selectedStrategy;
+  } else {
+    // Update in-place
     chart.data.labels = labels;
     chart.data.datasets.forEach((ds, i) => {
       if (datasets[i]) {
@@ -558,40 +619,29 @@ function buildChart(data) {
       chart.options.scales.y.min = undefined;
       chart.options.scales.y.max = undefined;
     }
-    // Sync visibility toggles
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
-    // Respect stat card toggle states
     document.querySelectorAll(".stat-card-toggle").forEach(cb => {
-      chart.getDatasetMeta(parseInt(cb.dataset.datasetIdx)).hidden = !cb.checked;
+      const idx = parseInt(cb.dataset.datasetIdx);
+      if (idx < chart.data.datasets.length) {
+        chart.getDatasetMeta(idx).hidden = !cb.checked;
+      }
     });
-    const diyMomCb = document.querySelector('.stat-card-toggle[data-dataset-idx="6"]');
-    const diyMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[6].label);
-    if (diyMomIdx !== -1) chart.getDatasetMeta(diyMomIdx).hidden = !momentumVisible || (diyMomCb && !diyMomCb.checked);
-    const actMomCb = document.querySelector('.stat-card-toggle[data-dataset-idx="7"]');
-    const actMomIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[7].label);
-    if (actMomIdx !== -1) chart.getDatasetMeta(actMomIdx).hidden = !momentumVisible || (actMomCb && !actMomCb.checked);
-    const ycInvIdx = chart.data.datasets.findIndex(ds => ds.label === "Yield Curve Inversion");
-    if (ycInvIdx !== -1) chart.getDatasetMeta(ycInvIdx).hidden = !(data.yield_curve_inversions && data.yield_curve_inversions.length > 0);
+    const momIdx = chart.data.datasets.findIndex(ds => ds.label === datasets[4].label);
+    if (momIdx !== -1) chart.getDatasetMeta(momIdx).hidden = !momentumVisible;
+    const ycIdx = chart.data.datasets.findIndex(ds => ds.label === "Yield Curve Inversion");
+    if (ycIdx !== -1) chart.getDatasetMeta(ycIdx).hidden = !(results.ref.yield_curve_inversions && results.ref.yield_curve_inversions.length > 0);
     chart.update();
-  } else {
-    chart = new Chart(ctx, config);
-    // Apply initial visibility for all toggleable lines
-    document.querySelectorAll(".stat-card-toggle").forEach(cb => {
-      chart.getDatasetMeta(parseInt(cb.dataset.datasetIdx)).hidden = !cb.checked;
-    });
-    const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
-    if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
-    chart.update("none");
-    applyChartTheme(lightChart);
   }
 }
 
 // ==================== STATS ====================
 
-function updateStats(data) {
-  const s = data.scenarios;
-  const taxable = data.taxable;
+function updateStats(results) {
+  const strategy = STRATEGIES[selectedStrategy];
+  const scenarioKey = strategy.scenarioKey;
+  const colors = strategy.colors;
+  const taxable = results.ref.taxable;
 
   function fill(prefix, stats) {
     document.getElementById(`${prefix}Final`).textContent   = fmt$.format(stats.final_value);
@@ -599,26 +649,49 @@ function updateStats(data) {
     document.getElementById(`${prefix}Gain`).textContent    = fmt$.format(stats.total_gain);
     document.getElementById(`${prefix}Cagr`).textContent    = fmtPct(stats.cagr);
     document.getElementById(`${prefix}Fees`).textContent    = fmt$.format(stats.total_fees_paid);
-    // Tax rows (optional elements)
     const setPair = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = fmt$.format(val); };
     setPair(`${prefix}TaxesPaid`, stats.total_taxes_paid || 0);
     setPair(`${prefix}TaxDue`,    stats.taxes_due_at_liquidation || 0);
     setPair(`${prefix}AfterTax`,  stats.after_tax_final != null ? stats.after_tax_final : stats.final_value);
   }
 
-  fill("diy",            s.diy.stats);
-  fill("managed",        s.managed.stats);
-  fill("active",         s.active.stats);
-  fill("activeManaged",  s.active_managed.stats);
-  if (s.diy_momentum)    fill("diyMomentum",    s.diy_momentum.stats);
-  if (s.active_momentum) fill("activeMomentum", s.active_momentum.stats);
+  fill("never",     results.never.scenarios[scenarioKey].stats);
+  fill("quarterly", results.quarterly.scenarios[scenarioKey].stats);
+  fill("annually",  results.annually.scenarios[scenarioKey].stats);
 
-  // Show/hide tax rows based on account type
+  // Momentum card
+  const momKey = strategy.momentumKey;
+  if (momKey && results.annually.scenarios[momKey]) {
+    fill("momentum", results.annually.scenarios[momKey].stats);
+  }
+
+  // Update card colors dynamically
+  const cards   = ["statsNever", "statsQuarterly", "statsAnnually"];
+  const swatches = ["neverSwatch", "quarterlySwatch", "annuallySwatch"];
+  const dashes  = ["8 4", "3 3", ""];
+
+  for (let i = 0; i < 3; i++) {
+    document.getElementById(cards[i]).style.borderTopColor = colors[i];
+    const line = document.querySelector(`#${swatches[i]} line`);
+    if (line) {
+      line.setAttribute("stroke", colors[i]);
+      line.setAttribute("stroke-dasharray", dashes[i]);
+    }
+  }
+
+  // Update group label
+  document.getElementById("rebalGroupLabel").textContent = strategy.label;
+
+  // Show/hide tax rows
   document.querySelectorAll(".tax-row").forEach(el => {
     el.style.display = taxable ? "" : "none";
   });
+  // "Taxes Paid" row only for With Advisor strategies
+  document.querySelectorAll(".tax-paid-row").forEach(el => {
+    el.style.display = (taxable && strategy.hasAdvisor) ? "" : "none";
+  });
 
-  // Manage "Show After-Tax Wealth" checkbox state
+  // Show after-tax checkbox state
   const atCb = document.getElementById("showAfterTax");
   if (!taxable) {
     atCb.checked  = false;
@@ -627,53 +700,44 @@ function updateStats(data) {
     atCb.disabled = false;
   }
 
-  // Build fund tables for hover tooltips
-  const diyTickers = data.diy_portfolio.tickers;
-  const actTickers = data.active_fund_set.tickers;
-  const mu = data.momentum_universe;
+  // Wire fund hover tooltips on card subtitles
+  const ref = results.ref;
+  const diyTickers = ref.diy_portfolio.tickers;
+  const actTickers = ref.active_fund_set.tickers;
+  const isIndex = (scenarioKey === "diy" || scenarioKey === "managed");
+  const tickers = isIndex ? diyTickers : actTickers;
+  const tbl = fundTable([{ heading: null, tickers }]);
 
-  const diyTbl = fundTable([{ heading: null, tickers: diyTickers }]);
-  const actTbl = fundTable([{ heading: null, tickers: actTickers }]);
-
-  // Stat card subtitles — plain text + hover table
-  const diySubEl = document.getElementById("diyCardSub");
-  diySubEl.textContent = diyTickers.join(" / ");
-  wireFundHover(diySubEl, diyTbl);
-
-  const mgdSubEl = document.getElementById("managedCardSub");
-  mgdSubEl.textContent = diyTickers.join(" / ") + " + advisor fees";
-  wireFundHover(mgdSubEl, diyTbl);
-
-  const actSubEl = document.getElementById("activeCardSub");
-  actSubEl.textContent = actTickers.join(" / ");
-  wireFundHover(actSubEl, actTbl);
-
-  const actMgdSubEl = document.getElementById("activeManagedCardSub");
-  actMgdSubEl.textContent = actTickers.join(" / ") + " + advisor fees";
-  wireFundHover(actMgdSubEl, actTbl);
-
-  // Momentum card subtitles + group labels
-  if (s.diy_momentum && mu) {
-    const diyMomTbl = fundTable([{ heading: "Equity", tickers: mu.diy_equity }, { heading: "Bond", tickers: mu.diy_bond }]);
-    const diyMomSubEl = document.getElementById("diyMomentumCardSub");
-    diyMomSubEl.textContent = `${mu.diy_equity.length} equity · ${mu.diy_bond.length} bond · annual rotation`;
-    wireFundHover(diyMomSubEl, diyMomTbl);
-    const diyMomLabel = document.getElementById("diyMomentumGroupLabel");
-    if (diyMomLabel) { diyMomLabel.textContent = "Index Momentum (With Advisor)"; wireFundHover(diyMomLabel, diyMomTbl); }
+  const cardSubs = ["neverCardSub", "quarterlyCardSub", "annuallyCardSub"];
+  for (const id of cardSubs) {
+    const el = document.getElementById(id);
+    if (el) wireFundHover(el, tbl);
   }
-  if (s.active_momentum && mu) {
-    const actMomTbl = fundTable([{ heading: "Equity", tickers: mu.active_equity }, { heading: "Bond", tickers: mu.active_bond }]);
-    const actMomSubEl = document.getElementById("activeMomentumCardSub");
-    actMomSubEl.textContent = `${mu.active_equity.length} equity · ${mu.active_bond.length} bond · annual rotation`;
-    wireFundHover(actMomSubEl, actMomTbl);
-    const actMomLabel = document.getElementById("activeMomentumGroupLabel");
-    if (actMomLabel) { actMomLabel.textContent = "Active Momentum (With Advisor)"; wireFundHover(actMomLabel, actMomTbl); }
+
+  // Momentum card subtitle
+  const mu = ref.momentum_universe;
+  if (momKey && mu) {
+    const momEq = momKey === "diy_momentum" ? mu.diy_equity : mu.active_equity;
+    const momBd = momKey === "diy_momentum" ? mu.diy_bond : mu.active_bond;
+    if (momEq) {
+      const momTbl = fundTable([{ heading: "Equity", tickers: momEq }, { heading: "Bond", tickers: momBd }]);
+      const momSubEl = document.getElementById("momentumCardSub");
+      if (momSubEl) {
+        momSubEl.textContent = `${momEq.length} equity · ${momBd.length} bond · annual rotation`;
+        wireFundHover(momSubEl, momTbl);
+      }
+      const momLabel = document.getElementById("momentumGroupLabel");
+      if (momLabel) {
+        momLabel.textContent = isIndex ? "Index Momentum (With Advisor)" : "Active Momentum (With Advisor)";
+        wireFundHover(momLabel, momTbl);
+      }
+    }
   }
 
   // Sidebar: DIY fund display
-  wireFundHover(document.getElementById("diyFundDisplay"), diyTbl);
+  wireFundHover(document.getElementById("diyFundDisplay"), fundTable([{ heading: null, tickers: diyTickers }]));
 
-  // Sidebar: "Actively Managed Funds" dropdown label → active momentum universe
+  // Sidebar: active fund set label → momentum universe
   if (mu) {
     wireFundHover(
       document.getElementById("activeFundSetLabel"),
@@ -681,102 +745,80 @@ function updateStats(data) {
     );
   }
 
-  // Sidebar: "Show momentum rotation" label → description tooltip
+  // Sidebar: momentum tooltip
   const momentumTipEl = document.getElementById("showMomentumTip");
   if (momentumTipEl) {
     wireFundHover(
       momentumTipEl,
       `<strong>Momentum Rotation</strong><br><br>
-Reveals two additional "With Advisor" scenarios that rebalance annually
+Reveals an additional "With Advisor" scenario that rebalances annually
 using 12-month trailing momentum. Funds that performed best over the
-prior year receive the largest allocation (≈50%); the worst performer
-receives the smallest (≈17%).<br><br>
-<em>No look-ahead:</em> weights at each rebalancing date use only returns
-available up to the prior month. The first year uses equal weights while
-momentum history accumulates.<br><br>
-The <strong>Aggressiveness</strong> setting controls a yield-curve tactical
-overlay: in Aggressive mode, equity is shifted toward bonds when the
-10Y–2Y spread was negative in the prior year.`
+prior year receive the largest allocation.<br><br>
+<em>Note:</em> Momentum always uses annual rotation regardless of the
+rebalancing comparison shown on the chart.`
     );
   }
 
-  // Update weighted expense ratio display
-  const wer = data.active_fund_set.weighted_expense_ratio;
+  // Weighted expense ratio display
+  const wer = ref.active_fund_set.weighted_expense_ratio;
   document.getElementById("erDisplay").textContent = `${wer.toFixed(2)}% / yr`;
 }
 
-function updateFeeDrag(data) {
-  const fd = data.fee_drag;
-  const s  = data.scenarios;
-  const el = document.getElementById("feeDragText");
+function updateCallout(results) {
+  const strategy = STRATEGIES[selectedStrategy];
+  const key = strategy.scenarioKey;
 
-  const diyFinal    = s.diy.stats.final_value;
-  const mgdFinal    = s.managed.stats.final_value;
-  const actFinal    = s.active.stats.final_value;
-  const actMgdFinal = s.active_managed.stats.final_value;
+  const neverFinal     = results.never.scenarios[key].stats.final_value;
+  const quarterlyFinal = results.quarterly.scenarios[key].stats.final_value;
+  const annuallyFinal  = results.annually.scenarios[key].stats.final_value;
 
-  // Scenario name with tooltip showing its final value and what costs are included
-  function scen(label, finalVal, note) {
-    const tt = `${label}  ·  Final value: ${fmt$.format(finalVal)}  ·  ${note}`;
-    return `<span class="tooltip-term tooltip-term--wide" data-tooltip="${tt.replace(/"/g, "&quot;")}">${label}</span>`;
-  }
+  const neverCagr     = results.never.scenarios[key].stats.cagr;
+  const quarterlyCagr = results.quarterly.scenarios[key].stats.cagr;
+  const annuallyCagr  = results.annually.scenarios[key].stats.cagr;
 
-  // Dollar difference with tooltip showing the explicit subtraction formula
-  function diff(amount, a, b) {
-    const tt = `How this is calculated: ${fmt$.format(a)} − ${fmt$.format(b)} = ${fmt$.format(Math.abs(amount))}`;
-    return `<span class="tooltip-term tooltip-term--wide" data-tooltip="${tt}"><strong>${fmt$.format(Math.abs(amount))}</strong></span>`;
-  }
-
+  const el = document.getElementById("rebalCalloutText");
   const lines = [];
 
-  // 1. Advisor + fund expense drag on index funds
-  const d1 = fd.diy_vs_managed;
-  if (d1 >= 0) {
+  // Find best and worst
+  const vals = [
+    { label: "No Rebalancing",       final: neverFinal,     cagr: neverCagr },
+    { label: "Quarterly Rebalancing", final: quarterlyFinal, cagr: quarterlyCagr },
+    { label: "Annual Rebalancing",    final: annuallyFinal,  cagr: annuallyCagr },
+  ];
+  vals.sort((a, b) => b.final - a.final);
+  const best  = vals[0];
+  const worst = vals[2];
+  const spread = best.final - worst.final;
+
+  lines.push(
+    `<strong>${best.label}</strong> produced the highest final value at <strong>${fmt$.format(best.final)}</strong> (CAGR ${fmtPct(best.cagr)}), ` +
+    `while <strong>${worst.label}</strong> finished at <strong>${fmt$.format(worst.final)}</strong> (CAGR ${fmtPct(worst.cagr)}).`
+  );
+
+  if (spread > 0) {
     lines.push(
-      `${scen(s.diy.label, diyFinal, "No AUM fee; index fund returns at cost")} grew to <strong>${fmt$.format(diyFinal)}</strong>. ` +
-      `${scen(s.managed.label, mgdFinal, "Same index funds — AUM fee + weighted active fund expense ratio deducted monthly")} would have ended at <strong>${fmt$.format(mgdFinal)}</strong>. ` +
-      `Advisor and fund fees cost ${diff(d1, diyFinal, mgdFinal)} in final portfolio value.`
-    );
-  } else {
-    lines.push(
-      `In this period the fee-adjusted scenario edged out the no-fee index by ${diff(-d1, mgdFinal, diyFinal)} ` +
-      `(${scen(s.managed.label, mgdFinal, "With AUM fee + fund expenses")} <strong>${fmt$.format(mgdFinal)}</strong> vs. ` +
-      `${scen(s.diy.label, diyFinal, "No fees")} <strong>${fmt$.format(diyFinal)}</strong>).`
+      `The spread between best and worst rebalancing approach was <strong>${fmt$.format(spread)}</strong> in final portfolio value.`
     );
   }
 
-  // 2. Active management vs. passive index
-  const d2 = fd.diy_vs_active;
-  if (d2 >= 0) {
+  // Annual vs. quarterly comparison
+  const annVsQtr = annuallyFinal - quarterlyFinal;
+  if (Math.abs(annVsQtr) < 100) {
     lines.push(
-      `Against ${scen(s.active.label, actFinal, "No advisor; fund expense ratios are already embedded in historical NAV prices")} ` +
-      `(<strong>${fmt$.format(actFinal)}</strong>), the index portfolio finished ${diff(d2, diyFinal, actFinal)} ahead.`
+      `Annual and quarterly rebalancing produced nearly identical results ` +
+      `(<strong>${fmt$.format(annuallyFinal)}</strong> vs. <strong>${fmt$.format(quarterlyFinal)}</strong>).`
+    );
+  } else if (annVsQtr > 0) {
+    lines.push(
+      `Annual rebalancing outperformed quarterly by <strong>${fmt$.format(annVsQtr)}</strong>.`
     );
   } else {
     lines.push(
-      `${scen(s.active.label, actFinal, "No advisor; expense ratios embedded in NAV")} ` +
-      `(<strong>${fmt$.format(actFinal)}</strong>) beat the index by ${diff(-d2, actFinal, diyFinal)} ` +
-      `— active management added value in this period.`
+      `Quarterly rebalancing edged ahead of annual by <strong>${fmt$.format(-annVsQtr)}</strong>.`
     );
   }
 
-  // 3. Cost of adding an advisor to the active funds
-  const d3 = fd.active_vs_active_managed;
-  if (d3 >= 0) {
-    lines.push(
-      `Layering an advisor onto the active funds: ` +
-      `${scen(s.active_managed.label, actMgdFinal, "Active funds + AUM fee deducted monthly")} ended at <strong>${fmt$.format(actMgdFinal)}</strong>, ` +
-      `vs. <strong>${fmt$.format(actFinal)}</strong> without an advisor. ` +
-      `The AUM fee cost ${diff(d3, actFinal, actMgdFinal)}.`
-    );
-  } else {
-    lines.push(
-      `The advisor-managed active portfolio ended ${diff(-d3, actMgdFinal, actFinal)} ahead of the no-advisor active baseline ` +
-      `(<strong>${fmt$.format(actMgdFinal)}</strong> vs. <strong>${fmt$.format(actFinal)}</strong>).`
-    );
-  }
-
-  el.innerHTML = lines.join("<br /><br />");
+  el.innerHTML = lines.join("<br><br>");
 }
 
 // ==================== FETCH & RENDER ====================
@@ -788,7 +830,6 @@ function getParams() {
     start_date:      document.getElementById("startDate").value,
     end_date:        document.getElementById("endDate").value,
     stock_pct:       document.getElementById("stockPct").value,
-    rebalance:       document.getElementById("rebalance").value,
     aum_fee:         document.getElementById("aumFee").value,
     inflation_adj:   document.getElementById("inflationAdj").checked ? "true" : "false",
     active_fund_set: document.getElementById("activeFundSet").value,
@@ -829,37 +870,48 @@ async function fetchAndRender() {
   }
 
   overlay.style.display = "flex";
-  const params = getParams();
-  const qs = new URLSearchParams(params).toString();
+  const baseParams = getParams();
 
   try {
-    const resp = await fetch(`/api/portfolio?${qs}`);
-    const data = await resp.json();
+    // 3 parallel API calls — one per rebalancing frequency
+    const responses = await Promise.all(
+      REBAL_MODES.map(mode => {
+        const params = { ...baseParams, rebalance: mode };
+        const qs = new URLSearchParams(params).toString();
+        return fetch(`/api/portfolio?${qs}`).then(r => r.json());
+      })
+    );
 
-    if (!resp.ok || !data.scenarios) {
-      throw new Error(data.error || `Server error ${resp.status}`);
+    const [neverData, quarterlyData, annuallyData] = responses;
+    const refData = annuallyData;
+
+    if (!refData.scenarios) {
+      throw new Error(refData.error || "Server error");
     }
 
-    // Initialize / update date picker bounds
     suppressPickerFetch = true;
-    initDatePicker(data.meta.absolute_date_start, data.meta.absolute_date_end);
+    initDatePicker(refData.meta.absolute_date_start, refData.meta.absolute_date_end);
     suppressPickerFetch = false;
 
-    // Date range note
     document.getElementById("dateRangeNote").textContent =
-      `Common history: ${data.meta.date_range_start} → ${data.meta.date_range_end} (${data.meta.months_available} months)`;
+      `Common history: ${refData.meta.date_range_start} → ${refData.meta.date_range_end} (${refData.meta.months_available} months)`;
 
-    // Soft warning
-    if (data.error) {
-      errBanner.textContent = data.error;
+    if (refData.error) {
+      errBanner.textContent = refData.error;
       errBanner.style.display = "block";
     }
 
-    lastData = data;
-    buildChart(data);
-    handleScaleAfterRender(data);
-    updateStats(data);
-    updateFeeDrag(data);
+    lastResults = {
+      never:     neverData,
+      quarterly: quarterlyData,
+      annually:  annuallyData,
+      ref:       refData,
+    };
+
+    buildChart(lastResults);
+    handleScaleAfterRender(lastResults);
+    updateStats(lastResults);
+    updateCallout(lastResults);
 
   } catch (err) {
     errBanner.textContent = `Error: ${err.message}`;
@@ -871,10 +923,10 @@ async function fetchAndRender() {
 
 const debouncedFetch = debounce(fetchAndRender, 400);
 
-// ==================== ACCOUNT TYPE SELECTION ====================
+// ==================== ACCOUNT TYPE ====================
 
 function setTaxable(value) {
-  document.querySelectorAll(".agg-option", "#taxToggle").forEach(el => {
+  document.querySelectorAll("#taxToggle .agg-option").forEach(el => {
     const radio = el.querySelector("input[name='taxable']");
     if (!radio) return;
     radio.checked = radio.value === value;
@@ -882,10 +934,10 @@ function setTaxable(value) {
   });
 }
 
-// ==================== AGGRESSIVENESS SELECTION ====================
+// ==================== AGGRESSIVENESS ====================
 
 function setAggressiveness(value) {
-  document.querySelectorAll(".agg-option").forEach(el => {
+  document.querySelectorAll("#aggToggle .agg-option").forEach(el => {
     const radio = el.querySelector("input[name='aggressiveness']");
     if (radio) {
       radio.checked = radio.value === value;
@@ -950,14 +1002,9 @@ const ERA_CONFIG = {
 
 function setEra(era) {
   const config = ERA_CONFIG[era];
-
-  // Update hidden input
   document.getElementById("diyPortfolio").value = era;
-
-  // Update DIY fund display (hover wired after fetch in updateStats)
   document.getElementById("diyFundDisplay").textContent = config.diyTickers.join(" / ");
 
-  // Check the matching radio button and style the labels
   document.querySelectorAll("input[name='era']").forEach(radio => {
     radio.checked = (radio.value === era);
   });
@@ -965,7 +1012,6 @@ function setEra(era) {
     el.classList.toggle("era-option--selected", el.querySelector("input[name='era']").value === era);
   });
 
-  // Rebuild active fund dropdown, preserving selection if it exists in new era
   const sel = document.getElementById("activeFundSet");
   const prev = sel.value;
   sel.innerHTML = "";
@@ -979,7 +1025,6 @@ function setEra(era) {
     sel.value = prev;
   }
 
-  // Reset start date so initDatePicker will snap to the new era's earliest date
   pickerYear  = null;
   pickerMonth = null;
   document.getElementById("startDate").value = "";
@@ -988,7 +1033,7 @@ function setEra(era) {
 // ==================== DATE PICKER ====================
 
 let pickerYear  = null;
-let pickerMonth = null;  // 1-based
+let pickerMonth = null;
 let endPickerYear  = null;
 let endPickerMonth = null;
 let pickerMinYear  = null;
@@ -1002,13 +1047,11 @@ function pickerToYYYYMM(y, m) {
   return `${y}-${String(m).padStart(2, "0")}`;
 }
 
-// Convert year/month to a comparable integer sequence
 function toSeq(y, m) { return y * 12 + m; }
 
 function updatePickerDisplay() {
   const startSeq = toSeq(pickerYear, pickerMonth);
   const minSeq   = toSeq(pickerMinYear, pickerMinMonth);
-  // Start can advance up to one month before end
   const endSeq   = toSeq(endPickerYear ?? pickerMaxYear, endPickerMonth ?? pickerMaxMonth);
   const effMaxSeq = endSeq - 1;
 
@@ -1028,7 +1071,6 @@ function updatePickerDisplay() {
 function updateEndPickerDisplay() {
   const endSeq   = toSeq(endPickerYear, endPickerMonth);
   const maxSeq   = toSeq(pickerMaxYear, pickerMaxMonth);
-  // End can retreat down to one month after start
   const startSeq = toSeq(pickerYear ?? pickerMinYear, pickerMonth ?? pickerMinMonth);
   const effMinSeq = startSeq + 1;
 
@@ -1041,7 +1083,6 @@ function updateEndPickerDisplay() {
   document.getElementById("endPickerNextMonth").disabled = endSeq         >= maxSeq;
   document.getElementById("endPickerReset").style.display = endSeq < maxSeq ? "inline-block" : "none";
 
-  // Only send end_date to backend when it's before the absolute maximum
   const val = endSeq < maxSeq ? pickerToYYYYMM(endPickerYear, endPickerMonth) : "";
   const input = document.getElementById("endDate");
   if (input.value !== val) { input.value = val; if (!suppressPickerFetch) debouncedFetch(); }
@@ -1066,7 +1107,6 @@ function clampEndPicker() {
 }
 
 function initDatePicker(absStart, absEnd) {
-  // absStart / absEnd are "YYYY-MM-DD" strings
   const [sy, sm] = absStart.split("-").map(Number);
   const [ey, em] = absEnd.split("-").map(Number);
   pickerMinYear  = sy;
@@ -1074,8 +1114,8 @@ function initDatePicker(absStart, absEnd) {
   pickerMaxYear  = ey;
   pickerMaxMonth = em;
 
-  if (pickerYear    === null) { pickerYear  = sy; pickerMonth  = sm; }  // first load: default to earliest
-  if (endPickerYear === null) { endPickerYear = ey; endPickerMonth = em; }  // first load: default to latest
+  if (pickerYear    === null) { pickerYear  = sy; pickerMonth  = sm; }
+  if (endPickerYear === null) { endPickerYear = ey; endPickerMonth = em; }
 
   clampPicker();
   clampEndPicker();
@@ -1083,36 +1123,19 @@ function initDatePicker(absStart, absEnd) {
   updateEndPickerDisplay();
 }
 
-function movePickerYear(delta) {
-  pickerYear += delta;
-  clampPicker();
-  updatePickerDisplay();
-  updateEndPickerDisplay();  // refresh end picker disabled states
-}
-
+function movePickerYear(delta)  { pickerYear += delta; clampPicker(); updatePickerDisplay(); updateEndPickerDisplay(); }
 function movePickerMonth(delta) {
   pickerMonth += delta;
   if (pickerMonth < 1)  { pickerYear -= 1; pickerMonth = 12; }
   if (pickerMonth > 12) { pickerYear += 1; pickerMonth = 1;  }
-  clampPicker();
-  updatePickerDisplay();
-  updateEndPickerDisplay();
+  clampPicker(); updatePickerDisplay(); updateEndPickerDisplay();
 }
-
-function moveEndPickerYear(delta) {
-  endPickerYear += delta;
-  clampEndPicker();
-  updateEndPickerDisplay();
-  updatePickerDisplay();  // refresh start picker disabled states
-}
-
+function moveEndPickerYear(delta) { endPickerYear += delta; clampEndPicker(); updateEndPickerDisplay(); updatePickerDisplay(); }
 function moveEndPickerMonth(delta) {
   endPickerMonth += delta;
   if (endPickerMonth < 1)  { endPickerYear -= 1; endPickerMonth = 12; }
   if (endPickerMonth > 12) { endPickerYear += 1; endPickerMonth = 1;  }
-  clampEndPicker();
-  updateEndPickerDisplay();
-  updatePickerDisplay();
+  clampEndPicker(); updateEndPickerDisplay(); updatePickerDisplay();
 }
 
 // ==================== WIRE UP INPUTS ====================
@@ -1120,13 +1143,20 @@ function moveEndPickerMonth(delta) {
 function wireInputs() {
   const ids = [
     "initialAmount", "monthlyContrib", "stockPct",
-    "rebalance", "aumFee", "inflationAdj", "activeFundSet",
+    "aumFee", "inflationAdj", "activeFundSet",
   ];
 
   for (const id of ids) {
     document.getElementById(id).addEventListener("input", debouncedFetch);
     document.getElementById(id).addEventListener("change", debouncedFetch);
   }
+
+  // Strategy radio buttons — re-render from cache, no re-fetch
+  document.querySelectorAll("input[name='strategy']").forEach(radio => {
+    radio.addEventListener("change", (e) => {
+      setStrategy(e.target.value);
+    });
+  });
 
   // Era radio buttons
   document.querySelectorAll("input[name='era']").forEach(radio => {
@@ -1136,7 +1166,7 @@ function wireInputs() {
     });
   });
 
-  // Account Type radio buttons (Taxable / Tax-Deferred)
+  // Account Type
   document.querySelectorAll("input[name='taxable']").forEach(radio => {
     radio.addEventListener("change", (e) => {
       setTaxable(e.target.value);
@@ -1144,7 +1174,7 @@ function wireInputs() {
     });
   });
 
-  // Aggressiveness radio buttons
+  // Aggressiveness
   document.querySelectorAll("input[name='aggressiveness']").forEach(radio => {
     radio.addEventListener("change", (e) => {
       setAggressiveness(e.target.value);
@@ -1152,13 +1182,12 @@ function wireInputs() {
     });
   });
 
-  // Start date picker arrow buttons
+  // Date pickers
   document.getElementById("pickerPrevYear").addEventListener("click",  () => movePickerYear(-1));
   document.getElementById("pickerNextYear").addEventListener("click",  () => movePickerYear(+1));
   document.getElementById("pickerPrevMonth").addEventListener("click", () => movePickerMonth(-1));
   document.getElementById("pickerNextMonth").addEventListener("click", () => movePickerMonth(+1));
 
-  // End date picker arrow buttons
   document.getElementById("endPickerPrevYear").addEventListener("click",  () => moveEndPickerYear(-1));
   document.getElementById("endPickerNextYear").addEventListener("click",  () => moveEndPickerYear(+1));
   document.getElementById("endPickerPrevMonth").addEventListener("click", () => moveEndPickerMonth(-1));
@@ -1176,14 +1205,16 @@ function wireInputs() {
     cb.addEventListener("change", (e) => {
       if (!chart) return;
       const idx = parseInt(e.target.dataset.datasetIdx);
-      chart.getDatasetMeta(idx).hidden = !e.target.checked;
+      if (idx < chart.data.datasets.length) {
+        chart.getDatasetMeta(idx).hidden = !e.target.checked;
+      }
       e.target.title = e.target.checked ? "Uncheck to hide this line on the chart" : "Check to show this line on the chart";
       e.target.closest(".stat-card").classList.toggle("line-hidden", !e.target.checked);
       chart.update();
     });
   });
 
-  // Show total invested checkbox
+  // Show total invested
   document.getElementById("showContrib").addEventListener("change", (e) => {
     if (!chart) return;
     const idx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
@@ -1192,26 +1223,18 @@ function wireInputs() {
     chart.update();
   });
 
-  // Show after-tax wealth checkbox
+  // Show after-tax wealth
   document.getElementById("showAfterTax").addEventListener("change", () => {
-    if (!lastData) return;
-    buildChart(lastData);
+    if (!lastResults) return;
+    buildChart(lastResults);
   });
 
-  // Show momentum rotation checkbox — also enables/disables aggressiveness
+  // Show momentum rotation
   document.getElementById("showMomentum").addEventListener("change", (e) => {
     setAggEnabled(e.target.checked);
     document.getElementById("momentumStats").style.display = e.target.checked ? "block" : "none";
-    // Reset momentum card checkboxes when toggling momentum on
-    if (e.target.checked) {
-      document.querySelectorAll('.stat-card-toggle[data-dataset-idx="6"], .stat-card-toggle[data-dataset-idx="7"]').forEach(cb => {
-        cb.checked = true;
-        cb.title = "Uncheck to hide this line on the chart";
-        cb.closest(".stat-card").classList.remove("line-hidden");
-      });
-    }
-    if (!chart || !lastData) return;
-    buildChart(lastData);
+    if (!chart || !lastResults) return;
+    buildChart(lastResults);
   });
 
   // Log scale toggle
@@ -1221,7 +1244,7 @@ function wireInputs() {
     chart.update();
   });
 
-  // Scale lock checkbox
+  // Scale lock
   document.getElementById("lockScale").addEventListener("change", (e) => {
     scaleLocked = e.target.checked;
     if (!chart) return;
@@ -1238,13 +1261,13 @@ function wireInputs() {
     chart.update("none");
   });
 
-  // Chart theme toggle (light / dark background)
+  // Chart theme toggle
   document.getElementById("chartThemeBtn").addEventListener("click", () => {
     lightChart = !lightChart;
     applyChartTheme(lightChart);
   });
 
-  // Rescale button: auto-scale then re-lock at new bounds
+  // Rescale button
   document.getElementById("rescaleBtn").addEventListener("click", () => {
     if (!chart) return;
     chart.options.scales.y.min = undefined;
@@ -1258,7 +1281,7 @@ function wireInputs() {
     document.getElementById("rescaleBtn").style.display = "none";
   });
 
-  // Slider display update (instant, no debounce)
+  // Slider display update
   document.getElementById("stockPct").addEventListener("input", (e) => {
     document.getElementById("stockPctDisplay").textContent = e.target.value;
   });
@@ -1272,39 +1295,34 @@ document.getElementById("sidebarToggle").addEventListener("click", () => {
   const collapsed = sidebar.classList.toggle("sidebar--collapsed");
   btn.innerHTML  = collapsed ? "&#8250;" : "&#8249;";
   btn.title      = collapsed ? "Expand sidebar" : "Collapse sidebar";
-  // Let the CSS transition finish before resizing the chart
   setTimeout(() => { if (chart) chart.resize(); }, 260);
 });
 
 // ==================== COLLAPSIBLE SIDEBAR GROUPS ====================
 {
   const GROUP_TOOLTIPS = {
-    'group-simulation': 'Set your starting balance, contributions, date range, and asset allocation.',
+    'group-simulation': 'Set your starting balance, contributions, date range, and strategy to compare.',
     'group-portfolio':  'Choose index vs. active funds, investment era, and advisor fee assumptions.',
     'group-display':    'Control tax treatment, inflation adjustment, and which chart lines are shown.',
   };
 
   document.querySelectorAll('.sidebar-group').forEach(group => {
     const btn     = group.querySelector('.sidebar-group-header');
-    const content = group.querySelector('.sidebar-group-content');
     const tip     = group.id && GROUP_TOOLTIPS[group.id];
 
-    // Restore saved state
-    const saved = localStorage.getItem('sg-' + group.id);
+    const saved = localStorage.getItem('sg-rebal-' + group.id);
     if (saved === 'collapsed') group.classList.add('is-collapsed');
 
-    // Header tooltip
     if (tip) btn.title = tip;
 
     btn.addEventListener('click', () => {
       const collapsed = group.classList.toggle('is-collapsed');
-      localStorage.setItem('sg-' + group.id, collapsed ? 'collapsed' : 'open');
+      localStorage.setItem('sg-rebal-' + group.id, collapsed ? 'collapsed' : 'open');
     });
   });
 }
 
 // ==================== SIDEBAR TOOLTIPS ====================
-// CSS ::after tooltips are clipped by overflow-y:auto — use JS fixed positioning instead.
 {
   const tip = document.getElementById('sidebarTooltip');
   document.querySelectorAll('.sidebar .tooltip-term').forEach(el => {
