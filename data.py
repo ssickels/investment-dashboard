@@ -239,7 +239,7 @@ def load_cpi_series() -> pd.Series:
     url = (
         "https://api.stlouisfed.org/fred/series/observations"
         f"?series_id=CPIAUCSL&api_key={api_key}&file_type=json"
-        "&observation_start=2000-01-01"
+        "&observation_start=1980-01-01"
     )
     try:
         resp = requests.get(url, timeout=15)
