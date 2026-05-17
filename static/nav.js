@@ -16,6 +16,7 @@
     <a href="https://stevessite.com" class="nav-panel-home">&#8962; Home</a>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Investment Simulator</div>
+      <div class="nav-section-links">
       <a href="https://investment-dashboard-aapf.onrender.com">Comparing Strategies</a>
       <a href="https://investment-dashboard-aapf.onrender.com/guide">Strategies User Guide</a>
       <a href="https://investment-dashboard-aapf.onrender.com/rebalancing">Rebalancing Impact</a>
@@ -23,26 +24,43 @@
       <a href="https://investment-dashboard-aapf.onrender.com/reading-charts">What the Charts Show</a>
       <a href="https://investment-dashboard-aapf.onrender.com/methodology">Methodology</a>
       <a href="https://github.com/ssickels/investment-dashboard" target="_blank" class="nav-panel-github">GitHub ↗</a>
+      </div>
+    </div>
+    <div class="nav-panel-section">
+      <div class="nav-panel-heading">Monte Carlo Simulator</div>
+      <div class="nav-section-links">
+      <a href="https://stevessite.com/monte-carlo.html">Simulator</a>
+      <a href="https://stevessite.com/monte-carlo-guide.html">Getting Started</a>
+      <a href="https://stevessite.com/monte-carlo-about.html">About</a>
+      <a href="https://stevessite.com/monte-carlo-methodology.html">How It Works</a>
+      <a href="https://github.com/ssickels/r-shiny-portfolio" target="_blank" class="nav-panel-github">GitHub ↗</a>
+      </div>
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">US Economic Dashboard</div>
+      <div class="nav-section-links">
       <a href="https://stevessite.com/dashboard-two/">Dashboard</a>
+      </div>
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Boids / Fish</div>
+      <div class="nav-section-links">
       <a href="https://stevessite.com/playground.html">Playground</a>
       <a href="https://stevessite.com/boids-explain.html">How It Works</a>
       <a href="https://stevessite.com/boids-about.html">About</a>
       <a href="https://stevessite.com/boids-impl.html">Dev Notes</a>
       <a href="https://github.com/ssickels/boids-playgrounds" target="_blank" class="nav-panel-github">GitHub ↗</a>
+      </div>
     </div>
     <div class="nav-panel-section">
       <div class="nav-panel-heading">Boids / Murmurations</div>
+      <div class="nav-section-links">
       <a href="https://stevessite.com/murmuration.html">Playground</a>
       <a href="https://stevessite.com/murmuration-about.html">How It Works</a>
       <a href="https://stevessite.com/murmuration-waves.html">Density Waves</a>
       <a href="https://stevessite.com/murmuration-intro.html">About</a>
       <a href="https://stevessite.com/about.html" class="nav-panel-top-link">About This Site</a>
+      </div>
     </div>
     <a href="https://stevessite.com/contact.html" class="nav-panel-contact">Contact</a>
   </div>
@@ -173,6 +191,42 @@
   transition: background 0.12s;
 }
 .nav-panel-contact:hover { background: rgba(100, 210, 230, 0.08); }
+/* --- Accordion (mobile only) --- */
+.nav-section-links {
+  display: flex;
+  flex-direction: column;
+}
+@media (max-width: 768px) {
+  #nav-panel {
+    max-height: 100dvh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .nav-panel-heading {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .nav-panel-heading::after {
+    content: '\\25B8';
+    font-size: 14px;
+    color: rgba(100, 210, 230, 0.55);
+    transition: transform 0.2s;
+  }
+  .nav-panel-section.is-expanded .nav-panel-heading::after {
+    transform: rotate(90deg);
+  }
+  .nav-section-links {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.25s ease;
+  }
+  .nav-panel-section.is-expanded .nav-section-links {
+    max-height: 500px;
+  }
+}
 `;
 
   const style = document.createElement('style');
@@ -202,6 +256,27 @@
     if (tab.getAttribute('data-path') === path) {
       tab.classList.add('nav-tab-active');
     }
+  });
+
+  // Accordion for mobile
+  panel.querySelectorAll('.nav-panel-heading').forEach(function(heading) {
+    var section = heading.parentElement;
+    var links = section.querySelector('.nav-section-links');
+    if (!links) return;
+    var loc = window.location;
+    if (Array.from(links.querySelectorAll('a')).some(function(a) {
+      var h = a.getAttribute('href');
+      return loc.href.indexOf(h) !== -1 || loc.pathname.indexOf(h) !== -1;
+    })) {
+      section.classList.add('is-expanded');
+    }
+    heading.addEventListener('click', function(e) {
+      e.stopPropagation();
+      panel.querySelectorAll('.nav-panel-section.is-expanded').forEach(function(s) {
+        if (s !== section) s.classList.remove('is-expanded');
+      });
+      section.classList.toggle('is-expanded');
+    });
   });
 
 })();
