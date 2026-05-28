@@ -128,6 +128,39 @@ def _safe_float(val, default):
         return None   # signals invalid input
 
 
+@app.route("/api/debug-data")
+def debug_data():
+    """Trace data pipeline step by step."""
+    import data as d
+    result = {}
+    # Step 1: raw cache for each core ticker
+    for t in ["VTI", "VXUS", "BND", "AGTHX", "DODFX", "PTTAX"]:
+        try:
+            prices = d.load_price_series(t)
+            returns = prices.pct_change().dropna()
+            result[t] = {
+                "prices_start": str(prices.index[0].date()),
+                "prices_end": str(prices.index[-1].date()),
+                "prices_count": len(prices),
+                "returns_start": str(returns.index[0].date()),
+                "returns_end": str(returns.index[-1].date()),
+                "returns_count": len(returns),
+            }
+        except Exception as e:
+            result[t] = {"error": str(e)}
+    # Step 2: combined inner join
+    try:
+        df = d.load_returns_for_tickers(["VTI", "VXUS", "BND", "AGTHX", "DODFX", "PTTAX"])
+        result["_combined"] = {
+            "start": str(df.index[0].date()),
+            "end": str(df.index[-1].date()),
+            "count": len(df),
+        }
+    except Exception as e:
+        result["_combined"] = {"error": str(e)}
+    return jsonify(result)
+
+
 @app.route("/api/cache-status")
 def cache_status():
     """Diagnostic endpoint: show cache state for each ticker."""
