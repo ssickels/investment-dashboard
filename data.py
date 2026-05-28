@@ -150,6 +150,17 @@ def load_price_series(ticker: str) -> pd.Series:
         close = close.sort_index()
 
         data_dict = {str(d.date()): float(v) for d, v in close.items()}
+
+        # Guard against Yahoo returning truncated data to cloud IPs:
+        # only update cache if new data has at least as many points as cached.
+        if cached and len(data_dict) < len(cached.get("data", {})) * 0.8:
+            print(f"Warning: fetch for {ticker} returned only {len(data_dict)} "
+                  f"months vs {len(cached['data'])} cached — keeping cache")
+            data = cached["data"]
+            s = pd.Series(data)
+            s.index = pd.to_datetime(s.index)
+            return s
+
         _save_cache(ticker, data_dict)
         return close
 
