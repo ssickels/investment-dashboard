@@ -39,6 +39,19 @@ def _get_redis():
         print(f"Warning: Redis unavailable ({e}), falling back to file cache")
         return None
 
+def _flush_redis_cache():
+    """Clear all cached ticker data from Redis on startup so committed
+    file cache (with known-good data) takes precedence."""
+    r = _get_redis()
+    if not r:
+        return
+    keys = r.keys("cache:v5:*")
+    if keys:
+        r.delete(*keys)
+        print(f"Startup: flushed {len(keys)} stale Redis cache keys")
+
+_flush_redis_cache()
+
 DIY_TICKERS = ["VTI", "VXUS", "BND"]
 ACTIVE_TICKERS = ["AGTHX", "DODFX", "PTTAX"]
 ALL_ACTIVE_TICKERS = [

@@ -128,6 +128,22 @@ def _safe_float(val, default):
         return None   # signals invalid input
 
 
+@app.route("/api/cache-status")
+def cache_status():
+    """Diagnostic endpoint: show cache state for each ticker."""
+    import data as d
+    status = {}
+    for t in d.ALL_TICKERS:
+        cached = d._load_cache(t)
+        if cached and cached.get("data"):
+            dates = sorted(cached["data"].keys())
+            status[t] = {"count": len(dates), "start": dates[0], "end": dates[-1],
+                         "fetched_at": cached.get("fetched_at", "unknown")}
+        else:
+            status[t] = None
+    return jsonify(status)
+
+
 @app.route("/api/portfolio")
 def portfolio():
     try:
