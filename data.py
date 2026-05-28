@@ -61,21 +61,30 @@ ALL_TICKERS = DIY_TICKERS + ALL_ACTIVE_TICKERS
 # --------------- Cache interface ---------------
 
 def _load_cache(key: str):
+    # Always check file cache (committed to git, guaranteed baseline).
+    file_data = None
+    path = os.path.join(CACHE_DIR, f"{key}.json")
+    if os.path.exists(path):
+        with open(path) as f:
+            file_data = json.load(f)
+
     r = _get_redis()
     if r:
         val = r.get(f"cache:v5:{key}")
         if val is not None:
-            # Redis TTL handles freshness; return with a current timestamp so
-            # _cache_is_fresh() always passes for Redis-loaded data.
-            return {"fetched_at": datetime.datetime.utcnow().isoformat(), "data": json.loads(val)}
-        # Redis key expired/missing — fall through to file cache so stale
-        # data is still available as a fallback when fetches fail.
+            redis_data = json.loads(val)
+            # Compare end dates: prefer whichever source has more recent data,
+            # guarding against Redis holding truncated data from cloud IP blocks.
+            if file_data and file_data.get("data"):
+                redis_end = max(redis_data.keys()) if redis_data else ""
+                file_end = max(file_data["data"].keys()) if file_data["data"] else ""
+                if file_end > redis_end:
+                    print(f"Cache: file has newer data than Redis for {key} "
+                          f"({file_end} vs {redis_end}), using file")
+                    return file_data
+            return {"fetched_at": datetime.datetime.utcnow().isoformat(), "data": redis_data}
 
-    path = os.path.join(CACHE_DIR, f"{key}.json")
-    if not os.path.exists(path):
-        return None
-    with open(path) as f:
-        return json.load(f)
+    return file_data
 
 
 def _save_cache(key: str, data: dict):
