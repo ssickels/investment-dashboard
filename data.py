@@ -64,11 +64,12 @@ def _load_cache(key: str):
     r = _get_redis()
     if r:
         val = r.get(f"cache:v5:{key}")
-        if val is None:
-            return None
-        # Redis TTL handles freshness; return with a current timestamp so
-        # _cache_is_fresh() always passes for Redis-loaded data.
-        return {"fetched_at": datetime.datetime.utcnow().isoformat(), "data": json.loads(val)}
+        if val is not None:
+            # Redis TTL handles freshness; return with a current timestamp so
+            # _cache_is_fresh() always passes for Redis-loaded data.
+            return {"fetched_at": datetime.datetime.utcnow().isoformat(), "data": json.loads(val)}
+        # Redis key expired/missing — fall through to file cache so stale
+        # data is still available as a fallback when fetches fail.
 
     path = os.path.join(CACHE_DIR, f"{key}.json")
     if not os.path.exists(path):
@@ -81,8 +82,9 @@ def _save_cache(key: str, data: dict):
     r = _get_redis()
     if r:
         r.setex(f"cache:v5:{key}", CACHE_TTL_SECONDS, json.dumps(data))
-        return
 
+    # Always write file cache so stale data is available as a fallback
+    # even after Redis keys expire.
     os.makedirs(CACHE_DIR, exist_ok=True)
     path = os.path.join(CACHE_DIR, f"{key}.json")
     payload = {
