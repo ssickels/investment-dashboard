@@ -297,6 +297,7 @@ def portfolio():
 
         # Always simulate the full available range from the chosen start date
         years = max(1, years_available)
+        months_override = months_available
         warning = None
 
         # Load CPI / deflator
@@ -324,6 +325,7 @@ def portfolio():
             initial_amount=initial_amount,
             monthly_contrib=monthly_contrib,
             years=years,
+            months_override=months_override,
             stock_pct=stock_pct,
             rebalance=rebalance,
             aum_fee_pct=aum_fee,

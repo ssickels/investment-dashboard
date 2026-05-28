@@ -12,6 +12,7 @@ class SimParams:
     initial_amount: float = 10000.0
     monthly_contrib: float = 500.0
     years: int = 10
+    months_override: int = 0  # if > 0, use this instead of years * 12
     stock_pct: float = 80.0          # 0-100
     rebalance: str = "annually"      # never | annually | quarterly
     aum_fee_pct: float = 1.0         # % per year, applied to Scenarios 2 & 4
@@ -70,8 +71,8 @@ def simulate(
     """
     LTCG_RATE = 0.20
 
-    # Slice to requested years
-    months = params.years * 12
+    # Slice to requested period
+    months = params.months_override if params.months_override > 0 else params.years * 12
     slice_df = returns_df[tickers].iloc[:months]
 
     if len(slice_df) == 0:
@@ -229,7 +230,7 @@ def simulate_momentum(
     if not avail_cols:
         raise ValueError("None of the universe tickers found in returns data")
 
-    months = params.years * 12
+    months = params.months_override if params.months_override > 0 else params.years * 12
     slice_df = returns_df[avail_cols].iloc[:months]
     if len(slice_df) == 0:
         raise ValueError("No data available for momentum simulation")
