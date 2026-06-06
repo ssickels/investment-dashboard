@@ -1083,6 +1083,35 @@ function initDatePicker(absStart, absEnd) {
   updateEndPickerDisplay();
 }
 
+function showPickerDropdown(anchorEl, items, currentValue, onSelect) {
+  document.querySelectorAll(".picker-dropdown").forEach(d => d.remove());
+  const dropdown = document.createElement("div");
+  dropdown.className = "picker-dropdown";
+  items.forEach(item => {
+    const div = document.createElement("div");
+    div.className = "picker-dropdown-item";
+    if (item.value === currentValue) div.classList.add("active");
+    div.textContent = item.label;
+    div.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onSelect(item.value);
+      dropdown.remove();
+    });
+    dropdown.appendChild(div);
+  });
+  anchorEl.appendChild(dropdown);
+  const activeItem = dropdown.querySelector(".active");
+  if (activeItem) activeItem.scrollIntoView({ block: "center" });
+  setTimeout(() => {
+    document.addEventListener("click", function handler(e) {
+      if (!dropdown.contains(e.target)) {
+        dropdown.remove();
+        document.removeEventListener("click", handler);
+      }
+    });
+  });
+}
+
 function movePickerYear(delta) {
   pickerYear += delta;
   clampPicker();
@@ -1169,6 +1198,42 @@ function wireInputs() {
     clampEndPicker();
     updateEndPickerDisplay();
     updatePickerDisplay();
+  });
+
+  // Date picker dropdown click handlers
+  document.getElementById("pickerYear").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const effMaxSeq = toSeq(endPickerYear ?? pickerMaxYear, endPickerMonth ?? pickerMaxMonth) - 1;
+    const maxY = Math.floor((effMaxSeq - 1) / 12);
+    const items = [];
+    for (let y = pickerMinYear; y <= maxY; y++) items.push({ value: y, label: String(y) });
+    showPickerDropdown(e.currentTarget, items, pickerYear, (val) => {
+      pickerYear = val; clampPicker(); updatePickerDisplay(); updateEndPickerDisplay();
+    });
+  });
+  document.getElementById("pickerMonth").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const items = MONTH_NAMES.map((name, i) => ({ value: i + 1, label: name }));
+    showPickerDropdown(e.currentTarget, items, pickerMonth, (val) => {
+      pickerMonth = val; clampPicker(); updatePickerDisplay(); updateEndPickerDisplay();
+    });
+  });
+  document.getElementById("endPickerYear").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const effMinSeq = toSeq(pickerYear ?? pickerMinYear, pickerMonth ?? pickerMinMonth) + 1;
+    const minY = Math.ceil(effMinSeq / 12);
+    const items = [];
+    for (let y = minY; y <= pickerMaxYear; y++) items.push({ value: y, label: String(y) });
+    showPickerDropdown(e.currentTarget, items, endPickerYear, (val) => {
+      endPickerYear = val; clampEndPicker(); updateEndPickerDisplay(); updatePickerDisplay();
+    });
+  });
+  document.getElementById("endPickerMonth").addEventListener("click", (e) => {
+    e.stopPropagation();
+    const items = MONTH_NAMES.map((name, i) => ({ value: i + 1, label: name }));
+    showPickerDropdown(e.currentTarget, items, endPickerMonth, (val) => {
+      endPickerMonth = val; clampEndPicker(); updateEndPickerDisplay(); updatePickerDisplay();
+    });
   });
 
   // Stat card visibility toggles

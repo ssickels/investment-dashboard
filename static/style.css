@@ -1017,10 +1017,50 @@ input[type="range"] {
   color: var(--gray-800);
   min-width: 36px;
   text-align: center;
+  cursor: pointer;
+  position: relative;
 }
 
-#pickerYear {
+.picker-val:hover {
+  text-decoration: underline;
+  color: var(--blue);
+}
+
+#pickerYear, #endPickerYear {
   min-width: 44px;
+}
+
+.picker-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: #fff;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0,0,0,.12);
+  min-width: 60px;
+  margin-top: 4px;
+}
+
+.picker-dropdown-item {
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.picker-dropdown-item:hover {
+  background: var(--blue-bg);
+}
+
+.picker-dropdown-item.active {
+  font-weight: 700;
+  color: var(--blue);
 }
 
 .picker-sep {
