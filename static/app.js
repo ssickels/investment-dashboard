@@ -580,6 +580,12 @@ function buildChart(data) {
     document.querySelectorAll(".stat-card-toggle").forEach(cb => {
       chart.getDatasetMeta(parseInt(cb.dataset.datasetIdx)).hidden = !cb.checked;
     });
+    // Momentum datasets must respect the showMomentum checkbox, not just the stat-card toggle
+    [6, 7].forEach(idx => {
+      if (idx < chart.data.datasets.length) {
+        chart.getDatasetMeta(idx).hidden = !momentumVisible || chart.getDatasetMeta(idx).hidden;
+      }
+    });
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
     chart.update("none");

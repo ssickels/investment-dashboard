@@ -595,10 +595,14 @@ function buildChart(results) {
         chart.getDatasetMeta(idx).hidden = !cb.checked;
       }
     });
+    // Momentum datasets must respect the showMomentum checkbox, not just the stat-card toggle
+    [6, 7].forEach(idx => {
+      if (idx < chart.data.datasets.length) {
+        chart.getDatasetMeta(idx).hidden = !momentumVisible || chart.getDatasetMeta(idx).hidden;
+      }
+    });
     const contribIdx = chart.data.datasets.findIndex(ds => ds.label === "Total Invested");
     if (contribIdx !== -1) chart.getDatasetMeta(contribIdx).hidden = !contribVisible;
-    const momIdx = chart.data.datasets.findIndex(ds => ds.label && ds.label.includes("Momentum") && ds.label !== "Yield Curve Inversion");
-    if (momIdx !== -1) chart.getDatasetMeta(momIdx).hidden = !momentumVisible;
     chart.update("none");
     applyChartTheme(lightChart);
     currentChartStrategy = selectedStrategy;
