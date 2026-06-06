@@ -1332,6 +1332,15 @@ function wireInputs() {
     applyChartTheme(lightChart);
   });
 
+  // Save chart as PNG
+  document.getElementById("chartSnapBtn").addEventListener("click", () => {
+    if (!chart) return;
+    const link = document.createElement("a");
+    link.download = "rebalancing-impact.png";
+    link.href = chart.toBase64Image();
+    link.click();
+  });
+
   // Rescale button
   document.getElementById("rescaleBtn").addEventListener("click", () => {
     if (!chart) return;

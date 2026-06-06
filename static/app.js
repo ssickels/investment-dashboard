@@ -1309,6 +1309,15 @@ function wireInputs() {
     applyChartTheme(lightChart);
   });
 
+  // Save chart as PNG
+  document.getElementById("chartSnapBtn").addEventListener("click", () => {
+    if (!chart) return;
+    const link = document.createElement("a");
+    link.download = "portfolio-growth.png";
+    link.href = chart.toBase64Image();
+    link.click();
+  });
+
   // Rescale button: auto-scale then re-lock at new bounds
   document.getElementById("rescaleBtn").addEventListener("click", () => {
     if (!chart) return;
