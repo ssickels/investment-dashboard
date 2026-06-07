@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Rebalancing Impact — Investment Simulator</title>
-  <meta property="og:title" content="Rebalancing Impact — Investment Simulator" />
+  <title>Rebalancing Impact — Investment Back-Tester</title>
+  <meta property="og:title" content="Rebalancing Impact — Investment Back-Tester" />
   <meta property="og:description" content="See how rebalancing frequency affects portfolio outcomes using real historical data." />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
   <meta property="og:url" content="https://stevessite.com/simulator/rebalancing" />
@@ -28,7 +28,7 @@
       <!-- ── GROUP 1: Simulation Parameters ── -->
       <div class="sidebar-group" id="group-simulation">
         <button class="sidebar-group-header" type="button">
-          Simulation Parameters <span class="sg-chevron">▾</span>
+          Backtest Parameters <span class="sg-chevron">▾</span>
         </button>
         <div class="sidebar-group-content">
 
@@ -190,7 +190,7 @@
 
           <div class="control-group">
             <label>
-              <span class="tooltip-term" data-tooltip="Taxable: simulates a brokerage account where capital gains tax (20% long-term rate) applies. Tax-Deferred: simulates a 401(k) or IRA — no capital gains tax during the simulation.">Account Type</span>
+              <span class="tooltip-term" data-tooltip="Taxable: models a brokerage account where capital gains tax (20% long-term rate) applies. Tax-Deferred: models a 401(k) or IRA — no capital gains tax during the backtest.">Account Type</span>
             </label>
             <div class="agg-toggle" id="taxToggle">
               <label class="agg-option agg-option--selected" id="taxTaxableLabel">

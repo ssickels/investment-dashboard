@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Investment Simulator — Methodology</title>
-  <meta property="og:title" content="Investment Simulator — Methodology" />
-  <meta property="og:description" content="The data sources, assumptions, and calculation methods behind the investment strategy simulator." />
+  <title>Investment Back-Tester — Methodology</title>
+  <meta property="og:title" content="Investment Back-Tester — Methodology" />
+  <meta property="og:description" content="The data sources, assumptions, and calculation methods behind the investment strategy backtester." />
   <meta property="og:url" content="https://investment-dashboard-aapf.onrender.com/methodology" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
@@ -373,7 +373,7 @@
   <main class="guide-main">
     <h1>Methodology &amp; Technical Notes</h1>
     <p class="subtitle">
-      How the simulator gets from raw financial data to comparable portfolio values —
+      How the backtester gets from raw financial data to comparable portfolio values —
       including the assumptions made at each step. Written for readers who want to
       understand the math and modeling choices, not just the controls.
     </p>
@@ -391,9 +391,9 @@
           between "the fund's reported price" and "what an investor actually experienced."
         </p>
         <p>
-          This page explains exactly what the simulator does to bridge that gap for each of its four
+          This page explains exactly what the backtester does to bridge that gap for each of its four
           scenarios — and where it makes simplifying assumptions. The goal is transparency: if you want
-          to evaluate whether the simulator's outputs are meaningful, or whether its assumptions match
+          to evaluate whether the backtester's outputs are meaningful, or whether its assumptions match
           your situation, everything you need to know is here.
         </p>
         <p>
@@ -409,14 +409,14 @@
       <h2>The Full Pipeline <span class="h2-chevron">▾</span></h2>
       <div class="section-body">
         <p>
-          The diagram below shows how the simulator moves from raw data to final output —
+          The diagram below shows how the backtester moves from raw data to final output —
           and where your parameter settings shape that process. Each section of this page
           covers one stage in detail; this is the map.
         </p>
         <p>
           <strong>Reading the diagram:</strong> rectangular boxes are process steps;
           diamonds are decision points. Lines labeled <em>[param: …]</em> inside a box
-          identify the simulator setting that controls that step. The monthly loop
+          identify the backtester setting that controls that step. The monthly loop
           repeats for every month in your selected date range.
         </p>
 
@@ -455,7 +455,7 @@ flowchart TD
   AL["Align to common period\n[param: start / end dates]"]:::proc
   INIT["Initialize portfolio by weights\n[param: stock/bond split, initial $]"]:::proc
 
-  HDR3[["— Monthly Simulation Loop —"]]:::hdr
+  HDR3[["— Monthly Back-Test Loop —"]]:::hdr
   RET["Apply monthly returns\n[param: monthly contribution $]"]:::proc
   FEE{"advisor fee > 0?\n[param: advisor fee %]"}:::dec
   FDED["Deduct monthly fee"]:::proc
@@ -518,7 +518,7 @@ flowchart TD
       <h2>Data Sources <span class="h2-chevron">▾</span></h2>
       <div class="section-body">
         <p>
-          The simulator uses two external data sources: Yahoo Finance for fund price and distribution
+          The backtester uses two external data sources: Yahoo Finance for fund price and distribution
           history, and the Federal Reserve (FRED) for inflation and yield curve data.
         </p>
 
@@ -557,16 +557,16 @@ flowchart TD
         <h3>Coverage dates</h3>
         <p>
           Different funds have different inception dates, which limits how far back any comparison can go.
-          The simulator's default (Modern / ETF) portfolio uses VTI, VXUS, and BND; the earliest common
+          The backtester's default (Modern / ETF) portfolio uses VTI, VXUS, and BND; the earliest common
           date for all three is around September 2011, driven by VXUS's inception. The Pre-ETF portfolio
           (VFINX, VWIGX, VBMFX) extends coverage back to January 1987. When you choose a start date,
-          the simulator automatically clips to the earliest date for which all selected funds have data.
+          the backtester automatically clips to the earliest date for which all selected funds have data.
         </p>
         <p>
-          When the Pre-ETF era is selected, the simulation uses VFINX, VWIGX, and VBMFX for the
+          When the Pre-ETF era is selected, the backtest uses VFINX, VWIGX, and VBMFX for the
           <em>entire</em> date range — including years after 2011 when the modern ETFs (VTI, VXUS, BND)
           became available. This is intentional. The goal is a single consistent baseline throughout the
-          simulation period. Switching fund families mid-simulation would introduce a return discontinuity
+          backtest period. Switching fund families mid-backtest would introduce a return discontinuity
           that is difficult to interpret. More practically, an investor who started in 1987 with these
           Vanguard index mutual funds would likely have held them indefinitely rather than converting —
           transaction costs, tax events, and inertia all favor staying put. The Pre-ETF era is best
@@ -576,7 +576,7 @@ flowchart TD
 
         <div class="callout callout-warn">
           <strong>Survivorship bias</strong>
-          The funds available in the simulator are well-known, long-surviving funds. The full population
+          The funds available in the backtester are well-known, long-surviving funds. The full population
           of actively managed funds from 1987 included many others that quietly closed or merged after
           poor performance and are therefore absent from any comparison like this. This is a real
           limitation and is discussed further in the Known Limitations section.
@@ -597,7 +597,7 @@ flowchart TD
           significantly underperforming its actual investor experience over time.
         </p>
         <p>
-          <strong>The simulator builds a total return index manually for every fund.</strong>
+          <strong>The backtester builds a total return index manually for every fund.</strong>
           This means we assume all distributions are immediately reinvested — which is the standard
           assumption for comparing investment strategies and matches what happens in most tax-deferred
           accounts and many taxable accounts.
@@ -641,7 +641,7 @@ flowchart TD
         <p>
           Yahoo records distributions on the <strong>ex-dividend date</strong>, which is when the distribution
           amount is reflected in NAV. In practice, investors receive the cash on the <em>payable date</em>,
-          typically two to four weeks later. The simulator assumes reinvestment at the ex-dividend date's
+          typically two to four weeks later. The backtester assumes reinvestment at the ex-dividend date's
           closing price rather than the payable date's. For monthly-resolution results this introduces
           a negligible timing imprecision.
         </p>
@@ -671,15 +671,15 @@ flowchart TD
         <p>
           Monthly returns are computed for each fund individually. The four base scenarios then
           use an <em>inner join</em>: only months where every selected fund has a return value are
-          included. This means the simulation period is determined by the fund with the latest
+          included. This means the backtest period is determined by the fund with the latest
           inception date in the comparison set. For the default ETF portfolio, that's VXUS
           (September 2011). Any month where any fund is missing data is excluded entirely, which
-          prevents the simulator from implicitly assuming a fund existed before it did.
+          prevents the backtester from implicitly assuming a fund existed before it did.
         </p>
 
         <div class="callout callout-plain">
           <strong>What this means in practice</strong>
-          If you select a start date earlier than the latest fund's inception, the simulator
+          If you select a start date earlier than the latest fund's inception, the backtester
           silently moves your start date forward to the first month of common data. The displayed
           date range always reflects what was actually simulated.
         </div>
@@ -706,9 +706,9 @@ flowchart TD
 
         <h3>Per-fund holding tracking</h3>
         <p>
-          Rather than tracking a single aggregate portfolio value, the simulator tracks a separate
+          Rather than tracking a single aggregate portfolio value, the backtester tracks a separate
           dollar balance for each fund at every time step. This matters for rebalancing: when the
-          portfolio drifts away from target weights, the simulator can correctly identify which
+          portfolio drifts away from target weights, the backtester can correctly identify which
           positions to grow and which to trim, and can apply taxes only to the positions being
           reduced.
         </p>
@@ -729,7 +729,7 @@ flowchart TD
       <h2>The Four Scenarios <span class="h2-chevron">▾</span></h2>
       <div class="section-body">
         <p>
-          The simulator runs four parallel portfolios simultaneously, using the same start date,
+          The backtester runs four parallel portfolios simultaneously, using the same start date,
           contribution schedule, and stock/bond split for all four. The scenarios differ in which
           funds they hold and what fees are applied on top of those funds' underlying returns.
         </p>
@@ -766,13 +766,13 @@ flowchart TD
 
         <h3>How expense ratios are handled</h3>
         <p>
-          <strong>Fund expense ratios are not explicitly deducted by the simulator.</strong> Instead,
+          <strong>Fund expense ratios are not explicitly deducted by the backtester.</strong> Instead,
           they are already "baked in" to the funds' historical return data: every day's NAV already
           reflects the fund's management expenses being deducted from the portfolio. This is how
           fund expenses actually work — they are accrued daily against the fund's assets, not billed
           separately to investors. The weighted expense ratio displayed in the sidebar is informational
           only; it shows how much of your return is being silently absorbed by fund costs, but the
-          simulation doesn't double-count it.
+          backtest doesn't double-count it.
         </p>
         <p>
           This also means that when comparing index funds to active funds, the comparison is genuinely
@@ -799,13 +799,13 @@ flowchart TD
         <p>
           Over time, funds grow at different rates and the portfolio drifts away from its target
           weights. Rebalancing restores those weights by selling the overweight positions and buying
-          the underweight ones. The simulator supports three rebalancing frequencies: annually,
+          the underweight ones. The backtester supports three rebalancing frequencies: annually,
           quarterly, and never.
         </p>
 
         <h3>What happens at a rebalance</h3>
         <p>
-          At each rebalance event, the simulator computes the new target dollar amount for each fund
+          At each rebalance event, the backtester computes the new target dollar amount for each fund
           based on current portfolio value plus the month's contribution:
         </p>
         <div class="formula">
@@ -885,7 +885,7 @@ flowchart TD
         <p>
           Real after-tax wealth — what you'd actually net if you liquidated your portfolio —
           depends on both the account type and the investment strategy's trading behavior.
-          The simulator models this with three distinct tax modes, applied differently
+          The backtester models this with three distinct tax modes, applied differently
           across the four scenarios.
         </p>
 
@@ -898,7 +898,7 @@ flowchart TD
 
         <h3>Taxable accounts: two behaviors</h3>
         <p>
-          In taxable mode, the simulator distinguishes between strategies that trigger capital gains
+          In taxable mode, the backtester distinguishes between strategies that trigger capital gains
           continuously (via active rebalancing) versus those that defer realization until sale:
         </p>
 
@@ -909,7 +909,7 @@ flowchart TD
           <tbody>
             <tr>
               <td>Low-Cost Index &amp; Active (no advisor)</td>
-              <td>At liquidation only. Gains accumulate unrealized throughout the simulation period and are taxed in full when you "sell" at the end.</td>
+              <td>At liquidation only. Gains accumulate unrealized throughout the backtest period and are taxed in full when you "sell" at the end.</td>
             </tr>
             <tr>
               <td>Fee-Adjusted Index &amp; Active (with advisor)</td>
@@ -928,7 +928,7 @@ flowchart TD
 
         <h3>Cost basis tracking and rebalance taxation</h3>
         <p>
-          The simulator tracks a single aggregate cost basis for the entire portfolio — the
+          The backtester tracks a single aggregate cost basis for the entire portfolio — the
           cumulative sum of all contributions made so far. At each rebalancing event, it estimates
           what fraction of the current portfolio value represents unrealized gains:
         </p>
@@ -980,9 +980,9 @@ flowchart TD
 
         <h3>CPI deflator construction</h3>
         <p>
-          The simulator uses the Consumer Price Index for All Urban Consumers (CPIAUCSL) from FRED.
-          A deflator series is computed by dividing the CPI value at the simulation's base date
-          (the end of the simulation period) by the CPI value at each earlier date:
+          The backtester uses the Consumer Price Index for All Urban Consumers (CPIAUCSL) from FRED.
+          A deflator series is computed by dividing the CPI value at the backtest's base date
+          (the end of the backtest period) by the CPI value at each earlier date:
         </p>
         <div class="formula">
           <div class="formula-label">Deflator</div>
@@ -1006,7 +1006,7 @@ flowchart TD
       <h2>Momentum Rotation <span class="h2-chevron">▾</span></h2>
       <div class="section-body">
         <p>
-          The optional momentum scenarios simulate an advisor strategy that annually reallocates
+          The optional momentum scenarios model an advisor strategy that annually reallocates
           toward recent winners within a larger universe of funds. Both momentum scenarios include
           the advisor AUM fee and are run in taxable rebalance mode (gains realized annually),
           since active rotation is fundamentally an advisor-driven strategy.
@@ -1079,13 +1079,13 @@ flowchart TD
       <h2>Known Limitations <span class="h2-chevron">▾</span></h2>
       <div class="section-body">
         <p>
-          The simulator is designed to be as rigorous as a free public-data tool can be, but
+          The backtester is designed to be as rigorous as a free public-data tool can be, but
           several significant simplifications and caveats apply.
         </p>
 
         <h3>Survivorship bias</h3>
         <p>
-          The active funds in the simulator are well-known, large, long-surviving funds. They were
+          The active funds in the backtester are well-known, large, long-surviving funds. They were
           selected precisely because they have long histories — and they have long histories partly
           because they performed well enough to survive. The full universe of actively managed funds
           from 1987 or 2011 included many others that quietly closed or merged after poor performance.
@@ -1110,7 +1110,7 @@ flowchart TD
 
         <h3>Month-end pricing</h3>
         <p>
-          All simulations use the last available trading day's price in each calendar month. Returns
+          All backtests use the last available trading day's price in each calendar month. Returns
           are therefore computed month-over-month on end-of-month NAVs. Intra-month price movements —
           including any that occurred on the actual calendar month-end when no trading occurred — are
           not captured.
@@ -1118,7 +1118,7 @@ flowchart TD
 
         <h3>No transaction costs on rebalancing</h3>
         <p>
-          The simulator does not deduct trading commissions, bid-ask spreads, or fund redemption fees
+          The backtester does not deduct trading commissions, bid-ask spreads, or fund redemption fees
           when rebalancing. For modern ETFs and no-load mutual funds at major brokerages, transaction
           costs are now effectively zero, making this a reasonable assumption for the default fund set.
           For older fund families or advisor-managed accounts, some cost drag may be missing.
@@ -1150,7 +1150,7 @@ flowchart TD
 
         <h3>This is not financial advice</h3>
         <p>
-          The simulator uses real historical data for educational purposes only. Past performance
+          The backtester uses real historical data for educational purposes only. Past performance
           does not guarantee future results. Nothing here should be construed as a recommendation
           to buy, sell, or hold any security or to use or avoid any particular investment strategy.
         </p>

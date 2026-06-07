@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Investment Simulator — User Guide</title>
-  <meta property="og:title" content="Investment Simulator — User Guide" />
-  <meta property="og:description" content="How to use the investment strategy simulator: choosing scenarios, reading the charts, and understanding what the numbers mean." />
+  <title>Investment Back-Tester — User Guide</title>
+  <meta property="og:title" content="Investment Back-Tester — User Guide" />
+  <meta property="og:description" content="How to use the investment strategy backtester: choosing scenarios, reading the charts, and understanding what the numbers mean." />
   <meta property="og:url" content="https://investment-dashboard-aapf.onrender.com/guide" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
@@ -329,10 +329,60 @@
       vertical-align: middle;
     }
 
+    /* ── Backtesting-vs-simulation cards ── */
+    .compare-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 16px 0;
+    }
+    @media (max-width: 600px) { .compare-cards { grid-template-columns: 1fr; } }
+
+    .compare-cards .card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border-hi);
+      border-radius: 10px;
+      padding: 16px 18px;
+    }
+    .compare-cards .card h3 {
+      margin: 0 0 10px;
+    }
+    .compare-cards .pro,
+    .compare-cards .con {
+      font-size: 13.5px;
+      line-height: 1.55;
+      margin-bottom: 8px;
+    }
+    .compare-cards .pro { color: rgba(125, 212, 232, 0.85); }
+    .compare-cards .con { color: var(--color-text-dim); }
+
+    .summary-bullets {
+      margin: 10px 0 16px 18px;
+      line-height: 1.6;
+    }
+
+    .takeaway {
+      border-left: 3px solid var(--color-primary);
+      margin: 16px 0;
+      padding: 12px 16px;
+      font-style: italic;
+      color: var(--color-text);
+      background: rgba(125, 212, 232, 0.05);
+      border-radius: 0 8px 8px 0;
+    }
+
+    .aside {
+      font-size: 13px;
+      color: var(--color-text-dim);
+      line-height: 1.6;
+      margin-top: 14px;
+    }
+
     /* ── Footer ── */
     .disclaimer {
       margin-top: 60px;
       padding-top: 20px;
+      padding-bottom: 40px;
       border-top: 1px solid var(--color-border-hi);
       font-size: 12px;
       color: var(--color-text-dim);
@@ -364,6 +414,7 @@
       <li><a href="#funds">Fund universe</a></li>
       <li><a href="#limitations">What's not modeled</a></li>
       <li><a href="#data">Data sources</a></li>
+      <li><a href="#terminology">A note on backtesting vs. simulation</a></li>
     </ul>
   </nav>
 
@@ -371,7 +422,7 @@
   <div class="guide-main">
 
     <!-- Header -->
-    <h1>Investment Simulator — User Guide</h1>
+    <h1>Investment Back-Tester — User Guide</h1>
     <p class="subtitle">
       A tool for exploring how different investment approaches — indexed, actively managed,
       advisor-mediated, and momentum-driven — would have performed over any historical window
@@ -383,16 +434,16 @@
       outcomes are shaped just as much by investor behavior and advisor incentives, neither
       of which this tool models. The results are best read as a map of cost and strategy
       differences under idealized conditions, not a prediction of what any individual
-      investor would actually experience. See <a href="#limitations">What this simulator
+      investor would actually experience. See <a href="#limitations">What this backtester
       doesn't model</a> for a fuller discussion.
     </div>
 
     <!-- ── OVERVIEW ── -->
     <section id="overview">
-      <h2>What the simulator does</h2>
+      <h2>What the backtester does</h2>
       <div class="section-body">
         <p>
-          The simulator takes a starting balance, a monthly contribution amount, and a date range,
+          The backtester takes a starting balance, a monthly contribution amount, and a date range,
           then replays what would have happened to your money across up to six parallel investment
           scenarios using actual historical monthly returns from Yahoo Finance. All scenarios share
           the same inputs so differences in outcome are attributable entirely to strategy and cost.
@@ -403,6 +454,7 @@
           paid, and after-tax wealth, and a plain-English fee-drag callout that quantifies the cost
           of advisory and fund expenses in dollar terms.
         </p>
+        <p>(On when you might reach for a <a href="https://stevessite.com/monte-carlo.html">simulator</a> rather than a back-tester — they offer genuinely different insights — see the <a href="#terminology">note below</a>.)</p>
       </div>
     </section>
 
@@ -497,7 +549,7 @@
 
         <div class="tip">
           <b>Momentum mechanics:</b> For the first 12 months (cold start) all eligible funds
-          receive equal weight. At each subsequent 12-month anniversary the simulator ranks funds
+          receive equal weight. At each subsequent 12-month anniversary the backtester ranks funds
           by trailing 12-month cumulative return and assigns proportional weights — worst fund
           gets the smallest share, best gets the largest. No look-ahead: weights at any date use
           only data available up to the prior month. Funds not yet in existence at a given
@@ -533,7 +585,7 @@
               <td>Start Date / End Date</td>
               <td>
                 Arrow pickers let you select any month within the available historical window.
-                The simulator uses the full range between your chosen start and end dates. Reset
+                The backtester uses the full range between your chosen start and end dates. Reset
                 the end date to the latest available data with the ✕ button.
               </td>
             </tr>
@@ -624,12 +676,12 @@
             <tr>
               <td>Account Type</td>
               <td>
-                <em>Taxable</em> — simulates a standard brokerage account. A 20 % long-term
+                <em>Taxable</em> — models a standard brokerage account. A 20 % long-term
                 capital-gains rate applies. No-advisor scenarios defer all tax to final
                 liquidation; with-advisor &amp; momentum scenarios recognise gains at each
                 annual rebalancing event. Tax rows appear in the stat cards.<br /><br />
-                <em>Tax-Deferred</em> — simulates a 401(k) or IRA. No capital-gains tax during
-                the simulation. Tax rows are hidden.
+                <em>Tax-Deferred</em> — models a 401(k) or IRA. No capital-gains tax during
+                the backtest. Tax rows are hidden.
               </td>
             </tr>
             <tr>
@@ -724,7 +776,7 @@
 
     <!-- ── COMPARISONS ── -->
     <section id="comparisons">
-      <h2>Comparisons the simulator enables</h2>
+      <h2>Comparisons the backtester enables</h2>
       <div class="section-body">
         <ul class="comparison-list">
           <li>
@@ -804,7 +856,7 @@
           <tbody>
             <tr>
               <td>Final Value</td>
-              <td>Portfolio value at the end of the simulation period (gross, before any liquidation tax).</td>
+              <td>Portfolio value at the end of the backtest period (gross, before any liquidation tax).</td>
             </tr>
             <tr>
               <td>Total Contributed</td>
@@ -818,7 +870,7 @@
               <td>CAGR</td>
               <td>
                 Compound Annual Growth Rate: the single annualised return rate that would turn
-                Total Contributed into Final Value over the simulated period. Comparable across
+                Total Contributed into Final Value over the backtest period. Comparable across
                 windows of different lengths.
               </td>
             </tr>
@@ -855,7 +907,7 @@
       <div class="section-body">
 
         <p>
-          The simulator works with a fixed, curated set of funds chosen to be
+          The backtester works with a fixed, curated set of funds chosen to be
           <strong>representative of broad investment approaches</strong> — not to model any
           particular investor's portfolio or to identify top-performing funds. The goal is to
           illustrate structural differences between strategies (passive vs. active, self-directed
@@ -867,7 +919,7 @@
           Results should be read as evidence about <em>strategies</em>, not as endorsements of
           the specific funds shown. Swapping in comparable funds from the same category would
           likely produce similar directional conclusions — but different numbers. The universe
-          is deliberately small so that the simulations remain legible and the cost/return
+          is deliberately small so that the backtests remain legible and the cost/return
           trade-offs stay visible, rather than getting lost in fund-selection noise.
         </p>
 
@@ -984,7 +1036,7 @@
         </table>
 
         <div class="tip">
-          <b>Why this matters for interpreting results:</b> The simulator is designed to show
+          <b>Why this matters for interpreting results:</b> The backtester is designed to show
           whether a <em>strategy</em> — momentum rotation, active management, advisor
           intermediation — tends to add or subtract value relative to a low-cost index baseline.
           It is not designed to tell you whether FCNTX is a better fund than AGTHX, or whether
@@ -997,7 +1049,7 @@
 
     <!-- ── LIMITATIONS ── -->
     <section id="limitations">
-      <h2>What this simulator doesn't model</h2>
+      <h2>What this backtester doesn't model</h2>
       <div class="section-body">
 
         <h3>The behavior gap</h3>
@@ -1009,7 +1061,7 @@
           gains and sell after losses.
         </p>
         <p>
-          This creates a wide real-world spectrum that the simulator doesn't capture. At one
+          This creates a wide real-world spectrum that the backtester doesn't capture. At one
           end, the undisciplined DIY investor — panic-selling in downturns, buying back near
           peaks, triggering unnecessary capital gains — is likely to underperform every scenario
           shown here, often significantly. At the other end, an advisor with conflicts of interest —
@@ -1030,7 +1082,7 @@
 
         <h3>What advisors can add that isn't modeled</h3>
         <p>
-          The simulator captures two things an advisor does: select funds (active vs. index)
+          The backtester captures two things an advisor does: select funds (active vs. index)
           and charge a fee. A good advisor may also provide:
         </p>
         <ul class="comparison-list">
@@ -1038,7 +1090,7 @@
             <strong>Behavioral coaching</strong>
             Keeping clients invested through downturns may be the single most valuable thing
             an advisor does. One prevented panic sale in a major bear market can outweigh
-            years of advisory fees — an effect this simulator cannot quantify.
+            years of advisory fees — an effect this backtester cannot quantify.
           </li>
           <li>
             <strong>Tax, estate, and financial planning</strong>
@@ -1054,18 +1106,18 @@
           </li>
           <li>
             <strong>Dynamic strategy and responsiveness to changing conditions</strong>
-            The simulator runs a fixed strategy through historical data without adapting
+            The backtester runs a fixed strategy through historical data without adapting
             along the way. A real advisor may actively adjust in response to conditions
             the sim treats as invisible: shifts in the macroeconomic environment (interest
             rate cycles, inflation regimes, recession signals), changes in tax law that
             open or close planning opportunities, or adjustments to withdrawal sequencing
             as a client approaches or enters retirement. Whether these adjustments add value consistently is
-            debated — but they represent a category of advisor activity that this simulator
+            debated — but they represent a category of advisor activity that this backtester
             makes no attempt to model.
           </li>
         </ul>
         <p style="margin-top: 14px;">
-          Taken together, the simulator models two specific advisor behaviors — fund selection
+          Taken together, the backtester models two specific advisor behaviors — fund selection
           and fee structure — out of a much broader toolkit. It is a useful lens for
           understanding the cost and return implications of those two factors, but it should
           not be read as a comprehensive picture of what an advisor does or doesn't contribute.
@@ -1075,7 +1127,7 @@
 
         <h3>Past performance and regime risk</h3>
         <p>
-          In many of the historical windows available in this simulator, active funds and
+          In many of the historical windows available in this backtester, active funds and
           advisor-mediated strategies have performed competitively or better than the low-cost
           index baseline. Before drawing strong conclusions from this, it's worth considering
           a few things.
@@ -1089,16 +1141,16 @@
           and advisor approaches as it does to individual funds.
         </p>
         <p>
-          The simulator's historical windows (1987–present and 2011–present) include prolonged
+          The backtester's historical windows (1987–present and 2011–present) include prolonged
           bull markets, extended low-rate environments, and specific sector dynamics that may
           not repeat. Results might look quite different over other periods — or over the
-          period ahead. The simulator's comparisons are most reliable as a measure of
+          period ahead. The backtester's comparisons are most reliable as a measure of
           <em>cost differences</em>, which are structural and predictable. Return differences
           between active and passive strategies are real in the historical data, but their
           persistence is genuinely uncertain.
         </p>
         <p>
-          If active strategies appear to do well in a simulation, that's worth noting — but
+          If active strategies appear to do well in a backtest, that's worth noting — but
           it's a reason to look more carefully, not a reason to expect the pattern to continue.
         </p>
 
@@ -1117,7 +1169,7 @@
           (Federal Reserve Bank of St. Louis). Data is cached for 24 hours.
         </p>
         <p>
-          The common date range for any simulation is limited by the fund with the shortest
+          The common date range for any backtest is limited by the fund with the shortest
           history among the selected set. Pre-ETF mode extends available history to 1987 at
           the cost of using older, less-liquid mutual fund proxies.
         </p>
@@ -1134,8 +1186,43 @@
       </div>
     </section>
 
+    <!-- ── TERMINOLOGY ── -->
+    <section id="terminology">
+      <h2>A note on backtesting vs. simulation</h2>
+      <div class="section-body">
+
+        <p>Two tools, two lenses. Neither predicts the future — and that's the point. Each reveals something the other structurally can't.</p>
+
+        <ul class="summary-bullets">
+          <li><strong>Back-tester (this page)</strong> — one real path through history.</li>
+          <li><strong><a href="https://stevessite.com/monte-carlo.html">Monte Carlo simulator</a></strong> — thousands of hypothetical paths.</li>
+          <li>Both are useful <em>because</em> they fall short in opposite directions.</li>
+        </ul>
+
+        <div class="compare-cards">
+          <div class="card">
+            <h3>Back-tester</h3>
+            <p class="pro">&#10003; Real market dynamics for free — crisis correlations, volatility clustering, regime shifts. All present in the data, none of it modeled.</p>
+            <p class="con">&#10007; Just one path. No sense of the range of what might have happened — no error bar on the result.</p>
+          </div>
+          <div class="card">
+            <h3>Simulator</h3>
+            <p class="pro">&#10003; Thousands of paths — a real feel for the spread of outcomes, the weight of the tails, the role of luck.</p>
+            <p class="con">&#10007; Simplified dynamics — fixed parameters, stationary correlations — "unrealistic" exactly where markets are most interesting.</p>
+          </div>
+        </div>
+
+        <blockquote class="takeaway">
+          Actual dynamics with no sense of variability, against simplified dynamics with a rich sense of it. Complements, not rivals.
+        </blockquote>
+
+        <p class="aside">In the language of the field, <em>backtesting</em> works within the historical environment while <em>simulation</em> explores generated, hypothetical ones. The momentum scenarios here blur the line — they run an adaptive strategy that responds to data as it unfolds, which feels like simulating an active manager. But they stay backtests in the strict sense: the same window always yields one deterministic outcome, not a distribution.</p>
+
+      </div>
+    </section>
+
     <div class="disclaimer">
-      <strong>Disclaimer:</strong> This simulator uses real historical data for educational purposes only.
+      <strong>Disclaimer:</strong> This backtester uses real historical data for educational purposes only.
       Past performance does not guarantee future results. This is not financial advice.
       Always consult a qualified financial professional before making investment decisions.
     </div>

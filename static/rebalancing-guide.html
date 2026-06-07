@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rebalancing Impact — User Guide</title>
   <meta property="og:title" content="Rebalancing Impact — User Guide" />
-  <meta property="og:description" content="How to use the Rebalancing Impact simulator: choosing a strategy, comparing rebalancing frequencies, and understanding the results." />
+  <meta property="og:description" content="How to use the Rebalancing Impact backtester: choosing a strategy, comparing rebalancing frequencies, and understanding the results." />
   <meta property="og:url" content="https://investment-dashboard-aapf.onrender.com/rebalancing-guide" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
@@ -324,6 +324,7 @@
     .disclaimer {
       margin-top: 60px;
       padding-top: 20px;
+      padding-bottom: 40px;
       border-top: 1px solid var(--color-border-hi);
       font-size: 12px;
       color: var(--color-text-dim);
@@ -366,18 +367,18 @@
     <!-- Header -->
     <h1>Rebalancing Impact — User Guide</h1>
     <p class="subtitle">
-      This page isolates one question the main simulator leaves tangled with other variables:
+      This page isolates one question the main backtester leaves tangled with other variables:
       how much does rebalancing frequency actually matter? Pick a single strategy and compare
       three frequencies — never, quarterly, and annually — with all other inputs held constant.
     </p>
     <div class="tip" style="margin-bottom: 40px;">
-      <b>How this page relates to the main simulator:</b> The
+      <b>How this page relates to the main backtester:</b> The
       <a href="/">Comparing Strategies</a> page compares up to six different investment
       strategies side by side, all at the same rebalancing frequency. This page flips the
       perspective: it holds the strategy constant and varies the rebalancing frequency. Together
       the two pages let you understand both <em>what</em> you invest in and <em>how often</em>
       you rebalance. See the <a href="/guide">Strategies User Guide</a> for details on the
-      main simulator.
+      main backtester.
     </div>
 
     <!-- ── OVERVIEW ── -->
@@ -385,7 +386,7 @@
       <h2>What the page does</h2>
       <div class="section-body">
         <p>
-          The Rebalancing Impact page takes the same inputs as the main simulator — starting
+          The Rebalancing Impact page takes the same inputs as the main backtester — starting
           amount, monthly contribution, date range, stock/bond split, fund selections, and
           account type — but instead of comparing different strategies, it runs a single
           strategy at three rebalancing frequencies simultaneously.
@@ -408,7 +409,7 @@
       <div class="section-body">
         <p>
           The strategy selector in the sidebar presents the same four core strategies available
-          in the main simulator. Picking one determines which funds are used and whether an
+          in the main backtester. Picking one determines which funds are used and whether an
           advisor AUM fee is applied. The chart then compares three rebalancing frequencies
           for that one strategy.
         </p>
@@ -480,7 +481,7 @@
         <p>
           Rebalancing means selling some holdings that have grown beyond their target weight
           and buying those that have fallen below it, restoring the portfolio to its original
-          stock/bond split. The simulator models three approaches:
+          stock/bond split. The backtester models three approaches:
         </p>
 
         <div class="freq-grid">
@@ -516,13 +517,13 @@
             <p>
               Once per year the portfolio is restored to target weights. This is the most common
               rebalancing frequency recommended by financial advisors and the default on the
-              main simulator.
+              main backtester.
             </p>
           </div>
         </div>
 
         <div class="tip">
-          <b>What the simulator shows:</b> In long bull markets, no-rebalancing portfolios
+          <b>What the backtester shows:</b> In long bull markets, no-rebalancing portfolios
           tend to accumulate more equity exposure and can outperform — but they also take on
           more risk. In volatile or sideways markets, rebalancing can add value by systematically
           buying low and selling high. The magnitude of these effects depends heavily on the
@@ -537,13 +538,13 @@
       <div class="section-body">
         <p>
           The sidebar controls are identical to the
-          <a href="/">main simulator</a>, with one addition: the strategy selector. For full
+          <a href="/">main backtester</a>, with one addition: the strategy selector. For full
           descriptions of each control, see the
           <a href="/guide#controls">Strategies User Guide</a>. Here's a summary of what each
           group contains:
         </p>
 
-        <h3>Simulation Parameters</h3>
+        <h3>Backtest Parameters</h3>
         <table class="ctrl-table">
           <thead>
             <tr><th>Control</th><th>What it does</th></tr>
@@ -714,7 +715,7 @@
           <tbody>
             <tr>
               <td>Final Value</td>
-              <td>Portfolio value at the end of the simulation (gross, before liquidation tax).</td>
+              <td>Portfolio value at the end of the backtest period (gross, before liquidation tax).</td>
             </tr>
             <tr>
               <td>Total Contributed</td>
@@ -735,7 +736,7 @@
             <tr>
               <td>Taxes Paid <span class="badge">Taxable only</span></td>
               <td>
-                Capital-gains taxes already realized during the simulation. Visible only for
+                Capital-gains taxes already realized during the backtest. Visible only for
                 With Advisor strategies, which trigger gains at each rebalancing event.
               </td>
             </tr>
@@ -807,7 +808,7 @@
         </div>
 
         <div class="tip">
-          <b>A simplification worth noting:</b> The simulator models momentum rotation as a
+          <b>A simplification worth noting:</b> The backtester models momentum rotation as a
           once-per-year rebalancing event — ranking funds by trailing 12-month return and
           reallocating accordingly. In practice, many active advisors using momentum or tactical
           strategies trade far more frequently: monthly, or even opportunistically in response
@@ -816,7 +817,7 @@
           turnover costs and the potential responsiveness of a real momentum approach. The result
           is best read as an illustration of the general effect of trend-following active
           management rather than a precise model of any particular advisor's strategy. For a
-          fuller discussion of what the simulator does and doesn't capture about advisor
+          fuller discussion of what the backtester does and doesn't capture about advisor
           behavior, see the
           <a href="/guide#limitations">Strategies User Guide</a>.
         </div>
@@ -887,7 +888,7 @@
             beat the momentum approach? If so, a simpler strategy may be preferable.
           </li>
           <li>
-            <strong>Cross-check with the main simulator</strong>
+            <strong>Cross-check with the main backtester</strong>
             Once you've found an interesting rebalancing frequency, switch to the
             <a href="/">Comparing Strategies</a> page and set the rebalancing control to that
             frequency. Now you can see how your preferred frequency performs across all six
@@ -902,14 +903,14 @@
       <h2>Tax &amp; rebalancing</h2>
       <div class="section-body">
         <p>
-          In a taxable account, rebalancing triggers capital gains. The simulator models this
+          In a taxable account, rebalancing triggers capital gains. The backtester models this
           with a 20% long-term capital gains rate. The tax treatment differs by strategy type:
         </p>
 
         <h3>No Advisor strategies</h3>
         <p>
-          Without an advisor, the simulator assumes you hold all positions until the end of the
-          simulation. Rebalancing still occurs at the chosen frequency, but capital gains tax is
+          Without an advisor, the backtester assumes you hold all positions until the end of the
+          backtest. Rebalancing still occurs at the chosen frequency, but capital gains tax is
           deferred to final liquidation. The "Est. Tax at Sale" row shows the full tax bill.
         </p>
 
@@ -917,7 +918,7 @@
         <p>
           With an advisor, capital gains are recognized at each rebalancing event. Quarterly
           rebalancing recognizes gains four times per year; annual rebalancing once per year.
-          The "Taxes Paid" row accumulates the total tax paid over the simulation, while
+          The "Taxes Paid" row accumulates the total tax paid over the backtest, while
           "Est. Tax at Sale" covers the remaining unrealized gains.
         </p>
 
@@ -939,14 +940,14 @@
       <h2>Data sources</h2>
       <div class="section-body">
         <p>
-          The Rebalancing Impact page uses the same data and simulation engine as the
+          The Rebalancing Impact page uses the same data and backtest engine as the
           <a href="/">Comparing Strategies</a> page. Monthly adjusted-close prices come
           from <strong>Yahoo Finance</strong>, CPI and yield curve data from the
           <strong>FRED API</strong>.
         </p>
         <p>
-          For complete details on data sourcing, fund selection rationale, and simulation
-          limitations, see the
+          For complete details on data sourcing, fund selection rationale, and backtest
+          assumptions, see the
           <a href="/guide#data">Data sources</a> and
           <a href="/guide#funds">Fund universe</a> sections of the Strategies User Guide.
         </p>
@@ -954,7 +955,7 @@
     </section>
 
     <div class="disclaimer">
-      <strong>Disclaimer:</strong> This simulator uses real historical data for educational purposes only.
+      <strong>Disclaimer:</strong> This backtester uses real historical data for educational purposes only.
       Past performance does not guarantee future results. This is not financial advice.
       Always consult a qualified financial professional before making investment decisions.
     </div>

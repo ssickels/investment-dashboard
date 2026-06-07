@@ -15,7 +15,7 @@
   <div id="nav-panel" aria-hidden="true">
     <a href="https://stevessite.com" class="nav-panel-home">&#8962; Home</a>
     <div class="nav-panel-section">
-      <div class="nav-panel-heading">Investment Simulator</div>
+      <div class="nav-panel-heading">Investment Back-Tester</div>
       <div class="nav-section-links">
       <a href="https://investment-dashboard-aapf.onrender.com">Comparing Strategies</a>
       <a href="https://investment-dashboard-aapf.onrender.com/guide">Strategies User Guide</a>

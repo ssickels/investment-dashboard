@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Investment Strategy Comparison</title>
-  <meta property="og:title" content="Investment Strategy Simulator" />
+  <meta property="og:title" content="Investment Strategy Back-Tester" />
   <meta property="og:description" content="Compare index funds, active management, and advisor fees using real historical data going back to 1987." />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
   <meta property="og:url" content="https://stevessite.com/simulator" />
@@ -21,14 +21,14 @@
     <aside class="sidebar" id="sidebar">
       <button class="sidebar-toggle" id="sidebarToggle" title="Collapse sidebar">&#8249;</button>
       <div class="sidebar-content" id="sidebarContent">
-      <h1 class="sidebar-title">Investment Simulator</h1>
+      <h1 class="sidebar-title">Investment Back-Tester</h1>
       <p class="sidebar-subtitle">Compare three real-world investment strategies using historical data.</p>
       <p class="sidebar-see-also">To compare rebalancing frequencies for one strategy, see <a href="/rebalancing">Rebalancing Impact</a>.</p>
 
       <!-- ── GROUP 1: Simulation Parameters ── -->
       <div class="sidebar-group" id="group-simulation">
         <button class="sidebar-group-header" type="button">
-          Simulation Parameters <span class="sg-chevron">▾</span>
+          Backtest Parameters <span class="sg-chevron">▾</span>
         </button>
         <div class="sidebar-group-content">
 
@@ -167,7 +167,7 @@
 
           <div class="control-group">
             <label>
-              <span class="tooltip-term" data-tooltip="Taxable: simulates a brokerage account where capital gains tax (20% long-term rate) applies. No-Advisor scenarios defer tax to final liquidation. With-Advisor &amp; Momentum scenarios trigger capital gains at each annual rebalancing. Tax-Deferred: simulates a 401(k) or IRA — no capital gains tax during the simulation.">Account Type</span>
+              <span class="tooltip-term" data-tooltip="Taxable: models a brokerage account where capital gains tax (20% long-term rate) applies. No-Advisor scenarios defer tax to final liquidation. With-Advisor &amp; Momentum scenarios trigger capital gains at each annual rebalancing. Tax-Deferred: models a 401(k) or IRA — no capital gains tax during the backtest.">Account Type</span>
             </label>
             <div class="agg-toggle" id="taxToggle">
               <label class="agg-option agg-option--selected" id="taxTaxableLabel">

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>What the Charts Show — Investment Simulator</title>
-  <meta property="og:title" content="Investment Simulator — What the Charts Show" />
-  <meta property="og:description" content="A guide to reading the charts in the investment strategy simulator — what each visualization represents and how to interpret the data." />
+  <title>What the Charts Show — Investment Back-Tester</title>
+  <meta property="og:title" content="Investment Back-Tester — What the Charts Show" />
+  <meta property="og:description" content="A guide to reading the charts in the investment strategy backtester — what each visualization represents and how to interpret the data." />
   <meta property="og:url" content="https://investment-dashboard-aapf.onrender.com/reading-charts" />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="https://stevessite.com/investment_simulator_preview.jpg" />
@@ -167,7 +167,7 @@
 <div class="page-content">
 
   <h1>What the Charts Show</h1>
-  <p class="subtitle">These charts show how a portfolio would have grown using real historical data — but "growth" involves several moving parts. Here's what's already baked into the <a href="https://finance.yahoo.com" target="_blank" rel="noopener">Yahoo Finance</a> data we use, what our simulator adds on top, and how to compare results to a chart you'd find on Fidelity's or Vanguard's website.</p>
+  <p class="subtitle">These charts show how a portfolio would have grown using real historical data — but "growth" involves several moving parts. Here's what's already baked into the <a href="https://finance.yahoo.com" target="_blank" rel="noopener">Yahoo Finance</a> data we use, what our backtester adds on top, and how to compare results to a chart you'd find on Fidelity's or Vanguard's website.</p>
 
   <!-- ── SECTION 1: What's in the data ── -->
   <section>
@@ -178,7 +178,7 @@
       <li><strong>Capital gain distributions reinvested</strong> — funds pass through realized gains to shareholders annually; these are folded back in</li>
       <li><strong>Expense ratios embedded</strong> — fund management fees are already reflected in the NAV; we don't subtract them separately</li>
     </ul>
-    <p>This is the same "total return" baseline used by fund companies for their own growth charts. So our simulator starts from the same place Fidelity does.</p>
+    <p>This is the same "total return" baseline used by fund companies for their own growth charts. So our backtester starts from the same place Fidelity does.</p>
     <div class="callout">
       <strong>What's not in the Yahoo data</strong>
       Taxes. The adjusted close price assumes all proceeds are reinvested with no tax drag whatsoever.
@@ -196,8 +196,8 @@
 
   <!-- ── SECTION 2: The two flowcharts ── -->
   <section>
-    <h2>What the simulator adds</h2>
-    <p>Starting from total-return prices, the simulator applies your chosen parameters month by month. The path is straightforward in a tax-deferred account; a taxable account adds annual tax events at each rebalance.</p>
+    <h2>What the backtester adds</h2>
+    <p>Starting from total-return prices, the backtester applies your chosen parameters month by month. The path is straightforward in a tax-deferred account; a taxable account adds annual tax events at each rebalance.</p>
 
     <div class="charts-row">
 
@@ -262,15 +262,15 @@ flowchart TD
       </div>
     </div>
 
-    <p>This is exactly what our simulator does, extended to multiple funds weighted by your stock/bond allocation, with optional monthly contributions and rebalancing on top.</p>
+    <p>This is exactly what our backtester does, extended to multiple funds weighted by your stock/bond allocation, with optional monthly contributions and rebalancing on top.</p>
     <div class="callout">
       <strong>Settings to match a "growth of $10,000" chart</strong>
       Monthly contribution: $0 &nbsp;·&nbsp; Account type: Tax-Deferred &nbsp;·&nbsp; Rebalancing: Never &nbsp;·&nbsp;
       No advisor fee &nbsp;·&nbsp; Pick one fund at 100% stocks or 100% bonds &nbsp;·&nbsp; Match the start date.
       The result should be very close.
     </div>
-    <p>For a <em>portfolio</em> of multiple funds (e.g. 80% stocks / 20% bonds across three funds), there's no single published chart to compare against — you'd have to blend individual fund charts by weight yourself. Our simulator does this automatically.</p>
-    <p>The more your settings diverge from that "single fund, tax-deferred, no contributions" baseline — advisor fees, rebalancing, taxable account, ongoing contributions — the less directly comparable any external chart becomes. That's not a flaw in the simulator; it's the nature of modeling a real portfolio rather than a textbook example.</p>
+    <p>For a <em>portfolio</em> of multiple funds (e.g. 80% stocks / 20% bonds across three funds), there's no single published chart to compare against — you'd have to blend individual fund charts by weight yourself. Our backtester does this automatically.</p>
+    <p>The more your settings diverge from that "single fund, tax-deferred, no contributions" baseline — advisor fees, rebalancing, taxable account, ongoing contributions — the less directly comparable any external chart becomes. That's not a flaw in the backtester; it's the nature of modeling a real portfolio rather than a textbook example.</p>
   </section>
 
   <div class="methodology-note">
