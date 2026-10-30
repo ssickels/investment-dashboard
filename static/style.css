@@ -178,7 +178,8 @@ html, body {
 }
 
 .sg-chevron {
-  font-size: 14px;
+  font-size: 20px;
+  line-height: 1;   /* keep the header height from growing with the glyph */
   transition: transform 0.22s ease;
   flex-shrink: 0;
 }
@@ -683,6 +684,7 @@ input[type="range"] {
   color: var(--gray-600);
   margin-top: 2px;
 }
+.drift-panel-header .sg-chevron { font-size: 24px; }  /* panel title is 16px, so a bit larger */
 .drift-panel.is-collapsed .sg-chevron { transform: rotate(-90deg); }
 
 .drift-panel-content {
