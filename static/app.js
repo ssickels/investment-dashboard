@@ -450,6 +450,7 @@ function buildChart(data) {
             const cb = document.querySelector(`.stat-card-toggle[data-dataset-idx="${idx}"]`);
             if (cb) {
               cb.checked = nowVisible;
+              cb.closest(".stat-card").classList.toggle("line-hidden", !nowVisible);
               cb.title = nowVisible
                 ? "Uncheck to hide this line on the chart"
                 : "Check to show this line on the chart";

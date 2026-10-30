@@ -530,12 +530,37 @@ input[type="range"] {
   padding: 16px;
 }
 
-.stat-card.diy            { border-top: 4px solid var(--blue);   }
-.stat-card.managed        { border-top: 4px solid var(--red);    }
-.stat-card.active         { border-top: 4px solid var(--green);  }
-.stat-card.active-managed { border-top: 4px solid var(--orange); }
-.stat-card.diy-momentum    { border-top: 4px solid var(--orange); }
-.stat-card.active-momentum { border-top: 4px solid var(--orange); }
+/* --line matches each card's chart line color (see datasets in app.js),
+   so a plotted card's frame is the same color as its line on the chart. */
+.stat-card.diy             { --line: #2563eb; }
+.stat-card.managed         { --line: #dc2626; }
+.stat-card.active          { --line: #16a34a; }
+.stat-card.active-managed  { --line: #d97706; }
+.stat-card.diy-momentum    { --line: #7c3aed; }
+.stat-card.active-momentum { --line: #0891b2; }
+
+.stat-card.diy, .stat-card.managed, .stat-card.active, .stat-card.active-managed,
+.stat-card.diy-momentum, .stat-card.active-momentum {
+  border-color: var(--line);
+  border-top: 4px solid var(--line);
+  box-shadow: 0 0 14px -2px color-mix(in srgb, var(--line) 55%, transparent);
+  transition: opacity 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Not plotted: neutral frame, no glow, faded content */
+.stat-card.line-hidden {
+  border-color: var(--gray-200);
+  border-top-color: var(--gray-200);
+  box-shadow: none;
+}
+.stat-card.line-hidden > :not(.stat-card-toggle) {
+  opacity: 0.45;
+  transition: opacity 0.2s;
+}
+.stat-card.line-hidden:hover > :not(.stat-card-toggle) {
+  opacity: 0.75;
+}
+
 
 .stat-card-toggle {
   position: absolute;
@@ -576,6 +601,9 @@ input[type="range"] {
 .stat-card.active-managed .stat-card-title { color: var(--orange); }
 .stat-card.diy-momentum    .stat-card-title { color: var(--orange); }
 .stat-card.active-momentum .stat-card-title { color: var(--orange); }
+
+/* After the per-card colors above so it wins: muted title when not plotted */
+.stat-card.line-hidden .stat-card-title { color: var(--gray-600); }
 
 .stat-card-sub {
   font-size: 11px;
