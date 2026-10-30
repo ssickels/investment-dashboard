@@ -301,6 +301,71 @@
         </div>
       </div>
 
+      <!-- DRIFT & VOLATILITY PANEL (collapsed by default; charts render on first expand) -->
+      <section class="drift-panel is-collapsed" id="driftPanel">
+        <button class="drift-panel-header" id="driftPanelHeader" type="button" aria-expanded="false" aria-controls="driftPanelContent">
+          <span>
+            <span class="drift-panel-title">How the portfolio drifts</span>
+            <span class="drift-panel-sub">A portfolio that starts at its target allocation drifts as markets move. Rebalancing pulls it back.</span>
+          </span>
+          <span class="sg-chevron">▾</span>
+        </button>
+        <div class="drift-panel-content" id="driftPanelContent">
+
+          <!-- Chart A: Allocation drift -->
+          <div class="drift-chart-block">
+            <div class="drift-chart-head">
+              <h3>Allocation drift</h3>
+              <div class="drift-chart-controls">
+                <div class="seg-toggle" id="driftViewToggle" role="group" aria-label="Allocation view">
+                  <button type="button" class="seg-option seg-option--selected" data-view="equity">Equity %</button>
+                  <button type="button" class="seg-option" data-view="mix">Fund mix</button>
+                </div>
+                <select id="driftMixStrategy" class="drift-select" style="display:none;" aria-label="Strategy for fund mix">
+                  <option value="0">No Rebalancing</option>
+                  <option value="1">Quarterly Rebalancing</option>
+                  <option value="2">Annual Rebalancing</option>
+                </select>
+                <button type="button" class="chart-theme-btn drift-snap-btn" data-chart="drift" title="Save chart as PNG">📷</button>
+              </div>
+            </div>
+            <div class="chart-container drift-chart-container">
+              <canvas id="driftChart"></canvas>
+            </div>
+            <p class="drift-caption" id="driftCaption">Share of the portfolio in stock funds, measured at each month-end before any rebalance. On rebalancing dates the line drops straight back to target.</p>
+          </div>
+
+          <!-- Chart B: Volatility -->
+          <div class="drift-chart-block">
+            <div class="drift-chart-head">
+              <h3>Volatility</h3>
+              <div class="drift-chart-controls">
+                <div class="seg-toggle" id="volViewToggle" role="group" aria-label="Volatility view">
+                  <button type="button" class="seg-option seg-option--selected" data-view="implied">Implied</button>
+                  <button type="button" class="seg-option" data-view="realized">Realized</button>
+                </div>
+                <button type="button" class="chart-theme-btn drift-snap-btn" data-chart="vol" title="Save chart as PNG">📷</button>
+              </div>
+            </div>
+            <div class="vol-realized-controls" id="volRealizedControls" style="display:none;">
+              <label class="vol-window-label">
+                <span id="volWindowLabel">36-month window</span>
+                <input type="range" id="volWindow" min="12" max="60" step="6" value="36" />
+              </label>
+              <label class="scale-lock-label">
+                <input type="checkbox" id="volShowDiff" />
+                <span title="Plots No Rebalancing minus each rebalanced strategy. Market swings that hit every strategy cancel out, which makes the effect of drift easier to see.">Show difference</span>
+              </label>
+            </div>
+            <div class="chart-container drift-chart-container">
+              <canvas id="volChart"></canvas>
+            </div>
+            <p class="drift-caption" id="volCaption">Volatility the current mix would have under average market conditions. Rebalancing holds this steady; drift lets it rise.</p>
+          </div>
+
+        </div>
+      </section>
+
       <!-- STATS GRID — 3 rebalancing cards -->
       <div class="stats-grid stats-grid-rebal">
 

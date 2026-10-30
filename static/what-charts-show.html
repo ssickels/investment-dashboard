@@ -273,6 +273,20 @@ flowchart TD
     <p>The more your settings diverge from that "single fund, tax-deferred, no contributions" baseline — advisor fees, rebalancing, taxable account, ongoing contributions — the less directly comparable any external chart becomes. That's not a flaw in the backtester; it's the nature of modeling a real portfolio rather than a textbook example.</p>
   </section>
 
+  <!-- ── SECTION 4: Drift & volatility charts (Rebalancing Impact) ── -->
+  <section>
+    <h2>The drift and volatility charts</h2>
+    <p>The <a href="/rebalancing">Rebalancing Impact</a> page has a collapsible <em>How the portfolio drifts</em> panel with two more charts, both built from the same backtest as its growth chart.</p>
+    <h3>Allocation drift</h3>
+    <p>The share of the portfolio in stock funds at each month-end, before any rebalance, compared with your target. Without rebalancing, the stock share usually creeps upward as stocks outgrow bonds. Rebalanced strategies trace a sawtooth: they wander between rebalancing dates, then drop straight back to target. A <em>Fund mix</em> view shows each fund's share for one strategy.</p>
+    <h3>Volatility</h3>
+    <p><strong>Implied</strong> volatility is how volatile each month's mix would be under average market conditions for the whole period, so it moves only when the mix moves. <strong>Realized</strong> volatility is what the portfolio actually experienced over a trailing window; it is driven mostly by markets and is noisy, so treat small gaps between lines as noise. Neither includes the effect of monthly contributions.</p>
+    <div class="callout">
+      <strong>Why this matters</strong>
+      A higher final value from never rebalancing usually comes from holding more stocks than you intended. The drift chart shows how far the mix moved; implied volatility shows how much risk that added.
+    </div>
+  </section>
+
   <div class="methodology-note">
     For the technical details behind these calculations — specific formulas, fund tickers, data sources, and the full pipeline — see the <a href="/methodology">Methodology</a> page.
   </div>

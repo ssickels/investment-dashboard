@@ -8,6 +8,7 @@ from flask import Flask, jsonify, request, send_from_directory
 
 import data as data_module
 from simulator import SimParams, run_all_scenarios
+from drift import compute_drift_metrics, covariance_matrix, cov_to_list
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 
@@ -85,6 +86,19 @@ ACTIVE_FUND_SETS = {
         "expense_ratios": [0.61, 0.45, 0.59],
     },
 }
+
+
+# Bond funds, from the fund metadata above: the last ticker of every 3-fund set
+# plus the momentum bond universes. Everything else counts toward equity %.
+BOND_FUNDS = (
+    {s["tickers"][-1] for s in DIY_PORTFOLIO_SETS.values()}
+    | {s["tickers"][-1] for s in ACTIVE_FUND_SETS.values()}
+    | {t for u in ACTIVE_MOMENTUM_UNIVERSE.values() for t in u["bond"]}
+)
+
+
+def equity_funds_of(tickers):
+    return [t for t in tickers if t not in BOND_FUNDS]
 
 
 @app.route("/")
@@ -201,6 +215,8 @@ def portfolio():
         if aggressiveness not in ("conservative", "moderate", "aggressive"):
             aggressiveness = "moderate"
         taxable = request.args.get("taxable", "true").lower() == "true"
+        # Drift series are only needed by the Rebalancing Impact page
+        include_drift = request.args.get("include_drift", "false").lower() == "true"
 
         active_fund_set_key = request.args.get("active_fund_set", "american_dodge")
         if active_fund_set_key not in ACTIVE_FUND_SETS:
@@ -347,7 +363,53 @@ def portfolio():
             yield_curve_spread=yield_curve_spread,
             aggressiveness=aggressiveness,
             taxable=taxable,
+            record_history=include_drift,
         )
+
+        # Allocation drift / volatility (Rebalancing Impact panel)
+        drift_meta = None
+        if include_drift:
+            s_frac = stock_pct / 100.0
+            fund_set_tickers = {"index": diy_tickers, "active": active_tickers}
+            drift_meta = {
+                # Off rebalance dates, the simulator adds each contribution in
+                # proportion to current holdings; on rebalance dates it is folded
+                # into the rebalance to target.
+                "contribution_rule": "pro_rata",
+                "fund_sets": {},
+            }
+            sigmas = {}
+            for set_key, tickers in fund_set_tickers.items():
+                sim_returns = returns_df[tickers].iloc[:months_override]
+                sigmas[set_key] = covariance_matrix(sim_returns, tickers)
+                drift_meta["fund_sets"][set_key] = {
+                    "funds": tickers,
+                    "equity_funds": equity_funds_of(tickers),
+                    "target_weights": {
+                        tickers[0]: round(0.8 * s_frac, 10),
+                        tickers[1]: round(0.2 * s_frac, 10),
+                        tickers[2]: round(1.0 - s_frac, 10),
+                    },
+                    "cov_matrix": cov_to_list(sigmas[set_key]),
+                }
+            for sc_key in ("diy", "managed", "active", "active_managed"):
+                sc = scenarios[sc_key]
+                history = sc.get("holdings_history")
+                if not history:
+                    continue
+                set_key = "index" if sc_key in ("diy", "managed") else "active"
+                tickers = fund_set_tickers[set_key]
+                sc["drift"] = {
+                    "fund_set": set_key,
+                    **compute_drift_metrics(
+                        history,
+                        returns_df[tickers].iloc[:months_override],
+                        [r["date"] for r in history if r["rebalanced"]],
+                        equity_funds_of(tickers),
+                        cov_matrix=sigmas[set_key],
+                        decimals=6,
+                    ),
+                }
 
         # Use dates from DIY scenario (all same length)
         dates = scenarios["diy"]["dates"]
@@ -382,6 +444,7 @@ def portfolio():
                     "values": v["values"],
                     "after_tax_values": v["after_tax_values"],
                     "stats": v["stats"],
+                    **({"drift": v["drift"]} if v.get("drift") else {}),
                 } if v else None
                 for k, v in {
                     "diy":            scenarios["diy"],
@@ -416,6 +479,7 @@ def portfolio():
             "yield_curve_inversions": inversion_periods,
             "aggressiveness": aggressiveness,
             "taxable": taxable,
+            "drift_meta": drift_meta,
             "error": warning,
         }
 

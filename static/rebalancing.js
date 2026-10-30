@@ -178,6 +178,7 @@ function applyChartTheme(light) {
     btn.textContent = light ? '◑' : '☀';
     btn.title = light ? 'Switch to dark chart background' : 'Switch to light chart background';
   }
+  applyDriftTheme();
   if (!chart) return;
   chart.options.plugins.legend.labels.color        = t.legendColor;
   chart.options.plugins.tooltip.backgroundColor    = t.tooltipBg;
@@ -235,6 +236,7 @@ function setStrategy(value) {
     handleScaleAfterRender(lastResults);
     updateStats(lastResults);
     updateCallout(lastResults);
+    invalidateDriftPanel();
   }
 }
 
@@ -498,6 +500,7 @@ function buildChart(results) {
                 ? "Uncheck to hide this line on the chart"
                 : "Check to show this line on the chart";
               cb.closest(".stat-card").classList.toggle("line-hidden", !nowVisible);
+              syncDriftVisibility();
             }
 
             if (legendItem.text === "Total Invested") {
@@ -822,7 +825,418 @@ function updateCallout(results) {
     );
   }
 
+  const driftLine = driftCalloutLine(results, best.label === "No Rebalancing");
+  if (driftLine) lines.push(driftLine);
+
   el.innerHTML = lines.join("<br><br>");
+}
+
+// ==================== DRIFT & VOLATILITY PANEL ====================
+
+// localStorage can throw (private mode, blocked site data) — never let that break the page
+function storageGet(key) {
+  try { return window.localStorage.getItem(key); } catch (e) { return null; }
+}
+function storageSet(key, value) {
+  try { window.localStorage.setItem(key, value); } catch (e) { /* ignore */ }
+}
+
+const DRIFT_PANEL_KEY = "sg-rebal-drift-panel";
+const FUND_MIX_COLORS = ["#7dd4e8", "#e8c020", "#4db8a0"];  // --color-data-1..3
+
+let driftChart = null;
+let volChart   = null;
+let driftView  = "equity";    // equity | mix
+let volView    = "implied";   // implied | realized
+let driftDirty = true;        // data changed since the panel last rendered
+
+const toTs = (d) => new Date(d + "T00:00:00Z").getTime();
+const fmtMonth = (ts) => new Date(ts).toLocaleDateString("en-US", { month: "short", year: "numeric", timeZone: "UTC" });
+
+function driftPanelOpen() {
+  return !document.getElementById("driftPanel").classList.contains("is-collapsed");
+}
+
+// Which of the 3 rebalancing lines are plotted (follows the stat-card checkboxes)
+function rebalLineVisible(i) {
+  const cb = document.querySelector(`.stat-card-toggle[data-dataset-idx="${i}"]`);
+  return !cb || cb.checked;
+}
+
+// Drift objects for the selected strategy: [never, quarterly, annually]
+function driftSeries(results) {
+  const key = STRATEGIES[selectedStrategy].scenarioKey;
+  return [results.never, results.quarterly, results.annually].map(r => r.scenarios[key] && r.scenarios[key].drift);
+}
+
+function driftFundSet(results) {
+  const d = driftSeries(results)[0];
+  const meta = results.ref.drift_meta;
+  return d && meta ? meta.fund_sets[d.fund_set] : null;
+}
+
+function targetEquityPct(results) {
+  const fs = driftFundSet(results);
+  if (!fs) return null;
+  return fs.equity_funds.reduce((s, f) => s + (fs.target_weights[f] || 0), 0) * 100;
+}
+
+// Yield-curve shading + crash markers on a linear (timestamp) x-axis, same look as the main chart
+function driftAnnotations(results, x0, x1) {
+  const ann = {};
+  for (const p of (results.ref.yield_curve_inversions || [])) {
+    const a = toTs(p.start), b = toTs(p.end);
+    if (b < x0 || a > x1) continue;
+    ann[`inv_${p.start}`] = {
+      type: "box", xMin: Math.max(a, x0), xMax: Math.min(b, x1),
+      backgroundColor: "rgba(220,38,38,0.07)", borderWidth: 0, drawTime: "beforeDatasetsDraw",
+    };
+  }
+  const CRASHES = [
+    { label: "Dot-com Peak",     target: "2001-03-31" },
+    { label: "Financial Crisis", target: "2008-09-30" },
+    { label: "COVID-19 Crash",   target: "2020-02-29" },
+  ];
+  for (const c of CRASHES) {
+    const t = toTs(c.target);
+    if (t < x0 || t > x1) continue;
+    ann[c.label.replace(/\W+/g, "_")] = {
+      type: "line", xMin: t, xMax: t,
+      borderColor: "rgba(156,163,175,0.7)", borderWidth: 1, borderDash: [4, 4],
+      label: {
+        content: c.label, display: true, position: "start",
+        backgroundColor: "rgba(100, 210, 230, 0.12)", color: "#5a9aaa",
+        font: { size: 10 }, padding: 4, borderRadius: 3,
+      },
+    };
+  }
+  return ann;
+}
+
+// Shared options: timestamp x-axis spanning the main chart's date range, year ticks
+function driftBaseOptions(x0, x1, yTickFmt) {
+  const t = lightChart ? CHART_LIGHT : CHART_DARK;
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 250 },
+    interaction: { mode: "nearest", axis: "x", intersect: false },
+    plugins: {
+      legend: {
+        labels: {
+          color: t.legendColor, font: { size: 12 }, boxWidth: 30, usePointStyle: true,
+          generateLabels: (c) => {
+            const items = Chart.defaults.plugins.legend.labels.generateLabels(c);
+            items.forEach(it => { const ds = c.data.datasets[it.datasetIndex]; if (ds && ds.borderDash) it.lineDash = ds.borderDash; });
+            return items;
+          },
+        },
+      },
+      tooltip: {
+        backgroundColor: t.tooltipBg, borderColor: t.tooltipBorder, borderWidth: 1,
+        titleColor: t.tooltipTitle, bodyColor: t.tooltipBody, padding: 10,
+        // A rebalance date has two points (pre, post): keep one row per line
+        filter: (item, i, items) => items.findIndex(o => o.datasetIndex === item.datasetIndex) === i,
+        callbacks: { title: (items) => items.length ? fmtMonth(items[0].parsed.x) : "" },
+      },
+      annotation: { annotations: {} },
+    },
+    scales: {
+      x: {
+        type: "linear", min: x0, max: x1,
+        afterBuildTicks: (scale) => {
+          const y0 = new Date(x0).getUTCFullYear() + 1, y1 = new Date(x1).getUTCFullYear();
+          const step = Math.max(1, Math.ceil((y1 - y0 + 1) / 10));
+          const ticks = [];
+          for (let y = y0; y <= y1; y += step) ticks.push({ value: Date.UTC(y, 0, 1) });
+          scale.ticks = ticks;
+        },
+        ticks: { color: t.tickColor, font: { size: 11 }, maxRotation: 0, callback: (v) => String(new Date(v).getUTCFullYear()) },
+        grid: { color: t.gridColor },
+      },
+      y: {
+        ticks: { color: t.tickColor, font: { size: 11 }, callback: yTickFmt },
+        grid: { color: t.gridColor },
+      },
+    },
+  };
+}
+
+function lineDataset(i, colors, label, points) {
+  return {
+    label, data: points,
+    borderColor: colors[i], backgroundColor: "transparent",
+    borderWidth: REBAL_WIDTHS[i], borderDash: REBAL_DASHES[i],
+    pointRadius: 0, pointStyle: "line", tension: 0, fill: false, spanGaps: false,
+    hidden: !rebalLineVisible(i),
+    rebalIdx: i,
+  };
+}
+
+// Legend clicks on a strategy line go through its stat-card checkbox, so every chart stays in sync
+function legendToCheckbox(e, item, legend) {
+  const ds = legend.chart.data.datasets[item.datasetIndex];
+  if (ds.rebalIdx === undefined) {
+    const c = legend.chart;
+    if (c.isDatasetVisible(item.datasetIndex)) c.hide(item.datasetIndex); else c.show(item.datasetIndex);
+    return;
+  }
+  const cb = document.querySelector(`.stat-card-toggle[data-dataset-idx="${ds.rebalIdx}"]`);
+  if (cb) { cb.checked = !cb.checked; cb.dispatchEvent(new Event("change")); }
+}
+
+function replaceChart(old, canvasId, config) {
+  if (old) old.destroy();
+  return new Chart(document.getElementById(canvasId).getContext("2d"), config);
+}
+
+function buildDriftChart(results) {
+  const series = driftSeries(results);
+  if (series.some(s => !s)) return;
+  const colors = STRATEGIES[selectedStrategy].colors;
+  const dates = results.ref.dates;
+  const x0 = toTs(dates[0]), x1 = toTs(dates[dates.length - 1]);
+  const target = targetEquityPct(results);
+  const opts = driftBaseOptions(x0, x1, (v) => `${Math.round(v)}%`);
+  opts.plugins.annotation.annotations = driftAnnotations(results, x0, x1);
+  let datasets;
+
+  if (driftView === "equity") {
+    datasets = series.map((s, i) => lineDataset(i, colors, REBAL_LABELS[i],
+      s.weight_dates.map((d, j) => ({ x: toTs(d), y: s.equity_pct[j] * 100 }))));
+    // Auto-zoom, kept within 0–100 and always showing the target line
+    const ys = datasets.filter(ds => !ds.hidden).flatMap(ds => ds.data.map(p => p.y)).concat([target]);
+    // Round the range out to whole 5-point steps so the axis ends on clean ticks
+    const lo = Math.min(...ys), hi = Math.max(...ys);
+    opts.scales.y.min = Math.max(0, Math.floor((lo - 1) / 5) * 5);
+    opts.scales.y.max = Math.min(100, Math.ceil((hi + 1) / 5) * 5);
+    opts.plugins.annotation.annotations.target = {
+      type: "line", yMin: target, yMax: target,
+      borderColor: "rgba(232,192,32,0.75)", borderWidth: 1.5, borderDash: [2, 4],
+      label: {
+        content: `Target ${Math.round(target)}%`, display: true, position: "end", yAdjust: 12,
+        backgroundColor: "rgba(232,192,32,0.15)", color: "#e8c020", font: { size: 10 }, padding: 4, borderRadius: 3,
+      },
+    };
+    opts.plugins.legend.onClick = legendToCheckbox;
+    opts.plugins.tooltip.itemSort = (a, b) => a.datasetIndex - b.datasetIndex;
+    opts.plugins.tooltip.callbacks.label = (ctx) => {
+      const gap = ctx.parsed.y - target;
+      const next = ctx.dataset.data[ctx.dataIndex + 1];
+      const reset = next && next.x === ctx.parsed.x ? " · rebalanced" : "";
+      return ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}% (${gap >= 0 ? "+" : ""}${gap.toFixed(1)})${reset}`;
+    };
+  } else {
+    const idx = parseInt(document.getElementById("driftMixStrategy").value) || 0;
+    const s = series[idx];
+    // Flask sorts JSON keys, so take fund order (equity first, bond last) from the metadata
+    const fs = driftFundSet(results);
+    const funds = fs ? fs.funds.filter(f => f in s.weights) : Object.keys(s.weights);
+    datasets = funds.map((f, k) => ({
+      label: f,
+      data: s.weight_dates.map((d, j) => ({ x: toTs(d), y: s.weights[f][j] * 100 })),
+      borderColor: FUND_MIX_COLORS[k % FUND_MIX_COLORS.length],
+      backgroundColor: hexToRgba(FUND_MIX_COLORS[k % FUND_MIX_COLORS.length], 0.45),
+      borderWidth: 1, pointRadius: 0, pointStyle: "rect", tension: 0,
+      fill: k === 0 ? "origin" : "-1",
+    }));
+    opts.scales.y.stacked = true;
+    opts.scales.y.min = 0;
+    opts.scales.y.max = 100;
+    opts.plugins.tooltip.itemSort = (a, b) => a.datasetIndex - b.datasetIndex;
+    opts.plugins.tooltip.callbacks.label = (ctx) => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`;
+  }
+
+  driftChart = replaceChart(driftChart, "driftChart", { type: "line", data: { datasets }, options: opts });
+}
+
+// Annualized rolling stdev of monthly returns; first W-1 months are null
+function rollingVol(returns, W) {
+  const out = new Array(returns.length).fill(null);
+  for (let t = W - 1; t < returns.length; t++) {
+    let mean = 0;
+    for (let k = t - W + 1; k <= t; k++) mean += returns[k];
+    mean /= W;
+    let ss = 0;
+    for (let k = t - W + 1; k <= t; k++) ss += (returns[k] - mean) ** 2;
+    out[t] = Math.sqrt(12) * Math.sqrt(ss / (W - 1));
+  }
+  return out;
+}
+
+function buildVolChart(results) {
+  const series = driftSeries(results);
+  if (series.some(s => !s)) return;
+  const colors = STRATEGIES[selectedStrategy].colors;
+  const dates = results.ref.dates;
+  const x0 = toTs(dates[0]), x1 = toTs(dates[dates.length - 1]);
+  const opts = driftBaseOptions(x0, x1, (v) => `${(+v).toFixed(1)}%`);
+  opts.plugins.annotation.annotations = driftAnnotations(results, x0, x1);
+  opts.plugins.legend.onClick = legendToCheckbox;
+  opts.plugins.tooltip.itemSort = (a, b) => a.datasetIndex - b.datasetIndex;
+  let datasets;
+  const showDiff = volView === "realized" && document.getElementById("volShowDiff").checked;
+
+  if (volView === "implied") {
+    datasets = series.map((s, i) => lineDataset(i, colors, REBAL_LABELS[i],
+      s.weight_dates.map((d, j) => ({ x: toTs(d), y: s.implied_vol[j] * 100 }))));
+  } else {
+    const W = parseInt(document.getElementById("volWindow").value) || 36;
+    const rv = series.map(s => rollingVol(s.monthly_returns, W));
+    const pts = (vals, s) => s.return_dates.map((d, j) => ({ x: toTs(d), y: vals[j] === null ? null : vals[j] * 100 }));
+    if (showDiff) {
+      datasets = [1, 2].map(i => {
+        const diff = rv[0].map((v, j) => (v === null || rv[i][j] === null) ? null : v - rv[i][j]);
+        const ds = lineDataset(i, colors, `No Rebalancing − ${REBAL_LABELS[i].replace(" Rebalancing", "")}`, pts(diff, series[i]));
+        ds.hidden = !(rebalLineVisible(i) && rebalLineVisible(0));
+        return ds;
+      });
+      opts.plugins.annotation.annotations.zero = {
+        type: "line", yMin: 0, yMax: 0, borderColor: "rgba(156,163,175,0.6)", borderWidth: 1,
+      };
+    } else {
+      datasets = series.map((s, i) => lineDataset(i, colors, REBAL_LABELS[i], pts(rv[i], s)));
+    }
+  }
+  opts.plugins.tooltip.callbacks.label = (ctx) => {
+    const v = ctx.parsed.y;
+    return ` ${ctx.dataset.label}: ${showDiff && v >= 0 ? "+" : ""}${v.toFixed(1)}${showDiff ? " pts" : "%"}`;
+  };
+  volChart = replaceChart(volChart, "volChart", { type: "line", data: { datasets }, options: opts });
+}
+
+function renderDriftPanel(force) {
+  if (!lastResults || !driftPanelOpen()) return;  // lazy: nothing to draw while collapsed
+  if (!driftDirty && !force) return;
+  buildDriftChart(lastResults);
+  buildVolChart(lastResults);
+  applyDriftTheme();
+  driftDirty = false;
+}
+
+// Called whenever new results arrive or the selected strategy changes
+function invalidateDriftPanel() {
+  driftDirty = true;
+  renderDriftPanel();
+}
+
+// Stat-card checkbox changed: show/hide the matching lines without rebuilding
+function syncDriftVisibility() {
+  if (driftView === "equity") {
+    // Rebuild so the auto-zoomed y-range follows the visible lines
+    if (driftChart) buildDriftChart(lastResults);
+  }
+  if (volChart) {
+    const diff = volView === "realized" && document.getElementById("volShowDiff").checked;
+    volChart.data.datasets.forEach((ds, i) => {
+      if (ds.rebalIdx === undefined) return;
+      const vis = diff ? (rebalLineVisible(ds.rebalIdx) && rebalLineVisible(0)) : rebalLineVisible(ds.rebalIdx);
+      volChart.getDatasetMeta(i).hidden = !vis;
+    });
+    volChart.update();
+  }
+}
+
+function applyDriftTheme() {
+  const t = lightChart ? CHART_LIGHT : CHART_DARK;
+  document.querySelectorAll(".drift-chart-container").forEach(el => { el.style.background = t.containerBg; });
+  for (const c of [driftChart, volChart]) {
+    if (!c) continue;
+    c.options.plugins.legend.labels.color     = t.legendColor;
+    c.options.plugins.tooltip.backgroundColor = t.tooltipBg;
+    c.options.plugins.tooltip.borderColor     = t.tooltipBorder;
+    c.options.plugins.tooltip.titleColor      = t.tooltipTitle;
+    c.options.plugins.tooltip.bodyColor       = t.tooltipBody;
+    for (const ax of ["x", "y"]) {
+      c.options.scales[ax].ticks.color = t.tickColor;
+      c.options.scales[ax].grid.color  = t.gridColor;
+    }
+    c.update("none");
+  }
+}
+
+function setSegSelected(toggleId, view) {
+  document.querySelectorAll(`#${toggleId} .seg-option`).forEach(b => {
+    b.classList.toggle("seg-option--selected", b.dataset.view === view);
+  });
+}
+
+function wireDriftPanel() {
+  const panel  = document.getElementById("driftPanel");
+  const header = document.getElementById("driftPanelHeader");
+  const setOpen = (open) => {
+    panel.classList.toggle("is-collapsed", !open);
+    header.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  setOpen(storageGet(DRIFT_PANEL_KEY) === "open");
+  header.addEventListener("click", () => {
+    const open = !driftPanelOpen();
+    setOpen(open);
+    storageSet(DRIFT_PANEL_KEY, open ? "open" : "collapsed");
+    if (open) renderDriftPanel();
+  });
+
+  document.querySelectorAll("#driftViewToggle .seg-option").forEach(btn => {
+    btn.addEventListener("click", () => {
+      driftView = btn.dataset.view;
+      setSegSelected("driftViewToggle", driftView);
+      document.getElementById("driftMixStrategy").style.display = driftView === "mix" ? "" : "none";
+      document.getElementById("driftCaption").textContent = driftView === "mix"
+        ? "Each fund's share of the portfolio for one strategy, measured at each month-end before any rebalance."
+        : "Share of the portfolio in stock funds, measured at each month-end before any rebalance. On rebalancing dates the line drops straight back to target.";
+      if (lastResults) buildDriftChart(lastResults), applyDriftTheme();
+    });
+  });
+  document.getElementById("driftMixStrategy").addEventListener("change", () => {
+    if (lastResults) buildDriftChart(lastResults), applyDriftTheme();
+  });
+
+  document.querySelectorAll("#volViewToggle .seg-option").forEach(btn => {
+    btn.addEventListener("click", () => {
+      volView = btn.dataset.view;
+      setSegSelected("volViewToggle", volView);
+      document.getElementById("volRealizedControls").style.display = volView === "realized" ? "" : "none";
+      document.getElementById("volCaption").textContent = volView === "realized"
+        ? "Volatility the portfolio actually experienced. Market conditions dominate; treat small gaps as noise."
+        : "Volatility the current mix would have under average market conditions. Rebalancing holds this steady; drift lets it rise.";
+      if (lastResults) buildVolChart(lastResults), applyDriftTheme();
+    });
+  });
+  // Window slider: recomputed client-side from monthly_returns, no server call
+  document.getElementById("volWindow").addEventListener("input", (e) => {
+    document.getElementById("volWindowLabel").textContent = `${e.target.value}-month window`;
+    if (lastResults) buildVolChart(lastResults), applyDriftTheme();
+  });
+  document.getElementById("volShowDiff").addEventListener("change", () => {
+    if (lastResults) buildVolChart(lastResults), applyDriftTheme();
+  });
+
+  document.querySelectorAll(".drift-snap-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const c = btn.dataset.chart === "drift" ? driftChart : volChart;
+      if (!c) return;
+      const link = document.createElement("a");
+      link.download = btn.dataset.chart === "drift" ? "allocation-drift.png" : "portfolio-volatility.png";
+      link.href = c.toBase64Image();
+      link.click();
+    });
+  });
+}
+
+// Summary-box sentence: where No Rebalancing ended vs. target
+function driftCalloutLine(results, neverIsBest) {
+  const never = driftSeries(results)[0];
+  const target = targetEquityPct(results);
+  if (!never || target === null || !never.equity_pct.length) return null;
+  const end = never.equity_pct[never.equity_pct.length - 1] * 100;
+  const tgt = Math.round(target);
+  if (Math.abs(end - target) < 2) {
+    return `No Rebalancing stayed close to its ${tgt}% stock target (ended at ${Math.round(end)}%).`;
+  }
+  const article = /^(8|11$|18$)/.test(String(tgt)) ? "an" : "a";  // "an 80%", "an 11%", "a 60%"
+  let line = `No Rebalancing ended at <strong>${Math.round(end)}% stocks</strong> vs. ${article} ${tgt}% target`;
+  if (neverIsBest && end > target) line += ", so its higher final value came with more risk";
+  return line + ".";
 }
 
 // ==================== FETCH & RENDER ====================
@@ -880,7 +1294,7 @@ async function fetchAndRender() {
     // 3 parallel API calls — one per rebalancing frequency
     const responses = await Promise.all(
       REBAL_MODES.map(mode => {
-        const params = { ...baseParams, rebalance: mode };
+        const params = { ...baseParams, rebalance: mode, include_drift: "true" };
         const qs = new URLSearchParams(params).toString();
         return fetch(`/api/portfolio?${qs}`).then(r => r.json());
       })
@@ -916,6 +1330,7 @@ async function fetchAndRender() {
     handleScaleAfterRender(lastResults);
     updateStats(lastResults);
     updateCallout(lastResults);
+    invalidateDriftPanel();
 
   } catch (err) {
     errBanner.textContent = `Error: ${err.message}`;
@@ -1280,6 +1695,7 @@ function wireInputs() {
       e.target.title = e.target.checked ? "Uncheck to hide this line on the chart" : "Check to show this line on the chart";
       e.target.closest(".stat-card").classList.toggle("line-hidden", !e.target.checked);
       chart.update();
+      syncDriftVisibility();
     });
   });
 
@@ -1426,4 +1842,5 @@ document.getElementById("sidebarToggle").addEventListener("click", () => {
 
 setEra("etf");
 wireInputs();
+wireDriftPanel();
 fetchAndRender();

@@ -52,6 +52,7 @@ def simulate(
     monthly_fee_rate: float = 0.0,
     deflator: Optional[pd.Series] = None,
     tax_mode: str = "none",  # "none" | "end" | "rebalance"
+    record_history: bool = False,
 ) -> dict:
     """
     Simulate a portfolio for the given tickers/weights/params.
@@ -68,6 +69,11 @@ def simulate(
       - dates: list of date strings
       - stats: {final_value, total_contributions, total_gain, cagr, total_fees_paid,
                 total_taxes_paid, taxes_due_at_liquidation, after_tax_final}
+      - holdings_history (only when record_history=True): one record per month with
+        nominal dollar holdings per fund (see drift.compute_drift_metrics):
+          {date, start, pre, end, contribution, fee, tax, rebalanced}
+        start = holdings entering the month, pre = after the market move and fee,
+        end = after contribution / rebalance / rebalance tax.
     """
     LTCG_RATE = 0.20
 
@@ -86,8 +92,15 @@ def simulate(
     values = []
     after_tax_values = []
     dates = []
+    history = [] if record_history else None
 
     for i, (date, row) in enumerate(slice_df.iterrows()):
+        start_holdings = dict(holdings) if record_history else None
+        month_fee = 0.0
+        month_tax = 0.0
+        month_contrib = 0.0
+        rebalanced = False
+
         # Apply monthly returns
         for t in tickers:
             holdings[t] *= (1.0 + float(row[t]))
@@ -98,13 +111,17 @@ def simulate(
         if monthly_fee_rate > 0:
             fee = portfolio_value * monthly_fee_rate
             total_fees_paid += fee
+            month_fee = fee
             ratio = (portfolio_value - fee) / portfolio_value
             for t in tickers:
                 holdings[t] *= ratio
             portfolio_value -= fee
 
+        pre_holdings = dict(holdings) if record_history else None
+
         # Add monthly contribution / rebalance
         if i > 0:
+            month_contrib = params.monthly_contrib
             if _is_rebalance_month(i, params.rebalance):
                 # Compute gain rate BEFORE adding contribution (pure market gain fraction)
                 pv_pre = portfolio_value
@@ -128,12 +145,14 @@ def simulate(
                             total_sold += sold
                             rebalance_tax += sold * gain_rate * LTCG_RATE
                     total_taxes_paid += rebalance_tax
+                    month_tax = rebalance_tax
                     portfolio_value -= rebalance_tax
                     # Step up cost basis: realized gains already taxed won't be taxed again at liquidation
                     total_cost_basis += total_sold * gain_rate * (1.0 - LTCG_RATE)
                     new_target = {t: portfolio_value * weights[t] for t in tickers}
 
                 holdings = new_target
+                rebalanced = True
             else:
                 # Drift: add contribution proportional to current weights
                 cur_total = sum(holdings.values())
@@ -146,6 +165,7 @@ def simulate(
             # First month: rebalance if requested
             if params.rebalance != "never":
                 holdings = {t: portfolio_value * weights[t] for t in tickers}
+                rebalanced = True
 
         portfolio_value = sum(holdings.values())
 
@@ -154,8 +174,20 @@ def simulate(
         after_tax_values.append(portfolio_value - unrealized_gain * LTCG_RATE)
         values.append(portfolio_value)
         dates.append(str(date.date()))
+        if record_history:
+            history.append({
+                "date": str(date.date()),
+                "start": start_holdings,
+                "pre": pre_holdings,
+                "end": dict(holdings),
+                "contribution": month_contrib,
+                "fee": month_fee,
+                "tax": month_tax,
+                "rebalanced": rebalanced,
+            })
 
-    # Apply CPI deflation if requested
+    # Apply CPI deflation if requested (holdings_history stays nominal: weights are
+    # unaffected by deflation and drift returns are meant to be nominal)
     if deflator is not None and params.inflation_adj:
         deflator_aligned = deflator.reindex(slice_df.index, method="ffill")
         for i, date in enumerate(slice_df.index):
@@ -181,7 +213,7 @@ def simulate(
     else:
         cagr = 0.0
 
-    return {
+    result = {
         "values": [round(v, 2) for v in values],
         "after_tax_values": [round(v, 2) for v in after_tax_values],
         "dates": dates,
@@ -196,6 +228,9 @@ def simulate(
             "after_tax_final": round(after_tax_final, 2),
         },
     }
+    if record_history:
+        result["holdings_history"] = history
+    return result
 
 
 def simulate_momentum(
@@ -443,6 +478,7 @@ def run_all_scenarios(
     yield_curve_spread: Optional[pd.Series] = None,
     aggressiveness: str = "moderate",
     taxable: bool = False,
+    record_history: bool = False,
 ) -> dict:
     """
     Run all 4 investment scenarios.
@@ -479,6 +515,7 @@ def run_all_scenarios(
         monthly_fee_rate=0.0,
         deflator=deflator,
         tax_mode=end_mode,
+        record_history=record_history,
     )
 
     managed = simulate(
@@ -489,6 +526,7 @@ def run_all_scenarios(
         monthly_fee_rate=monthly_managed_fee_rate,
         deflator=deflator,
         tax_mode=rebalance_mode,
+        record_history=record_history,
     )
 
     active = simulate(
@@ -499,6 +537,7 @@ def run_all_scenarios(
         monthly_fee_rate=0.0,
         deflator=deflator,
         tax_mode=end_mode,
+        record_history=record_history,
     )
 
     active_managed = simulate(
@@ -509,6 +548,7 @@ def run_all_scenarios(
         monthly_fee_rate=monthly_active_managed_fee_rate,
         deflator=deflator,
         tax_mode=rebalance_mode,
+        record_history=record_history,
     )
 
     diy_str    = " / ".join(diy_tickers)

@@ -352,6 +352,7 @@
       <li><a href="#frequencies">The three frequencies</a></li>
       <li><a href="#controls">Controls &amp; settings</a></li>
       <li><a href="#chart">Reading the chart</a></li>
+      <li><a href="#drift">How the portfolio drifts</a></li>
       <li><a href="#stat-cards">Stat cards</a></li>
       <li><a href="#momentum">Momentum rotation</a></li>
       <li><a href="#callout">Impact callout</a></li>
@@ -699,6 +700,64 @@
       </div>
     </section>
 
+    <!-- ── DRIFT & VOLATILITY ── -->
+    <section id="drift">
+      <h2>How the portfolio drifts</h2>
+      <div class="section-body">
+        <p>
+          Below the growth chart, the collapsible <strong>How the portfolio drifts</strong> panel
+          explains <em>why</em> the three lines diverge. It is closed by default; click its header to
+          open it. Both of its charts use the same backtest run, line styles, and colors as the
+          growth chart, and follow the same stat-card checkboxes.
+        </p>
+
+        <h3>Allocation drift</h3>
+        <p>
+          A portfolio that starts at 80% stocks doesn't stay there. When stocks outperform bonds,
+          the stock share grows on its own. Without rebalancing, the portfolio gradually becomes a
+          different, usually riskier, portfolio. Rebalanced strategies wander between rebalancing
+          dates, then reset to target, which draws a sawtooth: tighter for quarterly, wider for annual.
+        </p>
+        <p>
+          Monthly contributions are invested in proportion to current holdings, which does not
+          affect drift: adding money in the same proportions the portfolio already holds leaves its
+          weights unchanged. (In a rebalancing month, the contribution is folded into the rebalance.)
+          So the drift you see is the same whatever contribution you enter.
+        </p>
+        <p>
+          The <strong>Equity % / Fund mix</strong> toggle switches from the stock share of each
+          strategy to a stacked view of each fund's share for one strategy at a time, picked from the
+          small menu beside the toggle. The dashed yellow line marks the target from the Stock / Bond
+          slider. Hover to see each strategy's stock share and its gap from target, e.g.
+          &ldquo;91.2% (+11.2)&rdquo;.
+        </p>
+
+        <h3>Volatility</h3>
+        <p>
+          <strong>Implied volatility</strong> asks: how volatile would this month's mix be under
+          average market conditions for the whole period? It isolates the effect of drift, which is
+          exactly what rebalancing is meant to control. Expect the rebalanced lines to stay roughly
+          flat while No Rebalancing climbs as its stock share grows.
+        </p>
+        <p>
+          <strong>Realized volatility</strong> is what the portfolio actually experienced over the
+          trailing window (12 to 60 months, set with the slider). Market conditions dominate it: in
+          2020 and 2022 all strategies spike together, and in 2022 stocks and bonds fell at the same
+          time. Any single rolling estimate is noisy. With a 36-month window, the uncertainty is
+          roughly 12% of the value itself, so differences of a point or two are within the noise.
+          Tick <strong>Show difference</strong> to plot No Rebalancing minus each rebalanced
+          strategy; market swings that hit every strategy cancel out, which makes the effect of drift
+          easier to see.
+        </p>
+        <div class="tip">
+          <b>Why monthly contributions don't distort volatility:</b> both volatility charts are built
+          from returns that exclude new money. A $500 deposit raises the portfolio's value but isn't a
+          gain, so it is left out. Advisor fees and rebalancing taxes are part of performance and are
+          included. See the <a href="/methodology#drift">Methodology</a> for the formulas.
+        </div>
+      </div>
+    </section>
+
     <!-- ── STAT CARDS ── -->
     <section id="stat-cards">
       <h2>Reading the stat cards</h2>
@@ -842,6 +901,12 @@
             <strong>Annual vs. quarterly</strong>
             Whether annual or quarterly rebalancing came out ahead, and by how much — since
             these are the two most common real-world options.
+          </li>
+          <li>
+            <strong>Where No Rebalancing ended up</strong>
+            Its final stock share against your target, e.g. &ldquo;No Rebalancing ended at 91%
+            stocks vs. an 80% target.&rdquo; If it also finished with the highest value, the
+            callout notes that the extra return came with more risk.
           </li>
         </ul>
         <p style="margin-top: 14px;">

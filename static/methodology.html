@@ -361,6 +361,7 @@
       <li><a href="#portfolio">Portfolio Construction</a></li>
       <li><a href="#scenarios">The Four Scenarios</a></li>
       <li><a href="#rebalancing">Rebalancing</a></li>
+      <li><a href="#drift">Drift &amp; Volatility</a></li>
       <li><a href="#fees">Advisor Fees</a></li>
       <li><a href="#taxes">Tax Modeling</a></li>
       <li><a href="#inflation">Inflation Adjustment</a></li>
@@ -821,11 +822,11 @@ flowchart TD
         <h3>Between rebalances: proportional contribution</h3>
         <p>
           In months without a scheduled rebalance, the monthly contribution is added to each fund
-          proportionally to its current weight in the portfolio. This means contributions naturally
-          provide some drift-offsetting without triggering a formal rebalance. It also means
-          the "never rebalance" option still allocates new money proportionally rather than
-          sending it all to a fixed allocation — the portfolio drifts, and contributions
-          follow the drift.
+          proportionally to its current weight in the portfolio. Because new money goes in at the
+          portfolio's current proportions, contributions leave the weights unchanged: they neither
+          offset nor add to drift. It also means the "never rebalance" option still allocates new
+          money proportionally rather than sending it all to a fixed allocation — the portfolio
+          drifts, and contributions follow the drift.
         </p>
 
         <h3>First month</h3>
@@ -833,6 +834,89 @@ flowchart TD
           In the first month, the initial investment is distributed to all three funds according
           to the target weights. No contribution is added in month one — the first monthly
           contribution begins in month two.
+        </p>
+      </div>
+    </section>
+
+    <!-- ── DRIFT & VOLATILITY ── -->
+    <section id="drift">
+      <h2>Drift &amp; Volatility <span class="h2-chevron">▾</span></h2>
+      <div class="section-body">
+        <p>
+          The Rebalancing Impact page's <em>How the portfolio drifts</em> panel is computed from the
+          same monthly backtest loop as the growth chart; no extra price data is used. The series are
+          built for each rebalancing frequency of the selected strategy.
+        </p>
+
+        <h3>Weights</h3>
+        <p>
+          At each month-end, after the market move (and advisor fee) and before any rebalance, each
+          fund's weight is its balance divided by the portfolio total. On rebalancing dates the
+          post-rebalance weights (the targets) are recorded at the same date as a second point, which
+          is what draws the vertical reset in the sawtooth.
+        </p>
+        <div class="formula">
+          <div class="formula-label">Weight and equity share</div>
+          w<sub>i</sub>(t) = balance<sub>i</sub>(t) ÷ Σ<sub>j</sub> balance<sub>j</sub>(t)
+          &nbsp;&nbsp;·&nbsp;&nbsp; equity % = Σ<sub>i ∈ stock funds</sub> w<sub>i</sub>(t)
+        </div>
+        <p>
+          Stock funds are every fund in the set except its bond fund, so the same definition works
+          for the Modern ETF, Pre-ETF, and Actively Managed fund sets.
+        </p>
+
+        <h3>Monthly returns, net of contributions</h3>
+        <p>
+          Contributions change portfolio value without being returns, so volatility uses each fund's
+          monthly return weighted by the weights held at the <em>start</em> of the month (post-rebalance
+          if the prior month rebalanced). Rebalancing trades swap assets inside the portfolio and need
+          no adjustment. Advisor fees and rebalancing taxes are deducted from the portfolio, so they are
+          part of performance and are subtracted:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Contribution-neutral portfolio return</div>
+          r<sub>p</sub>(t) = Σ<sub>i</sub> w<sub>i</sub>(t−1) · r<sub>i</sub>(t)
+          − (fee(t) + tax(t)) ÷ V(t−1)
+        </div>
+        <p>
+          As a cross-check, the time-weighted return from portfolio values gives the same number.
+          Contributions arrive at the end of the month, after the market move:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Time-weighted return (cross-check)</div>
+          r<sub>p</sub>(t) = (V(t) − C(t)) ÷ V(t−1) − 1
+        </div>
+
+        <h3>Implied volatility</h3>
+        <p>
+          One covariance matrix Σ of the funds' monthly returns is estimated over the whole selected
+          date range. Holding Σ fixed removes changing market conditions, so the line moves only when
+          the weights move:
+        </p>
+        <div class="formula">
+          <div class="formula-label">Implied (annualized) volatility</div>
+          σ<sub>implied</sub>(t) = √12 · √( w(t)<sup>⊤</sup> Σ w(t) )
+        </div>
+
+        <h3>Realized volatility</h3>
+        <p>
+          The annualized sample standard deviation of the monthly returns above over a trailing window
+          of W months (12–60, default 36). The first W − 1 months have no value. It is computed in the
+          browser, so moving the window slider needs no new backtest. Monthly data is used because the
+          backtester works from month-end prices.
+        </p>
+        <div class="formula">
+          <div class="formula-label">Realized (annualized) volatility</div>
+          σ<sub>realized</sub>(t) = √12 · stdev( r<sub>p</sub>(t−W+1), …, r<sub>p</sub>(t) )
+        </div>
+        <p>
+          With W monthly observations, the standard error of a volatility estimate is roughly
+          σ ÷ √(2W). At W = 36 that is about 12% of the value, so small gaps between lines are not
+          meaningful.
+        </p>
+        <p>
+          With inflation adjustment on, the growth chart is deflated but these series stay nominal:
+          weights are unaffected by deflation, and returns are shown before inflation.
         </p>
       </div>
     </section>
