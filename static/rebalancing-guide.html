@@ -734,14 +734,16 @@
 
         <h3>Volatility</h3>
         <p>
-          <strong>Implied volatility</strong> asks: how volatile would this month's mix be under
-          average market conditions for the whole period? It isolates the effect of drift, which is
-          exactly what rebalancing is meant to control. Expect the rebalanced lines to stay roughly
+          The chart has two views. <strong>Mix-based</strong> (called <em>implied volatility</em> in
+          the Methodology) asks: if you held this month's fund mix through the entire selected
+          period, how much would it have swung? Every point is measured against the same market
+          history, so the line changes only when the mix changes. That isolates the effect of drift,
+          which is exactly what rebalancing is meant to control. Expect the rebalanced lines to stay roughly
           flat while No Rebalancing climbs as its stock share grows.
         </p>
         <p>
-          <strong>Realized volatility</strong> is what the portfolio actually experienced over the
-          trailing window (12 to 60 months, set with the slider). Market conditions dominate it: in
+          <strong>Actual</strong> (called <em>realized volatility</em> in the Methodology) is how much
+          the portfolio actually swung over the trailing window (12 to 60 months, set with the slider). Market conditions dominate it: in
           2020 and 2022 all strategies spike together, and in 2022 stocks and bonds fell at the same
           time. Any single rolling estimate is noisy. With a 36-month window, the uncertainty is
           roughly 12% of the value itself, so differences of a point or two are within the noise.

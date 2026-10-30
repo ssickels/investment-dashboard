@@ -887,7 +887,7 @@ flowchart TD
           r<sub>p</sub>(t) = (V(t) − C(t)) ÷ V(t−1) − 1
         </div>
 
-        <h3>Implied volatility</h3>
+        <h3>Implied volatility (the &ldquo;Mix-based&rdquo; view)</h3>
         <p>
           One covariance matrix Σ of the funds' monthly returns is estimated over the whole selected
           date range. Holding Σ fixed removes changing market conditions, so the line moves only when
@@ -898,7 +898,7 @@ flowchart TD
           σ<sub>implied</sub>(t) = √12 · √( w(t)<sup>⊤</sup> Σ w(t) )
         </div>
 
-        <h3>Realized volatility</h3>
+        <h3>Realized volatility (the &ldquo;Actual&rdquo; view)</h3>
         <p>
           The annualized sample standard deviation of the monthly returns above over a trailing window
           of W months (12–60, default 36). The first W − 1 months have no value. It is computed in the

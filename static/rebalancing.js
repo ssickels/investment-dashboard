@@ -1198,7 +1198,7 @@ function wireDriftPanel() {
       document.getElementById("volRealizedControls").style.display = volView === "realized" ? "" : "none";
       document.getElementById("volCaption").textContent = volView === "realized"
         ? "Volatility the portfolio actually experienced. Market conditions dominate; treat small gaps as noise."
-        : "Volatility the current mix would have under average market conditions. Rebalancing holds this steady; drift lets it rise.";
+        : "How much this month’s mix would have swung if held through the whole selected period. Rebalancing holds this steady; drift lets it rise.";
       if (lastResults) buildVolChart(lastResults), applyDriftTheme();
     });
   });
@@ -1816,10 +1816,11 @@ document.getElementById("sidebarToggle").addEventListener("click", () => {
   });
 }
 
-// ==================== SIDEBAR TOOLTIPS ====================
+// ==================== SIDEBAR + VOL-TOGGLE TOOLTIPS ====================
+// Fixed-position tooltip escapes overflow clipping (the sidebar, and the vol toggle's rounded box).
 {
   const tip = document.getElementById('sidebarTooltip');
-  document.querySelectorAll('.sidebar .tooltip-term').forEach(el => {
+  document.querySelectorAll('.sidebar .tooltip-term, #volViewToggle .seg-option[data-tooltip]').forEach(el => {
     el.addEventListener('mouseenter', () => {
       const text = el.getAttribute('data-tooltip');
       if (!text) return;

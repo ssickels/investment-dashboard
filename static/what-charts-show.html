@@ -280,10 +280,10 @@ flowchart TD
     <h3>Allocation drift</h3>
     <p>The share of the portfolio in stock funds at each month-end, before any rebalance, compared with your target. Without rebalancing, the stock share usually creeps upward as stocks outgrow bonds. Rebalanced strategies trace a sawtooth: they wander between rebalancing dates, then drop straight back to target. A <em>Fund mix</em> view shows each fund's share for one strategy.</p>
     <h3>Volatility</h3>
-    <p><strong>Implied</strong> volatility is how volatile each month's mix would be under average market conditions for the whole period, so it moves only when the mix moves. <strong>Realized</strong> volatility is what the portfolio actually experienced over a trailing window; it is driven mostly by markets and is noisy, so treat small gaps between lines as noise. Neither includes the effect of monthly contributions.</p>
+    <p>The <strong>Mix-based</strong> view (implied volatility) asks how much each month's fund mix would have swung if held through the entire selected period. Every point uses the same market history, so it moves only when the mix moves. The <strong>Actual</strong> view (realized volatility) is how much the portfolio actually swung over a trailing window; it is driven mostly by markets and is noisy, so treat small gaps between lines as noise. Neither includes the effect of monthly contributions.</p>
     <div class="callout">
       <strong>Why this matters</strong>
-      A higher final value from never rebalancing usually comes from holding more stocks than you intended. The drift chart shows how far the mix moved; implied volatility shows how much risk that added.
+      A higher final value from never rebalancing usually comes from holding more stocks than you intended. The drift chart shows how far the mix moved; the Mix-based volatility view shows how much risk that added.
     </div>
   </section>
 
