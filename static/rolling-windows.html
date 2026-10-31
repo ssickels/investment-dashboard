@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rolling-Window Risk/Return Explorer</title>
+  <meta property="og:title" content="Rolling-Window Risk/Return Explorer" />
+  <meta property="og:description" content="How much does your outcome depend on when you started? Explore rolling-window CAGR and volatility across market regimes." />
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+  <style>
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 50px 24px 80px;
+    }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 1.6rem;
+      margin-bottom: 6px;
+    }
+    .subtitle {
+      color: var(--color-text-dim);
+      font-size: 0.9rem;
+      margin-bottom: 24px;
+    }
+    .chart-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 8px 4px;
+      margin-bottom: 20px;
+    }
+    .scatter-with-legend {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .scatter-with-legend > .chart-box {
+      margin-bottom: 0;
+    }
+    .scatter-with-legend > .chart-box:first-child {
+      flex: 1;
+      min-width: 0;
+    }
+    .legend-col {
+      width: 180px;
+      flex-shrink: 0;
+    }
+    .chart-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+    @media (max-width: 800px) {
+      .chart-row { grid-template-columns: 1fr; }
+      .scatter-with-legend { flex-direction: column; }
+      .legend-col { width: 100%; }
+    }
+    .config-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      color: var(--color-text-dim);
+    }
+    .config-bar span { white-space: nowrap; }
+    .config-bar code {
+      color: var(--color-primary);
+      background: var(--color-surface);
+      padding: 1px 6px;
+      border-radius: 3px;
+    }
+    #loading {
+      text-align: center;
+      padding: 60px 0;
+      color: var(--color-text-dim);
+      font-size: 1.1rem;
+    }
+    #error {
+      display: none;
+      text-align: center;
+      padding: 40px 0;
+      color: var(--color-negative);
+    }
+    /* Cross-check debug table */
+    .debug-section {
+      margin-top: 32px;
+      border-top: 1px solid var(--color-border);
+      padding-top: 20px;
+    }
+    .debug-section h3 {
+      font-size: 0.9rem;
+      color: var(--color-text-dim);
+      margin-bottom: 10px;
+    }
+    .debug-table {
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+    }
+    .debug-table td { padding: 3px 14px 3px 0; }
+    .debug-table .label { color: var(--color-text-dim); }
+    .debug-note {
+      font-size: 0.78rem;
+      color: var(--color-text-dim);
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+    /* ── Control sections ────────────────────────────────────────── */
+    .ctrl-section {
+      display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+      margin-bottom: 10px; font-size: 0.82rem; color: var(--color-text-dim);
+    }
+    .ctrl-section label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .ctrl-section input[type="range"] { width: 110px; accent-color: #7dd4e8; }
+    .ctrl-section select {
+      background: var(--color-surface); color: var(--color-text);
+      border: 1px solid rgba(100,210,230,0.2); border-radius: 4px;
+      padding: 2px 6px; font-size: 0.82rem;
+    }
+    .slider-val { color: var(--color-primary); min-width: 2ch; text-align: right; }
+    .ctrl-sep { height: 1px; background: rgba(100,210,230,0.12); margin: 2px 0 10px; }
+    .section-label {
+      font-size: 0.72rem; color: var(--color-text-dim); opacity: 0.45;
+      text-transform: uppercase; letter-spacing: 0.06em; min-width: 42px;
+    }
+    .control-group { display: flex; align-items: center; gap: 5px; }
+    .control-label { margin-right: 2px; }
+    .ctrl-btn {
+      background: var(--color-surface); color: rgba(125,212,232,0.6);
+      border: 1px solid rgba(100,210,230,0.15); border-radius: 4px;
+      padding: 3px 10px; font-size: 0.8rem; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+    .ctrl-btn:hover { color: #c8f0f8; border-color: rgba(100,210,230,0.3); }
+    .ctrl-btn.active { color: #7dd4e8; border-color: #7dd4e8; background: rgba(100,210,230,0.08); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Rolling-Window Risk / Return Explorer</h1>
+    <p class="subtitle">
+      One historical path, each window placed at its end date. Each dot is a
+      <span id="window-years">5</span>-year window &mdash; crashes appear in the year they actually happened.
+    </p>
+
+    <div class="config-bar" id="config-bar"></div>
+
+    <div id="ctrl-panel" style="display:none">
+
+      <!-- ── SCENARIO ──────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Scenario</span>
+        <label>Era:
+          <select id="era-select">
+            <option value="pre_etf">Pre-ETF (1987–)</option>
+            <option value="etf">ETF (2011–)</option>
+          </select>
+        </label>
+        <label>Stocks:
+          <input type="range" id="stock-pct" min="0" max="100" step="10" value="80" style="width:110px"/>
+          <span class="slider-val" id="stock-pct-val">80%</span>
+        </label>
+        <label>Domestic:
+          <input type="range" id="domestic-pct" min="0" max="100" step="5" value="80" style="width:90px"/>
+          <span class="slider-val" id="domestic-pct-val">80%</span>
+        </label>
+        <span id="tickers-display" style="color:var(--color-text-dim);font-size:0.78rem;opacity:0.55"></span>
+        <label>Rebalance:
+          <select id="rebalance-select">
+            <option value="annually">Annually</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="never">Never</option>
+          </select>
+        </label>
+        <label>Window:
+          <input type="range" id="window-length" min="12" max="240" step="12" value="60" style="width:160px"/>
+          <span class="slider-val" id="window-length-val" style="min-width:18ch;text-align:left">&mdash;</span>
+        </label>
+        <div class="control-group">
+          <span class="control-label">Axes:</span>
+          <button class="ctrl-btn active" id="axes-auto">Auto</button>
+          <button class="ctrl-btn" id="axes-lock">Lock</button>
+        </div>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── SCRUB ─────────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Scrub</span>
+        <label>Position:
+          <input type="range" id="time-scrub" min="0" max="100" step="1" value="0" style="width:300px"/>
+          <span class="slider-val" id="time-scrub-val" style="min-width:36ch;text-align:left">&mdash;</span>
+        </label>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── DISPLAY ───────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Display</span>
+        <div class="control-group">
+          <span class="control-label">Color:</span>
+          <button class="ctrl-btn active" data-color="date">End date</button>
+          <button class="ctrl-btn" data-color="quality">Quality</button>
+        </div>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+    </div><!-- end #ctrl-panel -->
+
+    <div id="loading">Loading data&hellip;</div>
+    <div id="error"></div>
+
+    <div id="charts" style="display:none">
+      <div class="scatter-with-legend">
+        <div class="chart-box">
+          <div id="squiggle"></div>
+        </div>
+        <div class="chart-box legend-col">
+          <div id="window-legend"></div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-box">
+          <div id="rolling-return"></div>
+        </div>
+        <div class="chart-box">
+          <div id="rolling-vol"></div>
+        </div>
+      </div>
+
+      <div class="debug-section" id="debug-section"></div>
+    </div>
+  </div>
+
+  <script src="/static/nav.js"></script>
+  <script src="/static/rw-shared.js"></script>
+  <script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Rolling-Window Risk/Return Explorer (2D)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const TEAL  = '#1D9E75';
+const AMBER = '#e8c020';
+
+// ── Plotly theme ─────────────────────────────────────────────────────────
+const PLOTLY_BASE = {
+  paper_bgcolor: 'rgba(0,0,0,0)',
+  plot_bgcolor:  '#002535',
+  font: { color: '#e4f6fb', family: 'system-ui, -apple-system, sans-serif', size: 12 },
+  margin: { t: 36, r: 16, b: 48, l: 56 },
+  hoverlabel: {
+    bgcolor: '#003a50',
+    bordercolor: 'rgba(100,210,230,0.3)',
+    font: { color: '#e4f6fb', size: 12 },
+  },
+};
+const AXIS_STYLE = {
+  gridcolor:     'rgba(100,210,230,0.07)',
+  zerolinecolor: 'rgba(100,210,230,0.18)',
+  tickfont:      { size: 11 },
+  title:         { font: { size: 13 } },
+};
+const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
+
+
+// ── Module-level mutable state ────────────────────────────────────────────
+var rawData             = null;
+var portfolioData       = null;
+var scenarioFixedBounds = null;
+var scenarioNAll        = 0;
+var requestedWindowMonths = RW_DEFAULTS.windowMonths;
+var currentWindowMonths   = RW_DEFAULTS.windowMonths;
+var currentConfig = {
+  era:         RW_DEFAULTS.era,
+  stockPct:    RW_DEFAULTS.stockPct,
+  domesticPct: RW_DEFAULTS.domesticPct,
+  rebalance:   RW_DEFAULTS.rebalance,
+};
+var currentWindows = null;
+var colorMode  = 'date';
+var axesLocked = false;
+var scrubIdx   = 0;
+var userZoom   = { squiggle: false, 'rolling-return': false, 'rolling-vol': false };
+
+
+// ── Full chart render (newPlot) ────────────────────────────────────────────
+
+function renderCharts(windows, fixedBounds, nAll) {
+  var wl   = currentWindowMonths;
+  var vol  = windows.map(w => w.volAnnual);
+  var cagr = windows.map(w => w.cagr);
+  var end  = windows.map(w => w.endDate);
+  var endIdx = windows.map((_, i) => i + wl - 1);
+
+  var color, scale, cmin, cmax;
+  if (colorMode === 'quality') {
+    color = computeQualityArr(windows, fixedBounds);
+    scale = QUALITY_COLORSCALE; cmin = 0; cmax = 1;
+  } else {
+    color = endIdx;
+    scale = COLORSCALE; cmin = 0; cmax = nAll - 1;
+  }
+
+  var scrubWin = windows[scrubIdx] || windows[0];
+  var scrubColor = colorMode === 'quality'
+    ? computeQualityArr([scrubWin], fixedBounds)[0]
+    : (scrubIdx + wl - 1);
+
+  // ── 1. Risk–return squiggle ──────────────────────────────────────
+  Plotly.newPlot('squiggle', [
+    // Trace 0: all windows
+    {
+      x: vol, y: cagr,
+      mode: 'markers',
+      marker: {
+        size: 7, opacity: 0.8,
+        color: color, colorscale: scale, cmin: cmin, cmax: cmax,
+        showscale: false,
+        line: { width: 0.5, color: 'rgba(0,30,42,0.5)' },
+      },
+      customdata: windows.map(w => [ym(w.startDate), ym(w.endDate)]),
+      hovertemplate:
+        '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+        'CAGR %{y:.1f}% \u00b7 Vol %{x:.1f}%<extra></extra>',
+      showlegend: false,
+    },
+    // Trace 1: scrub highlight
+    {
+      x: [scrubWin.volAnnual], y: [scrubWin.cagr],
+      mode: 'markers',
+      marker: {
+        size: 12, opacity: 0.95,
+        color: [scrubColor], colorscale: scale, cmin: cmin, cmax: cmax,
+        showscale: false,
+        line: { width: 2, color: '#ffffff' },
+      },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ], {
+    ...PLOTLY_BASE,
+    title: { text: 'Risk\u2013Return Path (' + formatWindowLength(wl) + ' windows)', font: { size: 14 } },
+    xaxis: { ...AXIS_STYLE, title: { text: 'Annualized Volatility (%)', font: { size: 13 } },
+             range: [fixedBounds.volMin, fixedBounds.volMax] },
+    yaxis: { ...AXIS_STYLE, title: { text: 'CAGR (%)', font: { size: 13 } },
+             range: [fixedBounds.cagrMin, fixedBounds.cagrMax] },
+    height: 500,
+  }, PLOTLY_CONFIG);
+
+  var marginalCustomdata = windows.map(w => [ym(w.startDate), ym(w.endDate)]);
+
+  // ── 2. Rolling return ────────────────────────────────────────────
+  Plotly.newPlot('rolling-return', [
+    // Trace 0: line
+    {
+      x: end, y: cagr,
+      mode: 'lines',
+      line: { color: TEAL, width: 1.5 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(29,158,117,0.10)',
+      customdata: marginalCustomdata,
+      hovertemplate:
+        '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+        'CAGR %{y:.1f}%<extra></extra>',
+      showlegend: false,
+    },
+    // Trace 1: scrub marker
+    {
+      x: [scrubWin.endDate], y: [scrubWin.cagr],
+      mode: 'markers',
+      marker: { size: 10, color: AMBER, line: { color: '#ffffff', width: 1.5 } },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ], {
+    ...PLOTLY_BASE,
+    title: { text: 'Rolling ' + formatWindowLength(wl) + ' CAGR', font: { size: 14 } },
+    xaxis: { ...AXIS_STYLE, type: 'date', title: { text: 'Window end date', font: { size: 12 } },
+             range: [fixedBounds.zMin, fixedBounds.zMax] },
+    yaxis: { ...AXIS_STYLE, title: { text: 'CAGR (%)', font: { size: 12 } },
+             zeroline: true, zerolinecolor: 'rgba(224,112,64,0.35)', zerolinewidth: 1,
+             range: [fixedBounds.cagrMin, fixedBounds.cagrMax] },
+    height: 340,
+    margin: { ...PLOTLY_BASE.margin, t: 36 },
+  }, PLOTLY_CONFIG);
+
+  // ── 3. Rolling volatility ────────────────────────────────────────
+  Plotly.newPlot('rolling-vol', [
+    // Trace 0: line
+    {
+      x: end, y: vol,
+      mode: 'lines',
+      line: { color: AMBER, width: 1.5 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(232,192,32,0.08)',
+      customdata: marginalCustomdata,
+      hovertemplate:
+        '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+        'Vol %{y:.1f}%<extra></extra>',
+      showlegend: false,
+    },
+    // Trace 1: scrub marker
+    {
+      x: [scrubWin.endDate], y: [scrubWin.volAnnual],
+      mode: 'markers',
+      marker: { size: 10, color: AMBER, line: { color: '#ffffff', width: 1.5 } },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ], {
+    ...PLOTLY_BASE,
+    title: { text: 'Rolling ' + formatWindowLength(wl) + ' Volatility', font: { size: 14 } },
+    xaxis: { ...AXIS_STYLE, type: 'date', title: { text: 'Window end date', font: { size: 12 } },
+             range: [fixedBounds.zMin, fixedBounds.zMax] },
+    yaxis: { ...AXIS_STYLE, title: { text: 'Ann. Volatility (%)', font: { size: 12 } },
+             range: [fixedBounds.volMin, fixedBounds.volMax] },
+    height: 340,
+    margin: { ...PLOTLY_BASE.margin, t: 36 },
+  }, PLOTLY_CONFIG);
+
+  // ── 4. Window legend ─────────────────────────────────────────────
+  renderWindowLegend(windows, nAll, wl);
+
+  // ── 5. Linked hover + zoom capture ───────────────────────────────
+  wireHoverHighlight(windows);
+  wireZoomCapture();
+}
+
+
+// ── In-place update (window-length change — no newPlot) ───────────────────
+
+function updateCharts(windows, fixedBounds, nAll) {
+  var wl    = currentWindowMonths;
+  var vol   = windows.map(w => w.volAnnual);
+  var cagr  = windows.map(w => w.cagr);
+  var end   = windows.map(w => w.endDate);
+  var endIdx = windows.map((_, i) => i + wl - 1);
+
+  var color, scale, cmin, cmax;
+  if (colorMode === 'quality') {
+    color = computeQualityArr(windows, fixedBounds);
+    scale = QUALITY_COLORSCALE; cmin = 0; cmax = 1;
+  } else {
+    color = endIdx;
+    scale = COLORSCALE; cmin = 0; cmax = nAll - 1;
+  }
+
+  var scrubWin = windows[scrubIdx] || windows[0];
+  var scrubColor = colorMode === 'quality'
+    ? computeQualityArr([scrubWin], fixedBounds)[0]
+    : (scrubIdx + wl - 1);
+
+  // Squiggle — restyle all-windows trace + scrub dot
+  Plotly.restyle('squiggle', {
+    x: [vol], y: [cagr],
+    'marker.color': [color], 'marker.colorscale': [scale],
+    'marker.cmin': cmin, 'marker.cmax': cmax,
+    customdata: [windows.map(w => [ym(w.startDate), ym(w.endDate)])],
+  }, [0]);
+  Plotly.restyle('squiggle', {
+    x: [[scrubWin.volAnnual]], y: [[scrubWin.cagr]],
+    'marker.color': [[scrubColor]],
+  }, [1]);
+  var sqLayout = { 'title.text': 'Risk\u2013Return Path (' + formatWindowLength(wl) + ' windows)' };
+  if (!userZoom.squiggle) {
+    sqLayout['xaxis.range'] = [fixedBounds.volMin, fixedBounds.volMax];
+    sqLayout['yaxis.range'] = [fixedBounds.cagrMin, fixedBounds.cagrMax];
+  }
+  Plotly.relayout('squiggle', sqLayout);
+
+  var marginalCustomdata = windows.map(w => [ym(w.startDate), ym(w.endDate)]);
+
+  // Rolling return
+  Plotly.restyle('rolling-return', {
+    x: [end], y: [cagr],
+    customdata: [marginalCustomdata],
+  }, [0]);
+  Plotly.restyle('rolling-return', {
+    x: [[scrubWin.endDate]], y: [[scrubWin.cagr]],
+  }, [1]);
+  var rrLayout = { 'title.text': 'Rolling ' + formatWindowLength(wl) + ' CAGR' };
+  if (!userZoom['rolling-return']) {
+    rrLayout['xaxis.range'] = [fixedBounds.zMin, fixedBounds.zMax];
+    rrLayout['yaxis.range'] = [fixedBounds.cagrMin, fixedBounds.cagrMax];
+  }
+  Plotly.relayout('rolling-return', rrLayout);
+
+  // Rolling vol
+  Plotly.restyle('rolling-vol', {
+    x: [end], y: [vol],
+    customdata: [marginalCustomdata],
+  }, [0]);
+  Plotly.restyle('rolling-vol', {
+    x: [[scrubWin.endDate]], y: [[scrubWin.volAnnual]],
+  }, [1]);
+  var rvLayout = { 'title.text': 'Rolling ' + formatWindowLength(wl) + ' Volatility' };
+  if (!userZoom['rolling-vol']) {
+    rvLayout['xaxis.range'] = [fixedBounds.zMin, fixedBounds.zMax];
+    rvLayout['yaxis.range'] = [fixedBounds.volMin, fixedBounds.volMax];
+  }
+  Plotly.relayout('rolling-vol', rvLayout);
+
+  // Re-render window legend (z matrix changes with wl)
+  renderWindowLegend(windows, nAll, wl);
+}
+
+
+// ── Scrub update (no data change) ─────────────────────────────────────────
+
+function updateScrub(j) {
+  if (!currentWindows || j < 0 || j >= currentWindows.length) return;
+  scrubIdx = j;
+  var w   = currentWindows[j];
+  var wl  = currentWindowMonths;
+  var nAll = scenarioNAll;
+  var fb  = scenarioFixedBounds;
+
+  var scrubColor = colorMode === 'quality'
+    ? computeQualityArr([w], fb)[0]
+    : (j + wl - 1);
+  var colorScale = colorMode === 'quality' ? QUALITY_COLORSCALE : COLORSCALE;
+  var cmin = 0, cmax = colorMode === 'quality' ? 1 : nAll - 1;
+
+  Plotly.restyle('squiggle', {
+    x: [[w.volAnnual]], y: [[w.cagr]],
+    'marker.color': [[scrubColor]],
+    'marker.colorscale': [colorScale],
+    'marker.cmin': cmin, 'marker.cmax': cmax,
+  }, [1]);
+  Plotly.restyle('rolling-return', {
+    x: [[w.endDate]], y: [[w.cagr]],
+  }, [1]);
+  Plotly.restyle('rolling-vol', {
+    x: [[w.endDate]], y: [[w.volAnnual]],
+  }, [1]);
+
+  // Legend highlight
+  Plotly.relayout(document.getElementById('window-legend'), {
+    shapes: [
+      { type: 'line', x0: w.endDate, x1: w.endDate,
+        y0: w.startDate, y1: w.endDate,
+        xref: 'x', yref: 'y',
+        line: { color: '#ffffff', width: 3 } },
+      { type: 'line', x0: 0, x1: 1,
+        y0: w.startDate, y1: w.startDate,
+        xref: 'paper', yref: 'y',
+        line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+      { type: 'line', x0: 0, x1: 1,
+        y0: w.endDate, y1: w.endDate,
+        xref: 'paper', yref: 'y',
+        line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+    ],
+  });
+
+  // Readout
+  var timeScrubVal = document.getElementById('time-scrub-val');
+  timeScrubVal.textContent =
+    ym(w.startDate) + ' \u2192 ' + ym(w.endDate) +
+    '  CAGR ' + w.cagr.toFixed(1) + '%  Vol ' + w.volAnnual.toFixed(1) + '%';
+}
+
+
+// ── Window legend ──────────────────────────────────────────────────────────
+
+function renderWindowLegend(windows, nAll, wl) {
+  var nW = windows.length;
+  var xDates = windows.map(w => w.endDate);
+  var allDates = portfolioData.dates;
+
+  var z  = [];
+  var cd = [];
+  for (var i = 0; i < nAll; i++) {
+    var zRow  = new Array(nW).fill(null);
+    var cdRow = new Array(nW).fill(null);
+    var jLo = Math.max(0, i - wl + 1);
+    var jHi = Math.min(nW - 1, i);
+    for (var j = jLo; j <= jHi; j++) {
+      zRow[j]  = j + wl - 1;
+      cdRow[j] = ym(windows[j].endDate);
+    }
+    z.push(zRow);
+    cd.push(cdRow);
+  }
+
+  Plotly.newPlot('window-legend', [{
+    type: 'heatmap',
+    x: xDates,
+    y: allDates,
+    z: z,
+    customdata: cd,
+    colorscale: COLORSCALE,
+    zmin: 0,
+    zmax: nAll - 1,
+    showscale: false,
+    hoverongaps: false,
+    hovertemplate: '%{customdata} \u2192 %{x|%Y-%m}<extra></extra>',
+    xgap: 0,
+    ygap: 0,
+  }], {
+    ...PLOTLY_BASE,
+    title: false,
+    xaxis: {
+      ...AXIS_STYLE,
+      showticklabels: false,
+      title: '',
+    },
+    yaxis: {
+      ...AXIS_STYLE,
+      title: '',
+      dtick: 'M60',
+      tickformat: '%Y',
+      tickfont: { size: 10 },
+      autorange: true,
+    },
+    height: 500,
+    margin: { t: 36, r: 8, b: 48, l: 40 },
+  }, PLOTLY_CONFIG);
+}
+
+
+// ── Hover highlight helpers ────────────────────────────────────────────────
+
+function highlightWindow(win) {
+  Plotly.relayout(document.getElementById('window-legend'), {
+    shapes: [
+      { type: 'line', x0: win.endDate, x1: win.endDate,
+        y0: win.startDate, y1: win.endDate,
+        xref: 'x', yref: 'y',
+        line: { color: '#ffffff', width: 3 } },
+      { type: 'line', x0: 0, x1: 1,
+        y0: win.startDate, y1: win.startDate,
+        xref: 'paper', yref: 'y',
+        line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+      { type: 'line', x0: 0, x1: 1,
+        y0: win.endDate, y1: win.endDate,
+        xref: 'paper', yref: 'y',
+        line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+    ],
+  });
+}
+
+function clearHighlight() {
+  Plotly.relayout(document.getElementById('window-legend'), { shapes: [] });
+}
+
+function wireZoomCapture() {
+  // Reset flags whenever newPlot is called (era change / first render)
+  userZoom.squiggle = userZoom['rolling-return'] = userZoom['rolling-vol'] = false;
+  ['squiggle', 'rolling-return', 'rolling-vol'].forEach(function(id) {
+    document.getElementById(id).on('plotly_relayout', function(eventData) {
+      // Our updateCharts relayouts always include 'title.text' — ignore them
+      if ('title.text' in eventData) return;
+      // User drag-zoom: Plotly sets range keys
+      if ('xaxis.range[0]' in eventData || 'yaxis.range[0]' in eventData) {
+        userZoom[id] = true;
+      }
+      // User double-click to reset zoom
+      if (eventData['xaxis.autorange'] === true) {
+        userZoom[id] = false;
+      }
+    });
+  });
+}
+
+function wireHoverHighlight(windows) {
+  var ids = ['squiggle', 'rolling-return', 'rolling-vol'];
+  ids.forEach(function(id) {
+    var div = document.getElementById(id);
+    var isMarginal = id !== 'squiggle';
+    div.on('plotly_hover', function(event) {
+      var pt = event.points[0];
+      if (pt.curveNumber !== 0) return;  // ignore scrub dot hover
+      var wi = pt.pointIndex;
+      var w  = windows[wi];
+      highlightWindow(w);
+      if (isMarginal) {
+        Plotly.relayout(div, {
+          shapes: [{
+            type: 'line',
+            x0: w.startDate, x1: w.endDate,
+            y0: 0, y1: 0,
+            xref: 'x', yref: 'paper',
+            line: { color: 'rgba(255,255,255,0.45)', width: 2.5 },
+          }],
+        });
+      }
+    });
+    div.on('plotly_unhover', function() {
+      clearHighlight();
+      if (isMarginal) Plotly.relayout(div, { shapes: [] });
+    });
+  });
+}
+
+
+// ── Load and re-render (scenario change) ──────────────────────────────────
+
+async function loadAndRender() {
+  var loadEl   = document.getElementById('loading');
+  var chartsEl = document.getElementById('charts');
+
+  var isFirstLoad = !currentWindows;
+  var isEraChange = !rawData || rawData._era !== currentConfig.era;
+  // Save scrub position before any data change (preserved for non-era; best-effort for era)
+  var heldEndDate = (currentWindows && currentWindows[scrubIdx]) ? currentWindows[scrubIdx].endDate : null;
+
+  if (isFirstLoad) {
+    loadEl.style.display  = 'block';
+    chartsEl.style.display = 'none';
+  }
+
+  try {
+    if (isEraChange) {
+      var resp = await fetch('/api/rolling-window-data?era=' + currentConfig.era);
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      var data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      rawData = data;
+      rawData._era = currentConfig.era;
+    }
+
+    var { dates, returns, tickers } = rawData;
+
+    var weights = computeWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+    portfolioData = buildPortfolioSeries(dates, returns, tickers, {
+      weights,
+      rebalance: currentConfig.rebalance,
+    });
+
+    var newBounds = computeFixedBounds(portfolioData.dates, portfolioData.values, portfolioData.monthlyReturns);
+    if (axesLocked && scenarioFixedBounds) {
+      scenarioFixedBounds.zMin = newBounds.zMin;
+      scenarioFixedBounds.zMax = newBounds.zMax;
+    } else {
+      scenarioFixedBounds = newBounds;
+    }
+    scenarioNAll = dates.length;
+
+    var maxForEra = Math.min(MAX_WINDOW_MONTHS, Math.floor(dates.length / 12) * 12);
+    currentWindowMonths = Math.min(requestedWindowMonths, maxForEra);
+
+    var winSlider = document.getElementById('window-length');
+    var winVal    = document.getElementById('window-length-val');
+    winSlider.max   = maxForEra;
+    winSlider.value = currentWindowMonths;
+
+    currentWindows = computeWindows(
+      portfolioData.dates, portfolioData.values, portfolioData.monthlyReturns, currentWindowMonths
+    );
+    if (currentWindows.length === 0) throw new Error('Not enough data for ' + currentWindowMonths + '-month windows');
+
+    // Restore scrub position by end-date (exact match for non-era; falls back to 0 for era change)
+    var j = heldEndDate ? currentWindows.findIndex(w => w.endDate === heldEndDate) : -1;
+    scrubIdx = j >= 0 ? j : 0;
+    var timeScrub = document.getElementById('time-scrub');
+    timeScrub.max   = currentWindows.length - 1;
+    timeScrub.value = scrubIdx;
+
+    // Update tickers/weights display
+    document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+
+    // Update config bar
+    document.getElementById('config-bar').innerHTML =
+      '<span>Era: <code>' + rawData.label + '</code></span>' +
+      '<span>Tickers: <code>' + tickers.join(' / ') + '</code></span>' +
+      '<span>Allocation: <code>' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) +
+        ' (' + currentConfig.domesticPct + '/' + (100 - currentConfig.domesticPct) + ' dom/intl)</code></span>' +
+      '<span>Rebalancing: <code>' + currentConfig.rebalance + '</code></span>' +
+      '<span>Window: <code id="config-window">' + formatWindowLength(currentWindowMonths) + '</code></span>' +
+      '<span>Data: <code>' + ym(dates[0]) + ' \u2013 ' + ym(dates[scenarioNAll - 1]) + '</code> (' + scenarioNAll + ' mo)</span>';
+
+    winVal.textContent = formatWindowLength(currentWindowMonths) + ' \u00b7 ' + currentWindows.length + ' windows';
+    document.getElementById('window-years').textContent = formatWindowLength(currentWindowMonths);
+
+    loadEl.style.display  = 'none';
+    chartsEl.style.display = 'block';
+    document.getElementById('ctrl-panel').style.display = 'block';
+
+    if (isFirstLoad || isEraChange) {
+      // Full newPlot (era change or first render)
+      renderCharts(currentWindows, scenarioFixedBounds, scenarioNAll);
+    } else {
+      // Fast path: restyle only — avoids Plotly.newPlot overhead (~300-600ms)
+      updateCharts(currentWindows, scenarioFixedBounds, scenarioNAll);
+      updateScrub(scrubIdx);  // update legend shapes + readout
+    }
+    renderDebug(currentWindows);
+
+  } catch (err) {
+    loadEl.style.display  = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Error: ' + err.message;
+    console.error('Rolling-window 2D loadAndRender failed:', err);
+  }
+}
+
+
+// ── 2D recompute (window-length change — no refetch) ──────────────────────
+
+function recompute2d(newL) {
+  if (!portfolioData) return;
+  requestedWindowMonths = newL;
+  currentWindowMonths   = newL;
+
+  var heldEndDate = currentWindows[scrubIdx] ? currentWindows[scrubIdx].endDate : null;
+
+  var newWindows = computeWindows(
+    portfolioData.dates, portfolioData.values, portfolioData.monthlyReturns, newL
+  );
+  if (newWindows.length === 0) return;
+  currentWindows = newWindows;
+
+  // Restore scrub position by end date
+  if (heldEndDate) {
+    var j = newWindows.findIndex(w => w.endDate === heldEndDate);
+    scrubIdx = j >= 0 ? j : 0;
+  } else {
+    scrubIdx = 0;
+  }
+
+  var timeScrub = document.getElementById('time-scrub');
+  timeScrub.max   = newWindows.length - 1;
+  timeScrub.value = scrubIdx;
+
+  var winVal = document.getElementById('window-length-val');
+  winVal.textContent = formatWindowLength(newL) + ' \u00b7 ' + newWindows.length + ' windows';
+  document.getElementById('window-years').textContent = formatWindowLength(newL);
+  var cwEl = document.getElementById('config-window');
+  if (cwEl) cwEl.textContent = formatWindowLength(newL);
+
+  updateCharts(currentWindows, scenarioFixedBounds, scenarioNAll);
+  updateScrub(scrubIdx);
+  renderDebug(currentWindows);
+}
+
+
+// ── Debug / cross-check section ───────────────────────────────────────────
+
+function renderDebug(windows) {
+  if (!rawData) return;
+  var first = windows[0];
+  var last  = windows[windows.length - 1];
+
+  var cagrRange = windows.reduce((a, w) => [Math.min(a[0], w.cagr), Math.max(a[1], w.cagr)], [Infinity, -Infinity]);
+  var volRange  = windows.reduce((a, w) => [Math.min(a[0], w.volAnnual), Math.max(a[1], w.volAnnual)], [Infinity, -Infinity]);
+
+  var html =
+    '<h3>Cross-check &amp; diagnostics</h3>' +
+    '<table class="debug-table">' +
+    '<tr><td class="label">Era</td><td>' + rawData.label + ' (' + currentConfig.era + ')</td></tr>' +
+    '<tr><td class="label">Tickers</td><td>' + rawData.tickers.join(' / ') + '</td></tr>' +
+    '<tr><td class="label">Data range</td><td>' + ym(rawData.dates[0]) + ' &ndash; ' + ym(rawData.dates[rawData.dates.length - 1]) + ' (' + rawData.dates.length + ' months)</td></tr>' +
+    '<tr><td class="label">Allocation</td><td>' + currentConfig.stockPct + '% equity / ' + (100 - currentConfig.stockPct) + '% bonds, rebal ' + currentConfig.rebalance + '</td></tr>' +
+    '<tr><td class="label">Window length</td><td>' + currentWindowMonths + ' months (' + formatWindowLength(currentWindowMonths) + ')</td></tr>' +
+    '<tr><td class="label">Windows computed</td><td>' + windows.length + '</td></tr>' +
+    '</table>' +
+    '<table class="debug-table" style="margin-top:12px">' +
+    '<tr><td></td><td class="label">Start</td><td class="label">End</td><td class="label">CAGR</td><td class="label">Vol</td></tr>' +
+    '<tr><td class="label">First window</td>' +
+    '<td>' + ym(first.startDate) + '</td><td>' + ym(first.endDate) + '</td>' +
+    '<td>' + first.cagr.toFixed(2) + '%</td><td>' + first.volAnnual.toFixed(2) + '%</td></tr>' +
+    '<tr><td class="label">Last window</td>' +
+    '<td>' + ym(last.startDate) + '</td><td>' + ym(last.endDate) + '</td>' +
+    '<td>' + last.cagr.toFixed(2) + '%</td><td>' + last.volAnnual.toFixed(2) + '%</td></tr>' +
+    '</table>' +
+    '<table class="debug-table" style="margin-top:12px">' +
+    '<tr><td class="label">CAGR range</td><td>' + cagrRange[0].toFixed(2) + '% &ndash; ' + cagrRange[1].toFixed(2) + '%</td></tr>' +
+    '<tr><td class="label">Vol range</td><td>' + volRange[0].toFixed(2) + '% &ndash; ' + volRange[1].toFixed(2) + '%</td></tr>' +
+    '</table>' +
+    '<p class="debug-note">' +
+    '<strong>Cross-check:</strong> Compare the <em>last window</em> above with the main ' +
+    '<a href="/?diy_portfolio=' + currentConfig.era + '&stock_pct=' + currentConfig.stockPct + '&monthly_contrib=0" target="_blank">back-tester</a> ' +
+    'set to ' + rawData.label + ', ' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) + ' allocation, $0 monthly contribution, ' +
+    currentConfig.rebalance + ' rebalancing. The CAGR should be in the same ballpark.' +
+    '</p>';
+
+  document.getElementById('debug-section').innerHTML = html;
+}
+
+
+// ── Initialization ────────────────────────────────────────────────────────
+
+async function init() {
+
+  // ── Wire scenario controls ONCE ───────────────────────────────────
+  document.getElementById('era-select').addEventListener('change', async function () {
+    currentConfig.era = this.value;
+    await loadAndRender();
+  });
+
+  document.getElementById('stock-pct').addEventListener('input', debounce(async function () {
+    currentConfig.stockPct = +this.value;
+    document.getElementById('stock-pct-val').textContent = this.value + '%';
+    if (rawData) document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, rawData.tickers, currentConfig.domesticPct / 100);
+    await loadAndRender();
+  }, 150));
+
+  document.getElementById('domestic-pct').addEventListener('input', debounce(async function () {
+    currentConfig.domesticPct = +this.value;
+    document.getElementById('domestic-pct-val').textContent = this.value + '%';
+    if (rawData) document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, rawData.tickers, currentConfig.domesticPct / 100);
+    await loadAndRender();
+  }, 150));
+
+  document.getElementById('rebalance-select').addEventListener('change', async function () {
+    currentConfig.rebalance = this.value;
+    await loadAndRender();
+  });
+
+  // Window-length → recompute (no refetch)
+  var winSlider = document.getElementById('window-length');
+  var winVal    = document.getElementById('window-length-val');
+  var winDebounce = null;
+  winSlider.addEventListener('input', function () {
+    var newL = Number(this.value);
+    winVal.textContent = formatWindowLength(newL) + ' \u00b7 \u2026';
+    clearTimeout(winDebounce);
+    winDebounce = setTimeout(function () { recompute2d(newL); }, 80);
+  });
+
+  // Scrub slider
+  var timeScrub = document.getElementById('time-scrub');
+  var scrubQueued = false;
+  timeScrub.addEventListener('input', function () {
+    var j = Number(this.value);
+    if (!scrubQueued) {
+      scrubQueued = true;
+      requestAnimationFrame(function () { scrubQueued = false; updateScrub(j); });
+    }
+  });
+
+  // Color mode buttons
+  var colorBtns = document.querySelectorAll('[data-color]');
+  colorBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      colorBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      colorMode = this.dataset.color;
+      if (!currentWindows) return;
+      // Restyle squiggle colors only (no newPlot)
+      var wl = currentWindowMonths;
+      var endIdx = currentWindows.map((_, i) => i + wl - 1);
+      var color, scale, cmin, cmax;
+      if (colorMode === 'quality') {
+        color = computeQualityArr(currentWindows, scenarioFixedBounds);
+        scale = QUALITY_COLORSCALE; cmin = 0; cmax = 1;
+      } else {
+        color = endIdx;
+        scale = COLORSCALE; cmin = 0; cmax = scenarioNAll - 1;
+      }
+      Plotly.restyle('squiggle', {
+        'marker.color': [color], 'marker.colorscale': [scale],
+        'marker.cmin': cmin, 'marker.cmax': cmax,
+      }, [0]);
+      // Update scrub dot color too
+      updateScrub(scrubIdx);
+    });
+  });
+
+  // Axes lock buttons
+  document.getElementById('axes-auto').addEventListener('click', function () {
+    axesLocked = false;
+    document.getElementById('axes-auto').classList.add('active');
+    document.getElementById('axes-lock').classList.remove('active');
+  });
+  document.getElementById('axes-lock').addEventListener('click', function () {
+    axesLocked = true;
+    document.getElementById('axes-lock').classList.add('active');
+    document.getElementById('axes-auto').classList.remove('active');
+  });
+
+  // ── Initial load ──────────────────────────────────────────────────
+  await loadAndRender();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

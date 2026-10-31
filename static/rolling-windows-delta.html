@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rebalancing Delta Explorer</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+  <style>
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 50px 24px 80px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin-bottom: 6px; }
+    .subtitle { color: var(--color-text-dim); font-size: 0.9rem; margin-bottom: 8px; }
+    .framing-note {
+      font-size: 0.8rem; color: var(--color-text-dim); opacity: 0.7;
+      margin-bottom: 20px; font-style: italic;
+    }
+    .chart-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 8px 4px;
+      margin-bottom: 20px;
+    }
+    .scatter-with-legend {
+      display: flex; gap: 12px; align-items: flex-start; margin-bottom: 20px;
+    }
+    .scatter-with-legend > .chart-box { margin-bottom: 0; }
+    .scatter-with-legend > .chart-box:first-child { flex: 1; min-width: 0; }
+    .legend-col { width: 180px; flex-shrink: 0; }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 800px) {
+      .chart-row { grid-template-columns: 1fr; }
+      .scatter-with-legend { flex-direction: column; }
+      .legend-col { width: 100%; }
+    }
+    .config-bar {
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+      margin-bottom: 20px; font-size: 0.85rem; color: var(--color-text-dim);
+    }
+    .config-bar span { white-space: nowrap; }
+    .config-bar code {
+      color: var(--color-primary); background: var(--color-surface);
+      padding: 1px 6px; border-radius: 3px;
+    }
+    #loading { text-align: center; padding: 60px 0; color: var(--color-text-dim); font-size: 1.1rem; }
+    #error   { display: none; text-align: center; padding: 40px 0; color: var(--color-negative); }
+    #never-notice {
+      display: none; text-align: center; padding: 48px 0;
+      color: var(--color-text-dim); font-size: 0.95rem;
+    }
+    #never-notice strong { color: var(--color-text); }
+    .debug-section { margin-top: 32px; border-top: 1px solid var(--color-border); padding-top: 20px; }
+    .debug-section h3 { font-size: 0.9rem; color: var(--color-text-dim); margin-bottom: 10px; }
+    .debug-table { font-size: 0.8rem; font-family: var(--font-mono); }
+    .debug-table td { padding: 3px 14px 3px 0; }
+    .debug-table .label { color: var(--color-text-dim); }
+    .debug-note { font-size: 0.78rem; color: var(--color-text-dim); margin-top: 10px; line-height: 1.5; }
+    /* ── Control panel ─────────────────────────────────────────────── */
+    .ctrl-section {
+      display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+      margin-bottom: 10px; font-size: 0.82rem; color: var(--color-text-dim);
+    }
+    .ctrl-section label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .ctrl-section input[type="range"] { width: 110px; accent-color: #7dd4e8; }
+    .ctrl-section select {
+      background: var(--color-surface); color: var(--color-text);
+      border: 1px solid rgba(100,210,230,0.2); border-radius: 4px;
+      padding: 2px 6px; font-size: 0.82rem;
+    }
+    .slider-val { color: var(--color-primary); min-width: 2ch; text-align: right; }
+    .ctrl-sep { height: 1px; background: rgba(100,210,230,0.12); margin: 2px 0 10px; }
+    .section-label {
+      font-size: 0.72rem; color: var(--color-text-dim); opacity: 0.45;
+      text-transform: uppercase; letter-spacing: 0.06em; min-width: 42px;
+    }
+    .control-group { display: flex; align-items: center; gap: 5px; }
+    .control-label { margin-right: 2px; }
+    .ctrl-btn {
+      background: var(--color-surface); color: rgba(125,212,232,0.6);
+      border: 1px solid rgba(100,210,230,0.15); border-radius: 4px;
+      padding: 3px 10px; font-size: 0.8rem; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s; font-family: inherit;
+    }
+    .ctrl-btn:hover { color: #c8f0f8; border-color: rgba(100,210,230,0.3); }
+    .ctrl-btn.active { color: #7dd4e8; border-color: #7dd4e8; background: rgba(100,210,230,0.08); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Rebalancing Delta Explorer</h1>
+    <p class="subtitle"><span id="subtitle-text">Per rolling window: rebalanced minus buy-and-hold. Each dot is a
+      <span id="window-years">5yr</span> window placed at its end date.
+      Move the Allocation slider to see how mix divergence scales the effect.</span>
+    </p>
+    <p class="framing-note"><span id="framing-text">Note: this history is mostly a trending bull market, so &Delta;CAGR sits negative
+      much of the time &mdash; a property of this regime, not a law. The
+      <a href="/rebalancing" style="color:inherit;opacity:0.8">Rebalancing Impact</a>
+      and Monte Carlo pages show regimes where rebalancing also wins on returns.
+      The delta spans <em>two</em> rebalancing axes: stock/bond <em>and</em>
+      domestic/international &mdash; so it is nonzero even at 100% stocks (try it
+      with the Domestic slider at 100% to isolate each axis).</span>
+    </p>
+
+    <div class="config-bar" id="config-bar"></div>
+
+    <div id="ctrl-panel" style="display:none">
+
+      <!-- ── COMPARE ───────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Compare</span>
+        <div class="control-group">
+          <button class="ctrl-btn active" data-compare="rebalancing">Rebalancing</button>
+          <button class="ctrl-btn"        data-compare="active">Active vs passive</button>
+        </div>
+      </div>
+      <div class="ctrl-sep"></div>
+
+      <!-- ── SCENARIO ──────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Scenario</span>
+        <label>Era:
+          <select id="era-select">
+            <option value="pre_etf">Pre-ETF (1987&ndash;)</option>
+            <option value="etf">ETF (2011&ndash;)</option>
+          </select>
+        </label>
+        <label>Stocks:
+          <input type="range" id="stock-pct" min="0" max="100" step="10" value="80" style="width:110px"/>
+          <span class="slider-val" id="stock-pct-val">80%</span>
+        </label>
+        <label>Domestic:
+          <input type="range" id="domestic-pct" min="0" max="100" step="5" value="80" style="width:90px"/>
+          <span class="slider-val" id="domestic-pct-val">80%</span>
+        </label>
+        <span id="tickers-display" style="color:var(--color-text-dim);font-size:0.78rem;opacity:0.55"></span>
+        <label>Rebalance:
+          <select id="rebalance-select">
+            <option value="annually">Annually</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="never">Never</option>
+          </select>
+        </label>
+        <label>Window:
+          <input type="range" id="window-length" min="12" max="240" step="12" value="60" style="width:160px"/>
+          <span class="slider-val" id="window-length-val" style="min-width:18ch;text-align:left">&mdash;</span>
+        </label>
+        <div class="control-group">
+          <span class="control-label">Axes:</span>
+          <button class="ctrl-btn active" id="axes-auto">Auto</button>
+          <button class="ctrl-btn" id="axes-lock">Lock</button>
+        </div>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── ACTIVE LEG ─────────────────────────────────────────────── -->
+      <div class="ctrl-section" id="active-leg-ctrl" style="display:none">
+        <span class="section-label">Active Leg</span>
+        <label>Fund set:
+          <select id="active-fund-set">
+            <!-- Populated from API available_sets on first active-mode load -->
+          </select>
+        </label>
+        <div class="control-group">
+          <span class="control-label">Costs:</span>
+          <button class="ctrl-btn"        data-fee="gross">Gross</button>
+          <button class="ctrl-btn"        data-fee="net_fees">Net of fees</button>
+          <button class="ctrl-btn active" data-fee="net_tax">Net of fees + tax</button>
+        </div>
+      </div>
+      <div class="ctrl-sep" id="active-leg-sep" style="display:none"></div>
+
+      <!-- ── SCRUB ─────────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Scrub</span>
+        <label>Position:
+          <input type="range" id="time-scrub" min="0" max="100" step="1" value="0" style="width:300px"/>
+          <span class="slider-val" id="time-scrub-val" style="min-width:36ch;text-align:left">&mdash;</span>
+        </label>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+    </div><!-- end #ctrl-panel -->
+
+    <div id="loading">Loading data&hellip;</div>
+    <div id="error"></div>
+
+    <div id="never-notice">
+      <strong>No rebalancing selected.</strong><br>
+      Both legs are buy-and-hold &mdash; the delta is identically zero.<br>
+      Select <em>Annually</em> or <em>Quarterly</em> rebalancing to see the delta.
+    </div>
+
+    <div id="charts" style="display:none">
+      <div class="scatter-with-legend">
+        <div class="chart-box">
+          <div id="delta-scatter"></div>
+        </div>
+        <div class="chart-box legend-col">
+          <div id="window-legend"></div>
+        </div>
+      </div>
+      <div class="chart-row">
+        <div class="chart-box">
+          <div id="delta-gain"></div>
+        </div>
+        <div class="chart-box">
+          <div id="delta-vol"></div>
+        </div>
+      </div>
+
+      <div class="debug-section" id="debug-section"></div>
+    </div>
+  </div>
+
+  <script src="/static/nav.js"></script>
+  <script src="/static/rw-shared.js"></script>
+  <script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Rebalancing Delta Explorer (2D)
+   Reads rw-shared.js — no logic duplicated here.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+const TEAL  = '#1D9E75';
+const AMBER = '#e8c020';
+
+// ── Plotly theme ──────────────────────────────────────────────────────────
+const PLOTLY_BASE = {
+  paper_bgcolor: 'rgba(0,0,0,0)',
+  plot_bgcolor:  '#002535',
+  font: { color: '#e4f6fb', family: 'system-ui, -apple-system, sans-serif', size: 12 },
+  margin: { t: 36, r: 16, b: 48, l: 56 },
+  hoverlabel: {
+    bgcolor: '#003a50', bordercolor: 'rgba(100,210,230,0.3)',
+    font: { color: '#e4f6fb', size: 12 },
+  },
+};
+const AXIS_STYLE = {
+  gridcolor:     'rgba(100,210,230,0.07)',
+  zerolinecolor: 'rgba(255,255,255,0.25)',
+  zerolinewidth: 1,
+  tickfont:      { size: 11 },
+  title:         { font: { size: 13 } },
+};
+const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
+
+// ── Module-level mutable state ────────────────────────────────────────────
+var rawData           = null;
+var deltaFixedBounds  = null;
+var scenarioNAll      = 0;
+var requestedWindowMonths = RW_DEFAULTS.windowMonths;
+var currentWindowMonths   = RW_DEFAULTS.windowMonths;
+var currentConfig = {
+  era:         RW_DEFAULTS.era,
+  stockPct:    RW_DEFAULTS.stockPct,
+  domesticPct: RW_DEFAULTS.domesticPct,
+  rebalance:   RW_DEFAULTS.rebalance,
+};
+var currentDeltas   = null;  // Array<{dGain, dVol}>
+var currentWinDates = null;  // Array<{startDate, endDate}>
+var currentAllDates = null;  // full date array for window-legend heatmap y-axis
+var axesLocked = false;
+var scrubIdx   = 0;
+var userZoom   = { 'delta-scatter': false, 'delta-gain': false, 'delta-vol': false };
+
+// ── Comparison mode state ─────────────────────────────────────────────────
+// Mirrors ERA_CONFIG.activeFunds in app.js and rebalancing.js — keep in sync.
+var ERA_ACTIVE_SETS = {
+  etf: [
+    { value: 'american_dodge',  label: 'American/Dodge \u2014 AGTHX / DODFX / PTTAX' },
+    { value: 'fidelity',        label: 'Fidelity \u2014 FCNTX / FIEUX / FTBFX' },
+    { value: 'vanguard_active', label: 'Vanguard Active \u2014 VWUSX / VWILX / VBTLX' },
+    { value: 't_rowe_price',    label: 'T. Rowe Price \u2014 PRGFX / PRITX / PRTIX' },
+  ],
+  pre_etf: [
+    { value: 'fidelity_classic', label: 'Fidelity Classic \u2014 FMAGX / FOSFX / FBNDX' },
+    { value: 'american_funds',   label: 'American Funds \u2014 AGTHX / ANWPX / ABNDX' },
+    { value: 't_rowe_price',     label: 'T. Rowe Price \u2014 PRGFX / PRITX / PRTIX (1989+)' },
+  ],
+};
+
+var comparisonMode = 'rebalancing';   // 'rebalancing' | 'active'
+var activeFundSet  = 'fidelity_classic';  // default matches RW_DEFAULTS.era = 'pre_etf'
+var feeMode        = 'net_tax';       // 'gross' | 'net_fees' | 'net_tax'
+var activeData     = null;            // cached /api/active-passive-data response
+var activeDataKey  = null;            // "era:fundSet" — invalidation key
+
+
+// ── Quadrant shapes for scatter ───────────────────────────────────────────
+
+function quadrantShapes(fb) {
+  return [
+    // Δvol<0, Δgain>0 = lower risk + higher return ("free lunch")
+    { type: 'rect', xref: 'x', yref: 'y', layer: 'below',
+      x0: fb.dVolMin, x1: 0, y0: 0, y1: fb.dGainMax,
+      fillcolor: 'rgba(29,158,117,0.10)', line: { width: 0 } },
+    // Δvol<0, Δgain<0 = lower risk, lower return
+    { type: 'rect', xref: 'x', yref: 'y', layer: 'below',
+      x0: fb.dVolMin, x1: 0, y0: fb.dGainMin, y1: 0,
+      fillcolor: 'rgba(125,212,232,0.05)', line: { width: 0 } },
+    // Δvol>0, Δgain>0 = higher risk, higher return
+    { type: 'rect', xref: 'x', yref: 'y', layer: 'below',
+      x0: 0, x1: fb.dVolMax, y0: 0, y1: fb.dGainMax,
+      fillcolor: 'rgba(232,192,32,0.05)', line: { width: 0 } },
+    // Δvol>0, Δgain<0 = worse on both
+    { type: 'rect', xref: 'x', yref: 'y', layer: 'below',
+      x0: 0, x1: fb.dVolMax, y0: fb.dGainMin, y1: 0,
+      fillcolor: 'rgba(214,69,69,0.09)', line: { width: 0 } },
+  ];
+}
+
+function quadrantAnnotations(fb) {
+  var isActive = comparisonMode === 'active';
+  var st = { showarrow: false, xanchor: 'center', yanchor: 'middle' };
+  var dim = { size: 9 };
+  return [
+    { ...st, x: fb.dVolMin * 0.6, y: fb.dGainMax * 0.7,
+      text: isActive ? 'Active: lower risk<br>higher return' : 'Lower risk<br>Higher return',
+      font: { ...dim, color: 'rgba(29,158,117,0.55)' } },
+    { ...st, x: fb.dVolMax * 0.6, y: fb.dGainMax * 0.7,
+      text: isActive ? 'Active: higher risk<br>higher return' : 'Higher risk<br>Higher return',
+      font: { ...dim, color: 'rgba(232,192,32,0.40)' } },
+    { ...st, x: fb.dVolMin * 0.6, y: fb.dGainMin * 0.7,
+      text: isActive ? 'Active: lower risk<br>lower return' : 'Lower risk<br>Lower return',
+      font: { ...dim, color: 'rgba(125,212,232,0.40)' } },
+    { ...st, x: fb.dVolMax * 0.6, y: fb.dGainMin * 0.7,
+      text: isActive ? 'Active: worse on both' : 'Worse on both',
+      font: { ...dim, color: 'rgba(214,69,69,0.55)' } },
+  ];
+}
+
+
+// ── Full chart render (newPlot) ───────────────────────────────────────────
+
+function renderCharts(deltas, winDates, fixedBounds, nAll) {
+  var wl    = currentWindowMonths;
+  var dGain = deltas.map(d => d.dGain);
+  var dVol  = deltas.map(d => d.dVol);
+  var end   = winDates.map(w => w.endDate);
+  var endIdx = deltas.map((_, i) => i + wl - 1);
+  var customdata = winDates.map(w => [ym(w.startDate), ym(w.endDate)]);
+  var scrubWin = winDates[scrubIdx] || winDates[0];
+  var scrubD   = deltas[scrubIdx]   || deltas[0];
+
+  // 1. Delta scatter ────────────────────────────────────────────────
+  Plotly.newPlot('delta-scatter', [
+    {
+      x: dVol, y: dGain,
+      mode: 'markers',
+      marker: {
+        size: 7, opacity: 0.8,
+        color: endIdx, colorscale: COLORSCALE, cmin: 0, cmax: nAll - 1,
+        showscale: false,
+        line: { width: 0.5, color: 'rgba(0,30,42,0.5)' },
+      },
+      customdata: customdata,
+      hovertemplate:
+        '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+        '\u0394 CAGR %{y:+.2f} pp \u00b7 \u0394 Vol %{x:+.2f} pp<extra></extra>',
+      showlegend: false,
+    },
+    {
+      x: [scrubD.dVol], y: [scrubD.dGain],
+      mode: 'markers',
+      marker: {
+        size: 12, opacity: 0.95,
+        color: [scrubIdx + wl - 1], colorscale: COLORSCALE, cmin: 0, cmax: nAll - 1,
+        showscale: false,
+        line: { width: 2, color: '#ffffff' },
+      },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ], {
+    ...PLOTLY_BASE,
+    title: { text: '\u0394 Risk\u2013Return (' + formatWindowLength(wl) + ' windows)', font: { size: 14 } },
+    xaxis: { ...AXIS_STYLE, zeroline: true, title: { text: '\u0394 Volatility (pp)', font: { size: 13 } },
+             range: [fixedBounds.dVolMin, fixedBounds.dVolMax] },
+    yaxis: { ...AXIS_STYLE, zeroline: true, title: { text: '\u0394 CAGR (pp)', font: { size: 13 } },
+             range: [fixedBounds.dGainMin, fixedBounds.dGainMax] },
+    shapes: quadrantShapes(fixedBounds),
+    annotations: quadrantAnnotations(fixedBounds),
+    height: 500,
+  }, PLOTLY_CONFIG);
+
+  var marginalCustomdata = customdata;
+
+  // 2. Rolling Δ CAGR ───────────────────────────────────────────────
+  Plotly.newPlot('delta-gain', [
+    {
+      x: end, y: dGain,
+      mode: 'lines',
+      line: { color: TEAL, width: 1.5 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(29,158,117,0.10)',
+      customdata: marginalCustomdata,
+      hovertemplate:
+        '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+        '\u0394 CAGR %{y:+.2f} pp<extra></extra>',
+      showlegend: false,
+    },
+    {
+      x: [scrubWin.endDate], y: [scrubD.dGain],
+      mode: 'markers',
+      marker: { size: 10, color: AMBER, line: { color: '#ffffff', width: 1.5 } },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ], {
+    ...PLOTLY_BASE,
+    title: { text: 'Rolling ' + formatWindowLength(wl) + ' \u0394 CAGR', font: { size: 14 } },
+    xaxis: { ...AXIS_STYLE, type: 'date', title: { text: 'Window end date', font: { size: 12 } },
+             range: [fixedBounds.zMin, fixedBounds.zMax] },
+    yaxis: { ...AXIS_STYLE, zeroline: true, title: { text: '\u0394 CAGR (pp)', font: { size: 12 } },
+             range: [fixedBounds.dGainMin, fixedBounds.dGainMax] },
+    height: 340,
+    margin: { ...PLOTLY_BASE.margin, t: 36 },
+  }, PLOTLY_CONFIG);
+
+  // 3. Rolling Δ Volatility ─────────────────────────────────────────
+  Plotly.newPlot('delta-vol', [
+    {
+      x: end, y: dVol,
+      mode: 'lines',
+      line: { color: AMBER, width: 1.5 },
+      fill: 'tozeroy',
+      fillcolor: 'rgba(232,192,32,0.08)',
+      customdata: marginalCustomdata,
+      hovertemplate:
+        '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+        '\u0394 Vol %{y:+.2f} pp<extra></extra>',
+      showlegend: false,
+    },
+    {
+      x: [scrubWin.endDate], y: [scrubD.dVol],
+      mode: 'markers',
+      marker: { size: 10, color: AMBER, line: { color: '#ffffff', width: 1.5 } },
+      hoverinfo: 'skip', showlegend: false,
+    },
+  ], {
+    ...PLOTLY_BASE,
+    title: { text: 'Rolling ' + formatWindowLength(wl) + ' \u0394 Volatility', font: { size: 14 } },
+    xaxis: { ...AXIS_STYLE, type: 'date', title: { text: 'Window end date', font: { size: 12 } },
+             range: [fixedBounds.zMin, fixedBounds.zMax] },
+    yaxis: { ...AXIS_STYLE, zeroline: true, title: { text: '\u0394 Vol (pp)', font: { size: 12 } },
+             range: [fixedBounds.dVolMin, fixedBounds.dVolMax] },
+    height: 340,
+    margin: { ...PLOTLY_BASE.margin, t: 36 },
+  }, PLOTLY_CONFIG);
+
+  // 4. Window legend ────────────────────────────────────────────────
+  renderWindowLegend(winDates, nAll, wl);
+
+  // 5. Hover + zoom capture ─────────────────────────────────────────
+  wireHoverHighlight(winDates, deltas);
+  wireZoomCapture();
+}
+
+
+// ── In-place update (window-length change) ────────────────────────────────
+
+function updateCharts(deltas, winDates, fixedBounds, nAll) {
+  var wl    = currentWindowMonths;
+  var dGain = deltas.map(d => d.dGain);
+  var dVol  = deltas.map(d => d.dVol);
+  var end   = winDates.map(w => w.endDate);
+  var endIdx = deltas.map((_, i) => i + wl - 1);
+  var customdata = winDates.map(w => [ym(w.startDate), ym(w.endDate)]);
+  var scrubWin = winDates[scrubIdx] || winDates[0];
+  var scrubD   = deltas[scrubIdx]   || deltas[0];
+
+  // Scatter
+  Plotly.restyle('delta-scatter', {
+    x: [dVol], y: [dGain],
+    'marker.color': [endIdx], 'marker.cmax': nAll - 1,
+    customdata: [customdata],
+  }, [0]);
+  Plotly.restyle('delta-scatter', {
+    x: [[scrubD.dVol]], y: [[scrubD.dGain]],
+    'marker.color': [[scrubIdx + wl - 1]], 'marker.cmax': nAll - 1,
+  }, [1]);
+  var scLayout = { 'title.text': '\u0394 Risk\u2013Return (' + formatWindowLength(wl) + ' windows)' };
+  if (!userZoom['delta-scatter']) {
+    scLayout['xaxis.range'] = [fixedBounds.dVolMin, fixedBounds.dVolMax];
+    scLayout['yaxis.range'] = [fixedBounds.dGainMin, fixedBounds.dGainMax];
+  }
+  // Shapes/annotations are in data coords — always update with fixedBounds
+  scLayout.shapes      = quadrantShapes(fixedBounds);
+  scLayout.annotations = quadrantAnnotations(fixedBounds);
+  Plotly.relayout('delta-scatter', scLayout);
+
+  // Rolling Δ CAGR
+  Plotly.restyle('delta-gain', { x: [end], y: [dGain], customdata: [customdata] }, [0]);
+  Plotly.restyle('delta-gain', { x: [[scrubWin.endDate]], y: [[scrubD.dGain]] }, [1]);
+  var dgLayout = { 'title.text': 'Rolling ' + formatWindowLength(wl) + ' \u0394 CAGR' };
+  if (!userZoom['delta-gain']) {
+    dgLayout['xaxis.range'] = [fixedBounds.zMin, fixedBounds.zMax];
+    dgLayout['yaxis.range'] = [fixedBounds.dGainMin, fixedBounds.dGainMax];
+  }
+  Plotly.relayout('delta-gain', dgLayout);
+
+  // Rolling Δ Vol
+  Plotly.restyle('delta-vol', { x: [end], y: [dVol], customdata: [customdata] }, [0]);
+  Plotly.restyle('delta-vol', { x: [[scrubWin.endDate]], y: [[scrubD.dVol]] }, [1]);
+  var dvLayout = { 'title.text': 'Rolling ' + formatWindowLength(wl) + ' \u0394 Volatility' };
+  if (!userZoom['delta-vol']) {
+    dvLayout['xaxis.range'] = [fixedBounds.zMin, fixedBounds.zMax];
+    dvLayout['yaxis.range'] = [fixedBounds.dVolMin, fixedBounds.dVolMax];
+  }
+  Plotly.relayout('delta-vol', dvLayout);
+
+  renderWindowLegend(winDates, nAll, wl);
+}
+
+
+// ── Scrub update ──────────────────────────────────────────────────────────
+
+function updateScrub(j) {
+  if (!currentDeltas || j < 0 || j >= currentDeltas.length) return;
+  scrubIdx = j;
+  var w  = currentWinDates[j];
+  var d  = currentDeltas[j];
+  var wl = currentWindowMonths;
+
+  Plotly.restyle('delta-scatter', {
+    x: [[d.dVol]], y: [[d.dGain]],
+    'marker.color': [[j + wl - 1]],
+  }, [1]);
+  Plotly.restyle('delta-gain', { x: [[w.endDate]], y: [[d.dGain]] }, [1]);
+  Plotly.restyle('delta-vol',  { x: [[w.endDate]], y: [[d.dVol]]  }, [1]);
+
+  // Legend shapes
+  Plotly.relayout(document.getElementById('window-legend'), {
+    shapes: [
+      { type: 'line', x0: w.endDate, x1: w.endDate, y0: w.startDate, y1: w.endDate,
+        xref: 'x', yref: 'y', line: { color: '#ffffff', width: 3 } },
+      { type: 'line', x0: 0, x1: 1, y0: w.startDate, y1: w.startDate,
+        xref: 'paper', yref: 'y', line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+      { type: 'line', x0: 0, x1: 1, y0: w.endDate, y1: w.endDate,
+        xref: 'paper', yref: 'y', line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+    ],
+  });
+
+  document.getElementById('time-scrub-val').textContent =
+    ym(w.startDate) + ' \u2192 ' + ym(w.endDate) +
+    '  \u0394 CAGR ' + (d.dGain >= 0 ? '+' : '') + d.dGain.toFixed(2) + ' pp' +
+    '  \u0394 Vol '  + (d.dVol  >= 0 ? '+' : '') + d.dVol.toFixed(2)  + ' pp';
+}
+
+
+// ── Window legend ─────────────────────────────────────────────────────────
+
+function renderWindowLegend(winDates, nAll, wl) {
+  var nW = winDates.length;
+  var xDates = winDates.map(w => w.endDate);
+  var allDates = currentAllDates;
+
+  var z = [], cd = [];
+  for (var i = 0; i < nAll; i++) {
+    var zRow = new Array(nW).fill(null), cdRow = new Array(nW).fill(null);
+    var jLo = Math.max(0, i - wl + 1), jHi = Math.min(nW - 1, i);
+    for (var j = jLo; j <= jHi; j++) {
+      zRow[j]  = j + wl - 1;
+      cdRow[j] = ym(winDates[j].endDate);
+    }
+    z.push(zRow); cd.push(cdRow);
+  }
+
+  Plotly.newPlot('window-legend', [{
+    type: 'heatmap', x: xDates, y: allDates, z: z, customdata: cd,
+    colorscale: COLORSCALE, zmin: 0, zmax: nAll - 1,
+    showscale: false, hoverongaps: false,
+    hovertemplate: '%{customdata} \u2192 %{x|%Y-%m}<extra></extra>',
+    xgap: 0, ygap: 0,
+  }], {
+    ...PLOTLY_BASE,
+    title: false,
+    xaxis: { ...AXIS_STYLE, showticklabels: false, title: '' },
+    yaxis: { ...AXIS_STYLE, title: '', dtick: 'M60', tickformat: '%Y',
+             tickfont: { size: 10 }, autorange: true },
+    height: 500,
+    margin: { t: 36, r: 8, b: 48, l: 40 },
+  }, PLOTLY_CONFIG);
+}
+
+
+// ── Hover highlight ───────────────────────────────────────────────────────
+
+function wireHoverHighlight(winDates, deltas) {
+  var ids = ['delta-scatter', 'delta-gain', 'delta-vol'];
+  ids.forEach(function(id) {
+    var div = document.getElementById(id);
+    var isMarginal = id !== 'delta-scatter';
+    div.on('plotly_hover', function(event) {
+      var pt = event.points[0];
+      if (pt.curveNumber !== 0) return;
+      var wi = pt.pointIndex;
+      var w  = winDates[wi];
+      // Highlight in legend
+      Plotly.relayout(document.getElementById('window-legend'), {
+        shapes: [
+          { type: 'line', x0: w.endDate, x1: w.endDate, y0: w.startDate, y1: w.endDate,
+            xref: 'x', yref: 'y', line: { color: '#ffffff', width: 3 } },
+          { type: 'line', x0: 0, x1: 1, y0: w.startDate, y1: w.startDate,
+            xref: 'paper', yref: 'y', line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+          { type: 'line', x0: 0, x1: 1, y0: w.endDate, y1: w.endDate,
+            xref: 'paper', yref: 'y', line: { color: 'rgba(255,255,255,0.35)', width: 1, dash: 'dot' } },
+        ],
+      });
+      if (isMarginal) {
+        Plotly.relayout(div, {
+          shapes: [{ type: 'line', x0: w.startDate, x1: w.endDate, y0: 0, y1: 0,
+            xref: 'x', yref: 'paper', line: { color: 'rgba(255,255,255,0.45)', width: 2.5 } }],
+        });
+      }
+    });
+    div.on('plotly_unhover', function() {
+      Plotly.relayout(document.getElementById('window-legend'), { shapes: [] });
+      if (isMarginal) Plotly.relayout(div, { shapes: [] });
+    });
+  });
+}
+
+
+// ── Zoom capture ──────────────────────────────────────────────────────────
+
+function wireZoomCapture() {
+  userZoom['delta-scatter'] = userZoom['delta-gain'] = userZoom['delta-vol'] = false;
+  ['delta-scatter', 'delta-gain', 'delta-vol'].forEach(function(id) {
+    document.getElementById(id).on('plotly_relayout', function(eventData) {
+      if ('title.text' in eventData) return;
+      if ('xaxis.range[0]' in eventData || 'yaxis.range[0]' in eventData) {
+        userZoom[id] = true;
+      }
+      if (eventData['xaxis.autorange'] === true) {
+        userZoom[id] = false;
+      }
+    });
+  });
+}
+
+
+// ── Active vs Passive helpers ─────────────────────────────────────────────
+
+function getActiveComputeInputs() {
+  var d = activeData;
+  var pt = d.passive_tickers, at = d.active_tickers;
+  var pr = {}, ar = {};
+  for (var t of pt) pr[t] = d.returns[t];
+  for (var t of at) ar[t] = d.returns[t];
+  if (feeMode === 'gross') {
+    pr = addBackMonthlyFee(pr, pt, d.passive_ers);
+    ar = addBackMonthlyFee(ar, at, d.active_ers);
+  }
+  var afterTax = (feeMode === 'net_tax') ? applyEndTax : null;
+  return { passiveReturns: pr, passiveTickers: pt,
+           activeReturns:  ar, activeTickers:  at, afterTax: afterTax };
+}
+
+function updateSubtitleFraming(isActive) {
+  var subtitleEl = document.getElementById('subtitle-text');
+  var framingEl  = document.getElementById('framing-text');
+  if (!subtitleEl || !framingEl) return;
+  var wl = formatWindowLength(currentWindowMonths);
+  if (isActive) {
+    subtitleEl.innerHTML =
+      'Per rolling window: active fund CAGR minus index fund CAGR. Each dot is a ' +
+      '<span id="window-years">' + wl + '</span> window placed at its end date.';
+    framingEl.innerHTML =
+      'Note: all rolling windows start with a fresh $1 lump-sum, so this is a one-history ' +
+      'simulation of the same funds through the same market regimes. The delta reflects actual ' +
+      'fund returns (net of ERs unless Gross is selected), not back-tested alpha.';
+  } else {
+    subtitleEl.innerHTML =
+      'Per rolling window: rebalanced minus buy-and-hold. Each dot is a ' +
+      '<span id="window-years">' + wl + '</span> window placed at its end date. ' +
+      'Move the Allocation slider to see how mix divergence scales the effect.';
+    framingEl.innerHTML =
+      'Note: this history is mostly a trending bull market, so &Delta;CAGR sits negative ' +
+      'much of the time &mdash; a property of this regime, not a law. The ' +
+      '<a href="/rebalancing" style="color:inherit;opacity:0.8">Rebalancing Impact</a> ' +
+      'and Monte Carlo pages show regimes where rebalancing also wins on returns. ' +
+      'The delta spans <em>two</em> rebalancing axes: stock/bond <em>and</em> ' +
+      'domestic/international &mdash; so it is nonzero even at 100% stocks (try it ' +
+      'with the Domestic slider at 100% to isolate each axis).';
+  }
+}
+
+
+// ── Load and render (scenario change) ────────────────────────────────────
+
+async function loadAndRender() {
+  var loadEl   = document.getElementById('loading');
+  var chartsEl = document.getElementById('charts');
+  var neverEl  = document.getElementById('never-notice');
+
+  var isActive    = comparisonMode === 'active';
+  var isFirstLoad = !currentDeltas;
+  var heldEndDate = (currentWinDates && currentWinDates[scrubIdx])
+    ? currentWinDates[scrubIdx].endDate : null;
+
+  if (isFirstLoad) {
+    loadEl.style.display   = 'block';
+    chartsEl.style.display = 'none';
+  }
+
+  // ── Mode UI (h1, active-leg panel) ───────────────────────────────────
+  document.querySelector('h1').textContent =
+    isActive ? 'Active vs Passive Delta Explorer' : 'Rebalancing Delta Explorer';
+  document.getElementById('active-leg-ctrl').style.display = isActive ? '' : 'none';
+  document.getElementById('active-leg-sep').style.display  = isActive ? '' : 'none';
+
+  try {
+
+    if (!isActive) {
+      // ═══ REBALANCING PATH ═══════════════════════════════════════════════
+      var isEraChange = !rawData || rawData._era !== currentConfig.era;
+      if (isEraChange) {
+        var resp = await fetch('/api/rolling-window-data?era=' + currentConfig.era);
+        if (!resp.ok) throw new Error('API returned ' + resp.status);
+        var data = await resp.json();
+        if (data.error) throw new Error(data.error);
+        rawData = data;
+        rawData._era = currentConfig.era;
+      }
+
+      var { dates, returns, tickers } = rawData;
+      var weights = computeWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+
+      // Handle "never" rebalance — delta is zero, show notice instead
+      if (currentConfig.rebalance === 'never') {
+        loadEl.style.display   = 'none';
+        chartsEl.style.display = 'none';
+        neverEl.style.display  = 'block';
+        document.getElementById('ctrl-panel').style.display = 'block';
+        document.getElementById('tickers-display').textContent =
+          formatWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+        updateSubtitleFraming(false);
+        return;
+      }
+      neverEl.style.display = 'none';
+
+      // Bounds (re-derive unless locked)
+      var newBounds = computeFixedDeltaBounds(dates, returns, tickers, weights, currentConfig.rebalance, currentWindowMonths);
+      if (axesLocked && deltaFixedBounds) {
+        deltaFixedBounds.zMin = newBounds.zMin;
+        deltaFixedBounds.zMax = newBounds.zMax;
+      } else {
+        deltaFixedBounds = newBounds;
+      }
+      scenarioNAll    = dates.length;
+      currentAllDates = dates;
+
+      // Clamp window length to era
+      var maxForEra = Math.min(MAX_WINDOW_MONTHS, Math.floor(dates.length / 12) * 12);
+      currentWindowMonths = Math.min(requestedWindowMonths, maxForEra);
+      var winSlider = document.getElementById('window-length');
+      var winVal    = document.getElementById('window-length-val');
+      winSlider.max   = maxForEra;
+      winSlider.value = currentWindowMonths;
+
+      // Compute delta windows + matching date pairs
+      currentDeltas   = computeDeltaWindows(dates, returns, tickers, weights, currentConfig.rebalance, currentWindowMonths);
+      currentWinDates = [];
+      for (var i = 0; i <= dates.length - currentWindowMonths; i++) {
+        currentWinDates.push({ startDate: dates[i], endDate: dates[i + currentWindowMonths - 1] });
+      }
+      if (!currentDeltas || currentDeltas.length === 0)
+        throw new Error('Not enough data for ' + currentWindowMonths + '-month windows');
+
+      // Restore scrub
+      var j = heldEndDate ? currentWinDates.findIndex(w => w.endDate === heldEndDate) : -1;
+      scrubIdx = j >= 0 ? j : 0;
+      var timeScrub = document.getElementById('time-scrub');
+      timeScrub.max   = currentDeltas.length - 1;
+      timeScrub.value = scrubIdx;
+
+      // Config bar
+      document.getElementById('tickers-display').textContent =
+        formatWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+      document.getElementById('config-bar').innerHTML =
+        '<span>Era: <code>' + rawData.label + '</code></span>' +
+        '<span>Tickers: <code>' + tickers.join(' / ') + '</code></span>' +
+        '<span>Allocation: <code>' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) +
+          ' (' + currentConfig.domesticPct + '/' + (100 - currentConfig.domesticPct) + ' dom/intl)</code></span>' +
+        '<span>Rebalancing: <code>' + currentConfig.rebalance + '</code></span>' +
+        '<span>Window: <code id="config-window">' + formatWindowLength(currentWindowMonths) + '</code></span>' +
+        '<span>Data: <code>' + ym(dates[0]) + ' \u2013 ' + ym(dates[scenarioNAll - 1]) + '</code></span>';
+
+      winVal.textContent = formatWindowLength(currentWindowMonths) + ' \u00b7 ' + currentDeltas.length + ' windows';
+      updateSubtitleFraming(false);
+      document.getElementById('window-years').textContent = formatWindowLength(currentWindowMonths);
+
+      loadEl.style.display   = 'none';
+      chartsEl.style.display = 'block';
+      document.getElementById('ctrl-panel').style.display = 'block';
+
+      renderCharts(currentDeltas, currentWinDates, deltaFixedBounds, scenarioNAll);
+      updateScrub(scrubIdx);
+      renderDebug();
+
+    } else {
+      // ═══ ACTIVE VS PASSIVE PATH ═════════════════════════════════════════
+      neverEl.style.display = 'none';
+
+      // Validate activeFundSet for the current era — reset before fetch so
+      // newKey is computed with the correct (possibly reset) fund set.
+      var eraFunds = ERA_ACTIVE_SETS[currentConfig.era] || ERA_ACTIVE_SETS.pre_etf;
+      var validKeys = eraFunds.map(function(s) { return s.value; });
+      if (validKeys.indexOf(activeFundSet) === -1) {
+        activeFundSet = validKeys[0];
+      }
+
+      // Repopulate dropdown (always, since list changes with era)
+      var sel = document.getElementById('active-fund-set');
+      sel.innerHTML = '';
+      for (var s of eraFunds) {
+        var opt = document.createElement('option');
+        opt.value = s.value;
+        opt.textContent = s.label;
+        if (s.value === activeFundSet) opt.selected = true;
+        sel.appendChild(opt);
+      }
+
+      // Fetch (with cache bust on era/fund-set change)
+      var newKey = currentConfig.era + ':' + activeFundSet;
+      if (!activeData || activeDataKey !== newKey) {
+        var resp = await fetch('/api/active-passive-data?era=' + currentConfig.era + '&fund_set=' + activeFundSet);
+        if (!resp.ok) throw new Error('API returned ' + resp.status);
+        var fetched = await resp.json();
+        if (fetched.error) throw new Error(fetched.error);
+        activeData    = fetched;
+        activeDataKey = newKey;
+      }
+      var d = activeData;
+
+      // Clamp window to intersection length
+      var maxForEra = Math.min(MAX_WINDOW_MONTHS, Math.floor(d.dates.length / 12) * 12);
+      currentWindowMonths = Math.min(requestedWindowMonths, maxForEra);
+      var winSlider = document.getElementById('window-length');
+      var winVal    = document.getElementById('window-length-val');
+      winSlider.max   = maxForEra;
+      winSlider.value = currentWindowMonths;
+
+      currentAllDates = d.dates;
+      scenarioNAll    = d.dates.length;
+
+      var inputs   = getActiveComputeInputs();
+      var pt = inputs.passiveTickers, at = inputs.activeTickers;
+      var weights  = computeWeights(currentConfig.stockPct, at, currentConfig.domesticPct / 100);
+      var weightsP = computeWeights(currentConfig.stockPct, pt, currentConfig.domesticPct / 100);
+
+      // Bounds
+      var newBounds = computeFixedAnyDeltaBounds(d.dates,
+        inputs.activeReturns,  at, weights,  currentConfig.rebalance,
+        inputs.passiveReturns, pt, weightsP, currentConfig.rebalance,
+        currentWindowMonths, inputs.afterTax);
+      if (axesLocked && deltaFixedBounds) {
+        deltaFixedBounds.zMin = newBounds.zMin;
+        deltaFixedBounds.zMax = newBounds.zMax;
+      } else {
+        deltaFixedBounds = newBounds;
+      }
+
+      // Compute deltas
+      currentDeltas = computeAnyDeltaWindows(d.dates,
+        inputs.activeReturns,  at, weights,  currentConfig.rebalance,
+        inputs.passiveReturns, pt, weightsP, currentConfig.rebalance,
+        currentWindowMonths, inputs.afterTax);
+      currentWinDates = [];
+      for (var i = 0; i <= d.dates.length - currentWindowMonths; i++) {
+        currentWinDates.push({ startDate: d.dates[i], endDate: d.dates[i + currentWindowMonths - 1] });
+      }
+      if (!currentDeltas || currentDeltas.length === 0)
+        throw new Error('Not enough data for ' + currentWindowMonths + '-month windows');
+
+      // Restore scrub
+      var j = heldEndDate ? currentWinDates.findIndex(w => w.endDate === heldEndDate) : -1;
+      scrubIdx = j >= 0 ? j : 0;
+      var timeScrub = document.getElementById('time-scrub');
+      timeScrub.max   = currentDeltas.length - 1;
+      timeScrub.value = scrubIdx;
+
+      // Config bar
+      document.getElementById('tickers-display').textContent =
+        formatWeights(currentConfig.stockPct, at, currentConfig.domesticPct / 100);
+      document.getElementById('config-bar').innerHTML =
+        '<span>Era: <code>' + d.era_label + '</code></span>' +
+        '<span>Active: <code>' + at.join(' / ') + '</code></span>' +
+        '<span>Passive: <code>' + pt.join(' / ') + '</code></span>' +
+        '<span>Allocation: <code>' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) + '</code></span>' +
+        '<span>Costs: <code>' + feeMode.replace(/_/g, ' ') + '</code></span>' +
+        '<span>Window: <code id="config-window">' + formatWindowLength(currentWindowMonths) + '</code></span>' +
+        '<span>Data: <code>' + ym(d.dates[0]) + ' \u2013 ' + ym(d.dates[scenarioNAll - 1]) + '</code></span>';
+
+      winVal.textContent = formatWindowLength(currentWindowMonths) + ' \u00b7 ' + currentDeltas.length + ' windows';
+      updateSubtitleFraming(true);
+      document.getElementById('window-years').textContent = formatWindowLength(currentWindowMonths);
+
+      loadEl.style.display   = 'none';
+      chartsEl.style.display = 'block';
+      document.getElementById('ctrl-panel').style.display = 'block';
+
+      renderCharts(currentDeltas, currentWinDates, deltaFixedBounds, scenarioNAll);
+      updateScrub(scrubIdx);
+      renderDebug();
+    }
+
+  } catch (err) {
+    loadEl.style.display = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Error: ' + err.message;
+    console.error('Delta loadAndRender failed:', err);
+  }
+}
+
+
+// ── Window-length recompute (no refetch) ──────────────────────────────────
+
+function recomputeDelta(newL) {
+  requestedWindowMonths = newL;
+  currentWindowMonths   = newL;
+
+  var heldEndDate = currentWinDates && currentWinDates[scrubIdx]
+    ? currentWinDates[scrubIdx].endDate : null;
+
+  if (comparisonMode === 'rebalancing') {
+    if (!rawData || currentConfig.rebalance === 'never') return;
+    var { dates, returns, tickers } = rawData;
+    var weights = computeWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+    if (!axesLocked) {
+      var newBounds = computeFixedDeltaBounds(dates, returns, tickers, weights, currentConfig.rebalance, newL);
+      if (newBounds) deltaFixedBounds = newBounds;
+    }
+    currentDeltas = computeDeltaWindows(dates, returns, tickers, weights, currentConfig.rebalance, newL);
+    currentWinDates = [];
+    for (var i = 0; i <= dates.length - newL; i++) {
+      currentWinDates.push({ startDate: dates[i], endDate: dates[i + newL - 1] });
+    }
+  } else {
+    // Active vs passive
+    if (!activeData) return;
+    var d = activeData;
+    var inputs   = getActiveComputeInputs();
+    var pt = inputs.passiveTickers, at = inputs.activeTickers;
+    var weights  = computeWeights(currentConfig.stockPct, at, currentConfig.domesticPct / 100);
+    var weightsP = computeWeights(currentConfig.stockPct, pt, currentConfig.domesticPct / 100);
+    if (!axesLocked) {
+      var newBounds = computeFixedAnyDeltaBounds(d.dates,
+        inputs.activeReturns,  at, weights,  currentConfig.rebalance,
+        inputs.passiveReturns, pt, weightsP, currentConfig.rebalance,
+        newL, inputs.afterTax);
+      if (newBounds) deltaFixedBounds = newBounds;
+    }
+    currentDeltas = computeAnyDeltaWindows(d.dates,
+      inputs.activeReturns,  at, weights,  currentConfig.rebalance,
+      inputs.passiveReturns, pt, weightsP, currentConfig.rebalance,
+      newL, inputs.afterTax);
+    currentWinDates = [];
+    for (var i = 0; i <= d.dates.length - newL; i++) {
+      currentWinDates.push({ startDate: d.dates[i], endDate: d.dates[i + newL - 1] });
+    }
+  }
+
+  if (!currentDeltas || currentDeltas.length === 0) return;
+
+  var j = heldEndDate ? currentWinDates.findIndex(w => w.endDate === heldEndDate) : -1;
+  scrubIdx = j >= 0 ? j : 0;
+
+  var timeScrub = document.getElementById('time-scrub');
+  timeScrub.max   = currentDeltas.length - 1;
+  timeScrub.value = scrubIdx;
+
+  var winVal = document.getElementById('window-length-val');
+  winVal.textContent = formatWindowLength(newL) + ' \u00b7 ' + currentDeltas.length + ' windows';
+  document.getElementById('window-years').textContent = formatWindowLength(newL);
+  var cwEl = document.getElementById('config-window');
+  if (cwEl) cwEl.textContent = formatWindowLength(newL);
+
+  updateCharts(currentDeltas, currentWinDates, deltaFixedBounds, scenarioNAll);
+  updateScrub(scrubIdx);
+  renderDebug();
+}
+
+
+// ── Debug / cross-check ───────────────────────────────────────────────────
+
+function renderDebug() {
+  if (!currentDeltas) return;
+  var sign = function(v) { return (v >= 0 ? '+' : '') + v.toFixed(3) + ' pp'; };
+
+  var first = currentDeltas[0], last = currentDeltas[currentDeltas.length - 1];
+  var fDate = currentWinDates[0], lDate = currentWinDates[currentWinDates.length - 1];
+  var dGainRange = currentDeltas.reduce(
+    function(a, x) { return [Math.min(a[0], x.dGain), Math.max(a[1], x.dGain)]; },
+    [Infinity, -Infinity]);
+  var dVolRange = currentDeltas.reduce(
+    function(a, x) { return [Math.min(a[0], x.dVol), Math.max(a[1], x.dVol)]; },
+    [Infinity, -Infinity]);
+
+  var html;
+
+  if (comparisonMode === 'active') {
+    if (!activeData) return;
+    var d = activeData;
+    var inputs   = getActiveComputeInputs();
+    var pt = inputs.passiveTickers, at = inputs.activeTickers;
+    var weights  = computeWeights(currentConfig.stockPct, at, currentConfig.domesticPct / 100);
+    var weightsP = computeWeights(currentConfig.stockPct, pt, currentConfig.domesticPct / 100);
+
+    var fullLen    = d.dates.length;
+    var fullDeltas = computeAnyDeltaWindows(d.dates,
+      inputs.activeReturns,  at, weights,  currentConfig.rebalance,
+      inputs.passiveReturns, pt, weightsP, currentConfig.rebalance,
+      fullLen, inputs.afterTax);
+    var fd = fullDeltas ? fullDeltas[0] : null;
+
+    html =
+      '<h3>Cross-check &amp; diagnostics (Active vs Passive)</h3>' +
+      '<table class="debug-table">' +
+      '<tr><td class="label">Era</td><td>' + d.era_label + '</td></tr>' +
+      '<tr><td class="label">Active</td><td>' + at.join(' / ') + '</td></tr>' +
+      '<tr><td class="label">Passive</td><td>' + pt.join(' / ') + '</td></tr>' +
+      '<tr><td class="label">Costs</td><td>' + feeMode + '</td></tr>' +
+      '<tr><td class="label">Allocation</td><td>' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) + ', rebal ' + currentConfig.rebalance + '</td></tr>' +
+      '<tr><td class="label">Window</td><td>' + currentWindowMonths + ' mo (' + formatWindowLength(currentWindowMonths) + '), ' + currentDeltas.length + ' windows</td></tr>' +
+      '</table>' +
+      '<table class="debug-table" style="margin-top:12px">' +
+      '<tr><td></td><td class="label">Period</td><td class="label">\u0394 CAGR</td><td class="label">\u0394 Vol</td></tr>' +
+      '<tr><td class="label">First window</td><td>' + ym(fDate.startDate) + '\u2013' + ym(fDate.endDate) + '</td>' +
+      '<td>' + sign(first.dGain) + '</td><td>' + sign(first.dVol) + '</td></tr>' +
+      '<tr><td class="label">Last window</td><td>' + ym(lDate.startDate) + '\u2013' + ym(lDate.endDate) + '</td>' +
+      '<td>' + sign(last.dGain) + '</td><td>' + sign(last.dVol) + '</td></tr>' +
+      (fd ? '<tr><td class="label">Full period</td><td>' + ym(d.dates[0]) + '\u2013' + ym(d.dates[fullLen-1]) + '</td>' +
+      '<td>' + sign(fd.dGain) + '</td><td>' + sign(fd.dVol) + '</td></tr>' : '') +
+      '</table>' +
+      '<table class="debug-table" style="margin-top:12px">' +
+      '<tr><td class="label">\u0394 CAGR range</td><td>' + sign(dGainRange[0]) + ' \u2013 ' + sign(dGainRange[1]) + '</td></tr>' +
+      '<tr><td class="label">\u0394 Vol range</td><td>'  + sign(dVolRange[0])  + ' \u2013 ' + sign(dVolRange[1])  + '</td></tr>' +
+      '</table>' +
+      '<p class="debug-note">' +
+      '<strong>Cross-check:</strong> At <strong>Net of fees</strong>, the full-period \u0394 CAGR can be verified ' +
+      'against the <a href="/" target="_blank">Comparing Strategies</a> page (AUM fee\u00a0=\u00a00%, ' +
+      'taxable\u00a0=\u00a0No, matched allocation) as <em>(active CAGR \u2212 index CAGR)</em>. ' +
+      'At <strong>Net of fees + tax</strong>, results differ slightly from the dashboard because this page ' +
+      'uses end-of-window LTCG; the dashboard applies per-rebalancing LTCG.' +
+      '</p>';
+
+  } else {
+    // Rebalancing mode
+    if (!rawData || currentConfig.rebalance === 'never') return;
+    var { dates, returns, tickers } = rawData;
+    var weights = computeWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+
+    var fullLen    = dates.length;
+    var fullDeltas = computeDeltaWindows(dates, returns, tickers, weights, currentConfig.rebalance, fullLen);
+    var fd = fullDeltas ? fullDeltas[0] : null;
+
+    html =
+      '<h3>Cross-check &amp; diagnostics</h3>' +
+      '<table class="debug-table">' +
+      '<tr><td class="label">Era</td><td>' + rawData.label + '</td></tr>' +
+      '<tr><td class="label">Tickers</td><td>' + tickers.join(' / ') + '</td></tr>' +
+      '<tr><td class="label">Allocation</td><td>' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) + ', rebal ' + currentConfig.rebalance + '</td></tr>' +
+      '<tr><td class="label">Window</td><td>' + currentWindowMonths + ' mo (' + formatWindowLength(currentWindowMonths) + '), ' + currentDeltas.length + ' windows</td></tr>' +
+      '</table>' +
+      '<table class="debug-table" style="margin-top:12px">' +
+      '<tr><td></td><td class="label">Period</td><td class="label">\u0394 CAGR</td><td class="label">\u0394 Vol</td></tr>' +
+      '<tr><td class="label">First window</td><td>' + ym(fDate.startDate) + '\u2013' + ym(fDate.endDate) + '</td>' +
+      '<td>' + sign(first.dGain) + '</td><td>' + sign(first.dVol) + '</td></tr>' +
+      '<tr><td class="label">Last window</td><td>' + ym(lDate.startDate) + '\u2013' + ym(lDate.endDate) + '</td>' +
+      '<td>' + sign(last.dGain) + '</td><td>' + sign(last.dVol) + '</td></tr>' +
+      (fd ? '<tr><td class="label">Full period</td><td>' + ym(dates[0]) + '\u2013' + ym(dates[fullLen-1]) + '</td>' +
+      '<td>' + sign(fd.dGain) + '</td><td>' + sign(fd.dVol) + '</td></tr>' : '') +
+      '</table>' +
+      '<table class="debug-table" style="margin-top:12px">' +
+      '<tr><td class="label">\u0394 CAGR range</td><td>' + sign(dGainRange[0]) + ' \u2013 ' + sign(dGainRange[1]) + '</td></tr>' +
+      '<tr><td class="label">\u0394 Vol range</td><td>'  + sign(dVolRange[0])  + ' \u2013 ' + sign(dVolRange[1])  + '</td></tr>' +
+      '</table>' +
+      '<p class="debug-note">' +
+      '<strong>Cross-check:</strong> The <em>Full period</em> row above (\u0394 CAGR for the full data range) ' +
+      'should match the <a href="/rebalancing" target="_blank">Rebalancing Impact</a> page for the same ' +
+      rawData.label + ' era, ' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) + ' allocation, ' +
+      currentConfig.rebalance + ' rebalancing. Note: both legs start at window entry with target weights; ' +
+      'the rebalancing clock resets at window start, which may produce a small discrepancy vs. full-series values.' +
+      '</p>';
+  }
+
+  document.getElementById('debug-section').innerHTML = html;
+}
+
+
+// ── Initialization ────────────────────────────────────────────────────────
+
+async function init() {
+
+  document.getElementById('era-select').addEventListener('change', async function () {
+    currentConfig.era = this.value;
+    await loadAndRender();
+  });
+
+  document.getElementById('stock-pct').addEventListener('input', debounce(async function () {
+    currentConfig.stockPct = +this.value;
+    document.getElementById('stock-pct-val').textContent = this.value + '%';
+    if (rawData) document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, rawData.tickers, currentConfig.domesticPct / 100);
+    await loadAndRender();
+  }, 150));
+
+  document.getElementById('domestic-pct').addEventListener('input', debounce(async function () {
+    currentConfig.domesticPct = +this.value;
+    document.getElementById('domestic-pct-val').textContent = this.value + '%';
+    if (rawData) document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, rawData.tickers, currentConfig.domesticPct / 100);
+    await loadAndRender();
+  }, 150));
+
+  document.getElementById('rebalance-select').addEventListener('change', async function () {
+    currentConfig.rebalance = this.value;
+    await loadAndRender();
+  });
+
+  var winSlider = document.getElementById('window-length');
+  var winVal    = document.getElementById('window-length-val');
+  var winDebounce = null;
+  winSlider.addEventListener('input', function () {
+    var newL = Number(this.value);
+    winVal.textContent = formatWindowLength(newL) + ' \u00b7 \u2026';
+    clearTimeout(winDebounce);
+    winDebounce = setTimeout(function () { recomputeDelta(newL); }, 80);
+  });
+
+  var timeScrub = document.getElementById('time-scrub');
+  var scrubQueued = false;
+  timeScrub.addEventListener('input', function () {
+    var j = Number(this.value);
+    if (!scrubQueued) {
+      scrubQueued = true;
+      requestAnimationFrame(function () { scrubQueued = false; updateScrub(j); });
+    }
+  });
+
+  document.getElementById('axes-auto').addEventListener('click', async function () {
+    axesLocked = false;
+    document.getElementById('axes-auto').classList.add('active');
+    document.getElementById('axes-lock').classList.remove('active');
+    await loadAndRender();
+  });
+  document.getElementById('axes-lock').addEventListener('click', function () {
+    axesLocked = true;
+    document.getElementById('axes-lock').classList.add('active');
+    document.getElementById('axes-auto').classList.remove('active');
+  });
+
+  // ── Comparison toggle ────────────────────────────────────────────────
+  document.querySelectorAll('[data-compare]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      comparisonMode = this.dataset.compare;
+      document.querySelectorAll('[data-compare]').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+      });
+      await loadAndRender();
+    });
+  });
+
+  // ── Active fund set ──────────────────────────────────────────────────
+  document.getElementById('active-fund-set').addEventListener('change', async function() {
+    activeFundSet = this.value;
+    activeDataKey = null;  // invalidate cache so next load refetches
+    await loadAndRender();
+  });
+
+  // ── Fee / tax mode ───────────────────────────────────────────────────
+  document.querySelectorAll('[data-fee]').forEach(function(btn) {
+    btn.addEventListener('click', async function() {
+      feeMode = this.dataset.fee;
+      document.querySelectorAll('[data-fee]').forEach(function(b) {
+        b.classList.toggle('active', b === btn);
+      });
+      await loadAndRender();
+    });
+  });
+
+  await loadAndRender();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

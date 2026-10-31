@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Rolling-Window 3D Explorer</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+  <style>
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 50px 24px 80px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin-bottom: 6px; }
+    .subtitle { color: var(--color-text-dim); font-size: 0.9rem; margin-bottom: 24px; }
+    .chart-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 8px 4px;
+      margin-bottom: 20px;
+    }
+    .config-bar {
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+      margin-bottom: 20px; font-size: 0.85rem; color: var(--color-text-dim);
+    }
+    .config-bar span { white-space: nowrap; }
+    .config-bar code {
+      color: var(--color-primary); background: var(--color-surface);
+      padding: 1px 6px; border-radius: 3px;
+    }
+    #loading { text-align: center; padding: 60px 0; color: var(--color-text-dim); font-size: 1.1rem; }
+    #error { display: none; text-align: center; padding: 40px 0; color: var(--color-negative); }
+    /* ── Control sections ─────────────────────────────────────────── */
+    .ctrl-section {
+      display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+      margin-bottom: 10px; font-size: 0.82rem; color: var(--color-text-dim);
+    }
+    .ctrl-section label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .ctrl-section input[type="range"] { width: 110px; accent-color: #7dd4e8; }
+    .slider-val { color: var(--color-primary); min-width: 2ch; text-align: right; }
+    .ctrl-sep { height: 1px; background: rgba(100,210,230,0.12); margin: 2px 0 10px; }
+    .section-label {
+      font-size: 0.72rem; color: var(--color-text-dim); opacity: 0.45;
+      text-transform: uppercase; letter-spacing: 0.06em; min-width: 42px;
+    }
+    .ctrl-na { opacity: 0.28; pointer-events: none; }
+    #proj-controls { display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center; }
+    /* ── Buttons & checks ─────────────────────────────────────────── */
+    .control-group { display: flex; align-items: center; gap: 5px; }
+    .control-label { margin-right: 2px; }
+    .ctrl-btn {
+      background: var(--color-surface); color: rgba(125,212,232,0.6);
+      border: 1px solid rgba(100,210,230,0.15); border-radius: 4px;
+      padding: 3px 10px; font-size: 0.8rem; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s;
+      font-family: inherit;
+    }
+    .ctrl-btn:hover { color: #c8f0f8; border-color: rgba(100,210,230,0.3); }
+    .ctrl-btn.active { color: #7dd4e8; border-color: #7dd4e8; background: rgba(100,210,230,0.08); }
+    .ctrl-check { display: flex; align-items: center; gap: 5px; cursor: pointer; white-space: nowrap; }
+    .ctrl-check input { accent-color: #7dd4e8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Rolling-Window 3D Explorer</h1>
+    <p class="subtitle">
+      The same windows from the 2D view, lifted into 3D with end date as the z-axis.
+      Drag to rotate. Does the jitter resolve into a legible strand?
+    </p>
+
+    <div class="config-bar" id="config-bar"></div>
+    <div id="loading">Loading data&hellip;</div>
+    <div id="error"></div>
+
+    <div id="charts" style="display:none">
+
+      <!-- ── SCENARIO ──────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Scenario</span>
+        <label>Era:
+          <select id="era-select">
+            <option value="pre_etf">Pre-ETF (1987–)</option>
+            <option value="etf">ETF (2011–)</option>
+          </select>
+        </label>
+        <label>Stocks:
+          <input type="range" id="stock-pct" min="0" max="100" step="10" value="80" style="width:110px"/>
+          <span class="slider-val" id="stock-pct-val">80%</span>
+        </label>
+        <label>Domestic:
+          <input type="range" id="domestic-pct" min="0" max="100" step="5" value="80" style="width:90px"/>
+          <span class="slider-val" id="domestic-pct-val">80%</span>
+        </label>
+        <span id="tickers-display" style="color:var(--color-text-dim);font-size:0.78rem;opacity:0.55"></span>
+        <label>Rebalance:
+          <select id="rebalance-select">
+            <option value="annually">Annually</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="never">Never</option>
+          </select>
+        </label>
+        <label>Window:
+          <input type="range" id="window-length" min="12" max="240" step="12" value="60" style="width:160px"/>
+          <span class="slider-val" id="window-length-val" style="min-width:18ch;text-align:left">&mdash;</span>
+        </label>
+        <div class="control-group">
+          <span class="control-label">Axes:</span>
+          <button class="ctrl-btn active" id="axes-auto">Auto</button>
+          <button class="ctrl-btn" id="axes-lock">Lock</button>
+        </div>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── SCRUB ──────────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Scrub</span>
+        <label class="ctrl-check"><input type="checkbox" id="show-scrub" checked> Show</label>
+        <label>Position:
+          <input type="range" id="time-scrub" min="0" max="100" step="1" value="0" style="width:300px" />
+          <span class="slider-val" id="time-scrub-val" style="min-width:36ch;text-align:left">&mdash;</span>
+        </label>
+        <label id="scrub-width-label">Line weight:
+          <input type="range" id="scrub-width" min="4" max="10" step="0.5" value="8" />
+          <span class="slider-val" id="scrub-width-val">8</span>
+        </label>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── STRAND ────────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Strand</span>
+        <div class="control-group">
+          <button class="ctrl-btn active" data-strand="lines+markers">Line+Dots</button>
+          <button class="ctrl-btn" data-strand="lines">Line</button>
+          <button class="ctrl-btn" data-strand="markers">Dots</button>
+          <button class="ctrl-btn" data-strand="none">Off</button>
+        </div>
+        <div class="control-group" id="strand-color-group">
+          <span class="control-label">Color:</span>
+          <button class="ctrl-btn active" data-color="date">End date</button>
+          <button class="ctrl-btn" data-color="quality">Risk-return</button>
+        </div>
+        <label id="dot-size-label">Dot size:
+          <input type="range" id="dot-size" min="1.5" max="8" step="0.5" value="3" />
+          <span class="slider-val" id="dot-size-val">3</span>
+        </label>
+        <label id="dot-opacity-label">Dot opacity:
+          <input type="range" id="dot-opacity" min="0.05" max="1" step="0.05" value="0.8" />
+          <span class="slider-val" id="dot-opacity-val">0.8</span>
+        </label>
+        <label id="line-weight-label">Line weight:
+          <input type="range" id="line-weight" min="0" max="6" step="0.5" value="2" />
+          <span class="slider-val" id="line-weight-val">2</span>
+        </label>
+        <label class="ctrl-check"><input type="checkbox" id="show-plane" checked> Ref. plane</label>
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── PROJ ──────────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">Proj</span>
+        <div class="control-group">
+          <button class="ctrl-btn active" data-proj="lines">Line</button>
+          <button class="ctrl-btn" data-proj="lines+markers">Line+Dots</button>
+          <button class="ctrl-btn" data-proj="markers">Dots</button>
+          <button class="ctrl-btn" data-proj="none">Off</button>
+        </div>
+        <span id="proj-controls">
+        <label class="ctrl-check"><input type="checkbox" id="show-proj-floor" checked> Floor</label>
+        <label class="ctrl-check"><input type="checkbox" id="show-proj-back" checked> Back wall</label>
+        <label class="ctrl-check"><input type="checkbox" id="show-proj-side" checked> Side wall</label>
+        <label>Opacity:
+          <input type="range" id="proj-opacity" min="0.05" max="1" step="0.05" value="0.25" />
+          <span class="slider-val" id="proj-opacity-val">0.25</span>
+        </label>
+        <label id="proj-width-label">Width:
+          <input type="range" id="proj-width" min="0.5" max="6" step="0.5" value="1.5" />
+          <span class="slider-val" id="proj-width-val">1.5</span>
+        </label>
+        <label id="proj-dot-size-label">Dot size:
+          <input type="range" id="proj-dot-size" min="1" max="6" step="0.5" value="2" />
+          <span class="slider-val" id="proj-dot-size-val">2</span>
+        </label>
+        </span><!-- end #proj-controls -->
+      </div>
+
+      <div class="ctrl-sep"></div>
+
+      <!-- ── VIEW ──────────────────────────────────────────────────── -->
+      <div class="ctrl-section">
+        <span class="section-label">View</span>
+        <div class="control-group">
+          <button class="ctrl-btn" data-view="home">Home</button>
+          <button class="ctrl-btn" data-view="top">&darr; Time</button>
+          <button class="ctrl-btn" data-view="cagr">CAGR</button>
+          <button class="ctrl-btn" data-view="vol">Vol</button>
+        </div>
+        <div class="control-group">
+          <span class="control-label">Preset:</span>
+          <button class="ctrl-btn" data-preset="default">Default</button>
+          <button class="ctrl-btn" data-preset="proj-lines">Proj lines</button>
+          <button class="ctrl-btn" data-preset="proj-dots">Proj dots</button>
+        </div>
+      </div>
+
+      <div class="chart-box">
+        <div id="scatter3d"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/nav.js"></script>
+  <script src="/static/rw-shared.js"></script>
+  <script>
+/* ==========================================================================
+   Rolling-Window 3D Explorer
+   ========================================================================== */
+
+// ── 3D-specific constants ──────────────────────────────────────────────────
+const PLANE_COLORSCALE = [
+  [0,   'rgb(180,55,55)'],
+  [0.5, 'rgb(120,120,65)'],
+  [1,   'rgb(55,160,70)'],
+];
+
+const CAMERAS = {
+  home: { eye: { x: 2.6,   y: 2.6,  z: 1.1  }, up: { x: 0, y: 0, z: 1 } },
+  top:  { eye: { x: 0.01,  y: 0.7,  z: 3.2  }, up: { x: 0, y: 1, z: 0 } },
+  cagr: { eye: { x: -2.5,  y: 0.7,  z: 0.01 }, up: { x: 0, y: 1, z: 0 } },
+  vol:  { eye: { x: 0.7,   y: 2.5,  z: 0.01 }, up: { x: 1, y: 0, z: 0 } },
+};
+
+
+// ── Module-level mutable scenario state ────────────────────────────────────
+var rawData            = null;   // { dates, returns, tickers, label } from API
+var portfolioData      = null;   // { dates, values, monthlyReturns }
+var scenarioFixedBounds = null;
+var scenarioNAll       = 0;
+var requestedWindowMonths = RW_DEFAULTS.windowMonths;  // user's intent
+var currentWindowMonths   = RW_DEFAULTS.windowMonths;  // effective (clamped to era)
+var currentConfig = {
+  era:         RW_DEFAULTS.era,
+  stockPct:    RW_DEFAULTS.stockPct,
+  domesticPct: RW_DEFAULTS.domesticPct,
+  rebalance: RW_DEFAULTS.rebalance,
+};
+var currentWindows = null;
+var axesLocked = false;
+
+// ── Module-level inner-controls state (shared across wireInnerControls calls)
+var curFloorZ    = null;   // projection face z-position (set by syncProjectionFaces)
+var curBackY     = null;   // projection face y-position
+var curSideX     = null;   // projection face x-position
+var projEnabled  = { floor: true, back: true, side: true };
+var strandMode3d = 'lines+markers';
+var projMode3d   = 'lines';
+var colorMode3d  = 'date';
+var scrubEnabled = true;
+var innerControlsWired = false;
+
+
+// ── 3D chart rendering ────────────────────────────────────────────────────
+
+function renderChart(windows, portfolio, nAll, fixedBounds) {
+  const vol      = windows.map(w => w.volAnnual);
+  const cagr     = windows.map(w => w.cagr);
+  const start    = windows.map(w => w.endDate);
+  const endIdx   = windows.map(w => w.startIdx + currentWindowMonths - 1);
+
+  const customdata = windows.map(w => [
+    ym(w.startDate), ym(w.endDate), w.cagr.toFixed(1), w.volAnnual.toFixed(1),
+  ]);
+
+  const quality   = computeQualityArr(windows, fixedBounds);
+  const volColor  = computeVolColorArr(windows);
+  const cagrColor = computeCagrColorArr(windows);
+
+  const { pVolMin, pVolMax, pCagrMin, pCagrMax } = fixedBounds;
+  const zFloor = fixedBounds.zMin;
+  const zCeil  = fixedBounds.zMax;
+
+  // ── Trace 0: strand ──────────────────────────────────────────────
+  const strandTrace = {
+    type: 'scatter3d', mode: 'lines+markers',
+    x: vol, y: cagr, z: start,
+    marker: {
+      size: 3, opacity: 0.8,
+      color: endIdx, colorscale: COLORSCALE, cmin: 0, cmax: nAll - 1,
+      showscale: false, line: { width: 0 },
+    },
+    line: { color: endIdx, colorscale: COLORSCALE, cmin: 0, cmax: nAll - 1, width: 2 },
+    customdata, hovertemplate:
+      '%{customdata[0]} \u2192 %{customdata[1]}<br>' +
+      'CAGR %{customdata[2]}% \u00b7 Vol %{customdata[3]}%<extra></extra>',
+    showlegend: false,
+  };
+
+  // ── Trace 1: reference plane ─────────────────────────────────────
+  const planeTrace = {
+    type: 'mesh3d',
+    x: [pVolMin, pVolMax, pVolMax, pVolMin],
+    y: [pCagrMin, pCagrMin, pCagrMax, pCagrMax],
+    z: [zFloor, zFloor, zFloor, zFloor],
+    i: [0, 0], j: [1, 2], k: [2, 3],
+    intensity: [0.5, 0, 0.5, 1],
+    colorscale: PLANE_COLORSCALE, showscale: false, opacity: 0.30,
+    hoverinfo: 'skip', lighting: { ambient: 1, diffuse: 0, specular: 0 },
+  };
+
+  // ── Traces 2-4: projections ──────────────────────────────────────
+  const PROJ_OPACITY = 0.25, PROJ_WIDTH = 1.5;
+  const n = vol.length;
+
+  function projTrace(xs, ys, zs, color) {
+    return {
+      type: 'scatter3d', mode: 'lines',
+      x: xs, y: ys, z: zs,
+      line: { colorscale: QUALITY_COLORSCALE, cmin: 0, cmax: 1, width: PROJ_WIDTH, color },
+      marker: { size: 2, opacity: 0.6, colorscale: QUALITY_COLORSCALE, cmin: 0, cmax: 1, color, line: { width: 0 } },
+      opacity: PROJ_OPACITY, hoverinfo: 'skip', showlegend: false,
+    };
+  }
+
+  const floorProj = projTrace(vol, cagr,                     new Array(n).fill(zFloor), quality);
+  const backProj  = projTrace(vol, new Array(n).fill(pCagrMin), start,                  volColor);
+  const sideProj  = projTrace(new Array(n).fill(pVolMin), cagr, start,                  cagrColor);
+
+  // ── Trace 5: scrub dot ───────────────────────────────────────────
+  const v0 = vol[0], c0 = cagr[0], s0 = start[0];
+  const highlightTrace = {
+    type: 'scatter3d', mode: 'markers',
+    x: [v0], y: [c0], z: [s0],
+    marker: { size: 8, color: 'rgba(232,192,32,0.95)', line: { color: '#ffffff', width: 1.5 } },
+    hoverinfo: 'skip', showlegend: false,
+  };
+
+  // ── Traces 6-8: scrub connectors ────────────────────────────────
+  function scrubConn(xs, ys, zs, colorVal) {
+    return {
+      type: 'scatter3d', mode: 'lines',
+      x: xs, y: ys, z: zs,
+      line: { color: [colorVal, colorVal], colorscale: QUALITY_COLORSCALE, cmin: 0, cmax: 1, width: 8 },
+      opacity: 0.6, hoverinfo: 'skip', showlegend: false,
+    };
+  }
+  const floorConn = scrubConn([v0,v0], [c0,c0],      [s0,zFloor],  quality[0]);
+  const backConn  = scrubConn([v0,v0], [c0,pCagrMin], [s0,s0],     volColor[0]);
+  const sideConn  = scrubConn([v0,pVolMin], [c0,c0],  [s0,s0],     cagrColor[0]);
+
+  // ── Trace 9: span bar ────────────────────────────────────────────
+  const spanBar = {
+    type: 'scatter3d', mode: 'lines',
+    x: [pVolMin, pVolMin], y: [pCagrMin, pCagrMin],
+    z: [windows[0].startDate, windows[0].endDate],
+    line: { color: 'rgba(180,240,255,0.7)', width: 8 },
+    opacity: 0.6, hoverinfo: 'skip', showlegend: false,
+  };
+
+  // ── Traces 10-12: projection dots ────────────────────────────────
+  function projDot(x, y, z) {
+    return {
+      type: 'scatter3d', mode: 'markers',
+      x: [x], y: [y], z: [z],
+      marker: { size: 5, color: 'rgba(232,192,32,0.65)', line: { color: 'rgba(255,255,255,0.35)', width: 1 } },
+      hoverinfo: 'skip', showlegend: false,
+    };
+  }
+  const floorDot = projDot(v0, c0, zFloor);
+  const backDot  = projDot(v0, pCagrMin, s0);
+  const sideDot  = projDot(pVolMin, c0, s0);
+
+  Plotly.newPlot('scatter3d',
+    [strandTrace, planeTrace, floorProj, backProj, sideProj, highlightTrace,
+     floorConn, backConn, sideConn, spanBar, floorDot, backDot, sideDot],
+    {
+      paper_bgcolor: 'rgba(0,0,0,0)',
+      font: { color: '#e4f6fb', family: 'system-ui, -apple-system, sans-serif', size: 12 },
+      margin: { t: 24, r: 8, b: 8, l: 8 },
+      hoverlabel: {
+        bgcolor: '#003a50', bordercolor: 'rgba(100,210,230,0.3)',
+        font: { color: '#e4f6fb', size: 12 },
+      },
+      scene: {
+        aspectmode: 'manual', aspectratio: { x: 1, y: 1, z: 2.2 },
+        camera: { eye: { ...CAMERAS.home.eye }, up: { ...CAMERAS.home.up } },
+        xaxis: {
+          title: { text: 'Volatility (%)', font: { size: 12 } },
+          range: [fixedBounds.volMin, fixedBounds.volMax],
+          gridcolor: 'rgba(100,210,230,0.10)', backgroundcolor: '#001e2a',
+          showbackground: true, tickfont: { size: 10 }, showspikes: false,
+        },
+        yaxis: {
+          title: { text: 'CAGR (%)', font: { size: 12 } },
+          range: [fixedBounds.cagrMin, fixedBounds.cagrMax],
+          gridcolor: 'rgba(100,210,230,0.10)', backgroundcolor: '#001e2a',
+          showbackground: true, tickfont: { size: 10 }, showspikes: false,
+        },
+        zaxis: {
+          title: { text: 'Window End', font: { size: 12 } },
+          range: [fixedBounds.zMin, fixedBounds.zMax],
+          gridcolor: 'rgba(100,210,230,0.10)', backgroundcolor: '#001e2a',
+          showbackground: true, tickfont: { size: 10 }, showspikes: false,
+        },
+      },
+      height: 700,
+    },
+    { responsive: true, displayModeBar: true, modeBarButtonsToRemove: ['toImage', 'sendDataToCloud'] }
+  );
+}
+
+
+// ── Camera animation ──────────────────────────────────────────────────────
+
+function getCurrentCamera() {
+  const div = document.getElementById('scatter3d');
+  const cam = (div.layout.scene && div.layout.scene.camera) || {};
+  return {
+    eye: cam.eye ? { ...cam.eye } : { ...CAMERAS.home.eye },
+    up:  cam.up  ? { ...cam.up }  : { ...CAMERAS.home.up },
+  };
+}
+
+function animateCamera(target, duration, onDone) {
+  const div = document.getElementById('scatter3d');
+  const from = getCurrentCamera();
+  const t0 = performance.now();
+  function ease(t) { return t < 0.5 ? 2*t*t : 1 - (-2*t+2)**2/2; }
+  function lerp3(a, b, t) {
+    return { x: a.x+(b.x-a.x)*t, y: a.y+(b.y-a.y)*t, z: a.z+(b.z-a.z)*t };
+  }
+  function step(now) {
+    const t = Math.min((now - t0) / duration, 1), e = ease(t);
+    Plotly.relayout(div, {
+      'scene.camera.eye': lerp3(from.eye, target.eye, e),
+      'scene.camera.up':  lerp3(from.up,  target.up,  e),
+    });
+    if (t < 1) requestAnimationFrame(step); else if (onDone) onDone();
+  }
+  requestAnimationFrame(step);
+}
+
+
+// ── Load and re-render (scenario change: era / stockPct / rebalance) ───────
+
+async function loadAndRender() {
+  const plotDiv  = document.getElementById('scatter3d');
+  const loadEl   = document.getElementById('loading');
+  const chartsEl = document.getElementById('charts');
+
+  var isFirstLoad = !currentWindows;
+  var isEraChange = !rawData || rawData._era !== currentConfig.era;
+
+  // Show loading state without hiding charts if already rendered
+  if (!rawData) {
+    loadEl.style.display  = 'block';
+    chartsEl.style.display = 'none';
+  }
+
+  try {
+    // Fetch new data if era changed (or first load)
+    if (isEraChange) {
+      const resp = await fetch('/api/rolling-window-data?era=' + currentConfig.era);
+      if (!resp.ok) throw new Error('API returned ' + resp.status);
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error);
+      rawData = data;
+      rawData._era = currentConfig.era;
+    }
+
+    const { dates, returns, tickers } = rawData;
+
+    // Save scrub position before data changes
+    var timeScrub = document.getElementById('time-scrub');
+    var heldEndDate = (currentWindows && currentWindows[Number(timeScrub.value)])
+      ? currentWindows[Number(timeScrub.value)].endDate : null;
+
+    // Rebuild portfolio
+    const weights = computeWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+    portfolioData = buildPortfolioSeries(dates, returns, tickers, {
+      weights,
+      rebalance: currentConfig.rebalance,
+    });
+
+    // Compute fixedBounds per axes-lock rule
+    const newBounds = computeFixedBounds(portfolioData.dates, portfolioData.values, portfolioData.monthlyReturns);
+    if (axesLocked && scenarioFixedBounds) {
+      // Keep vol/CAGR axes; update only z-range
+      scenarioFixedBounds.zMin = newBounds.zMin;
+      scenarioFixedBounds.zMax = newBounds.zMax;
+    } else {
+      scenarioFixedBounds = newBounds;
+    }
+
+    // nAll always updates
+    scenarioNAll = dates.length;
+
+    // Clamp window length to era data
+    var maxForEra = Math.min(MAX_WINDOW_MONTHS, Math.floor(dates.length / 12) * 12);
+    currentWindowMonths = Math.min(requestedWindowMonths, maxForEra);
+
+    // Update window slider bounds and value
+    var winSlider = document.getElementById('window-length');
+    var winVal    = document.getElementById('window-length-val');
+    winSlider.max   = maxForEra;
+    winSlider.value = currentWindowMonths;
+
+    // Compute windows
+    currentWindows = computeWindows(
+      portfolioData.dates, portfolioData.values, portfolioData.monthlyReturns, currentWindowMonths
+    );
+    if (currentWindows.length === 0) throw new Error('Not enough data for ' + currentWindowMonths + '-month windows');
+
+    // Restore scrub position (era change falls back to 0; non-era preserves by endDate)
+    var j = heldEndDate ? currentWindows.findIndex(w => w.endDate === heldEndDate) : -1;
+    if (j === -1) j = isEraChange ? 0 : Math.min(Number(timeScrub.value), currentWindows.length - 1);
+    timeScrub.max   = currentWindows.length - 1;
+    timeScrub.value = j;
+    scrubReadout3d(j);
+
+    // Update tickers/weights display
+    document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, tickers, currentConfig.domesticPct / 100);
+
+    // Update config bar
+    document.getElementById('config-bar').innerHTML =
+      '<span>Era: <code>' + rawData.label + '</code></span>' +
+      '<span>Tickers: <code>' + tickers.join(' / ') + '</code></span>' +
+      '<span>Allocation: <code>' + currentConfig.stockPct + '/' + (100 - currentConfig.stockPct) +
+        ' (' + currentConfig.domesticPct + '/' + (100 - currentConfig.domesticPct) + ' dom/intl)</code></span>' +
+      '<span>Rebalancing: <code>' + currentConfig.rebalance + '</code></span>' +
+      '<span>Window: <code id="config-window">' + formatWindowLength(currentWindowMonths) + '</code></span>' +
+      '<span>Data: <code>' + ym(dates[0]) + ' \u2013 ' + ym(dates[scenarioNAll - 1]) + '</code> (' + scenarioNAll + ' mo)</span>';
+
+    winVal.textContent = formatWindowLength(currentWindowMonths) + ' \u00b7 ' + currentWindows.length + ' windows';
+
+    loadEl.style.display  = 'none';
+    chartsEl.style.display = 'block';
+
+    if (isFirstLoad || isEraChange) {
+      // Full re-render; re-attach Plotly events (newPlot clears them)
+      renderChart(currentWindows, portfolioData, scenarioNAll, scenarioFixedBounds);
+      // Reset face positions to match home camera (eye x,y,z > 0 → use mins)
+      curFloorZ = scenarioFixedBounds.zMin;
+      curBackY  = scenarioFixedBounds.pCagrMin;
+      curSideX  = scenarioFixedBounds.pVolMin;
+      wireInnerControls();
+      updateScrubTraces();
+    } else {
+      // Fast path: restyle/relayout only — preserves Plotly state (hover, camera, events)
+      var fb = scenarioFixedBounds;
+      var vol      = currentWindows.map(w => w.volAnnual);
+      var cagr     = currentWindows.map(w => w.cagr);
+      var endDates = currentWindows.map(w => w.endDate);
+      var endIdx   = currentWindows.map(w => w.startIdx + currentWindowMonths - 1);
+      var quality  = computeQualityArr(currentWindows, fb);
+      var volColor = computeVolColorArr(currentWindows);
+      var cagrColor = computeCagrColorArr(currentWindows);
+      var n = currentWindows.length;
+
+      var sColor = colorMode3d === 'quality' ? quality   : endIdx;
+      var sScale = colorMode3d === 'quality' ? QUALITY_COLORSCALE : COLORSCALE;
+      var sCmax  = colorMode3d === 'quality' ? 1 : scenarioNAll - 1;
+
+      var newCustomdata = currentWindows.map(w =>
+        [ym(w.startDate), ym(w.endDate), w.cagr.toFixed(1), w.volAnnual.toFixed(1)]
+      );
+
+      // Strand
+      Plotly.restyle(plotDiv, {
+        x: [vol], y: [cagr], z: [endDates],
+        customdata: [newCustomdata],
+        'marker.color': [sColor], 'marker.colorscale': [sScale],
+        'marker.cmin': 0, 'marker.cmax': sCmax,
+        'line.color':  [sColor], 'line.colorscale':  [sScale],
+        'line.cmin': 0, 'line.cmax': sCmax,
+      }, [0]);
+
+      // Reference plane vertices
+      Plotly.restyle(plotDiv, {
+        x: [[fb.pVolMin,  fb.pVolMax,  fb.pVolMax,  fb.pVolMin]],
+        y: [[fb.pCagrMin, fb.pCagrMin, fb.pCagrMax, fb.pCagrMax]],
+        z: [[fb.zMin,     fb.zMin,     fb.zMin,     fb.zMin]],
+      }, [1]);
+
+      // Projection faces (use module-level positions, fall back to bounds edge)
+      if (curFloorZ === null) curFloorZ = fb.zMin;
+      if (curBackY  === null) curBackY  = fb.pCagrMin;
+      if (curSideX  === null) curSideX  = fb.pVolMin;
+
+      Plotly.restyle(plotDiv, {
+        x: [vol, vol, new Array(n).fill(curSideX)],
+        y: [cagr, new Array(n).fill(curBackY), cagr],
+        z: [new Array(n).fill(curFloorZ), endDates, endDates],
+        'line.color':   [quality, volColor, cagrColor],
+        'marker.color': [quality, volColor, cagrColor],
+      }, [2, 3, 4]);
+
+      // Axis ranges
+      Plotly.relayout(plotDiv, {
+        'scene.xaxis.range': [fb.volMin, fb.volMax],
+        'scene.yaxis.range': [fb.cagrMin, fb.cagrMax],
+        'scene.zaxis.range': [fb.zMin, fb.zMax],
+      });
+
+      // Scrub dot + connectors
+      updateScrubTraces();
+    }
+
+  } catch (err) {
+    loadEl.style.display  = 'none';
+    document.getElementById('error').style.display = 'block';
+    document.getElementById('error').textContent = 'Error: ' + err.message;
+    console.error('Rolling-window 3D loadAndRender failed:', err);
+  }
+}
+
+
+// ── Recompute (window-length change only — no refetch) ─────────────────────
+
+function recompute(newL) {
+  requestedWindowMonths = newL;
+  currentWindowMonths   = newL;  // slider max is already era-limited
+
+  var newWindows = computeWindows(
+    portfolioData.dates, portfolioData.values, portfolioData.monthlyReturns, newL
+  );
+  if (newWindows.length === 0) return;
+
+  var timeScrub = document.getElementById('time-scrub');
+  var heldEndDate = currentWindows[Number(timeScrub.value)].endDate;
+
+  currentWindows = newWindows;
+
+  var vol      = newWindows.map(w => w.volAnnual);
+  var cagr     = newWindows.map(w => w.cagr);
+  var start    = newWindows.map(w => w.endDate);
+  var endIdx   = newWindows.map(w => w.startIdx + newL - 1);
+  var quality  = computeQualityArr(newWindows, scenarioFixedBounds);
+  var volColor = computeVolColorArr(newWindows);
+  var cagrColor = computeCagrColorArr(newWindows);
+  var newN = vol.length;
+
+  var plotDiv = document.getElementById('scatter3d');
+
+  var sColor = colorMode3d === 'quality' ? quality   : endIdx;
+  var sScale = colorMode3d === 'quality' ? QUALITY_COLORSCALE : COLORSCALE;
+  var sCmax  = colorMode3d === 'quality' ? 1 : scenarioNAll - 1;
+
+  var newCustomdata = newWindows.map(w =>
+    [ym(w.startDate), ym(w.endDate), w.cagr.toFixed(1), w.volAnnual.toFixed(1)]
+  );
+
+  Plotly.restyle(plotDiv, {
+    x: [vol], y: [cagr], z: [start],
+    customdata: [newCustomdata],
+    'marker.color': [sColor], 'marker.colorscale': [sScale],
+    'marker.cmin': 0, 'marker.cmax': sCmax,
+    'line.color': [sColor], 'line.colorscale': [sScale],
+    'line.cmin': 0, 'line.cmax': sCmax,
+  }, [0]);
+
+  // Use current projection face positions (module-level, updated by syncProjectionFaces)
+  if (curFloorZ === null) curFloorZ = scenarioFixedBounds.zMin;
+  if (curBackY  === null) curBackY  = scenarioFixedBounds.pCagrMin;
+  if (curSideX  === null) curSideX  = scenarioFixedBounds.pVolMin;
+
+  Plotly.restyle(plotDiv, {
+    x: [vol, vol, new Array(newN).fill(curSideX)],
+    y: [cagr, new Array(newN).fill(curBackY), cagr],
+    z: [new Array(newN).fill(curFloorZ), start, start],
+    'line.color':   [quality, volColor, cagrColor],
+    'marker.color': [quality, volColor, cagrColor],
+  }, [2, 3, 4]);
+
+  // Scrubber — preserve end date
+  timeScrub.max = newN - 1;
+  var j = newWindows.findIndex(w => w.endDate === heldEndDate);
+  if (j === -1) j = 0;
+  timeScrub.value = j;
+  scrubReadout3d(j);
+  updateScrubTraces();
+
+  // Update readouts
+  var winVal = document.getElementById('window-length-val');
+  winVal.textContent = formatWindowLength(newL) + ' \u00b7 ' + newN + ' windows';
+  var cwEl = document.getElementById('config-window');
+  if (cwEl) cwEl.textContent = formatWindowLength(newL);
+}
+
+
+// ── Inner controls ────────────────────────────────────────────────────────
+
+function updateScrubTraces() {
+  var plotDiv = document.getElementById('scatter3d');
+  var j = Number(document.getElementById('time-scrub').value);
+  var vol      = currentWindows.map(w => w.volAnnual);
+  var cagr     = currentWindows.map(w => w.cagr);
+  var start    = currentWindows.map(w => w.endDate);
+  var quality   = computeQualityArr(currentWindows, scenarioFixedBounds);
+  var volColor  = computeVolColorArr(currentWindows);
+  var cagrColor = computeCagrColorArr(currentWindows);
+  var v = vol[j], c = cagr[j], s = start[j];
+  var qc = quality[j], vc = volColor[j], cc = cagrColor[j];
+  Plotly.restyle(plotDiv, { x: [[v]], y: [[c]], z: [[s]], visible: scrubEnabled }, [5]);
+  Plotly.restyle(plotDiv, {
+    x: [[v,v],          [v,v],           [v, curSideX]],
+    y: [[c,c],          [c, curBackY],   [c,c]],
+    z: [[s, curFloorZ], [s,s],           [s,s]],
+    'line.color': [[qc,qc], [vc,vc], [cc,cc]],
+    visible: [scrubEnabled && projEnabled.floor,
+              scrubEnabled && projEnabled.back,
+              scrubEnabled && projEnabled.side],
+  }, [6, 7, 8]);
+  Plotly.restyle(plotDiv, {
+    x: [[scenarioFixedBounds.pVolMin, scenarioFixedBounds.pVolMin]],
+    y: [[scenarioFixedBounds.pCagrMin, scenarioFixedBounds.pCagrMin]],
+    z: [[currentWindows[j].startDate, currentWindows[j].endDate]],
+    visible: scrubEnabled,
+  }, [9]);
+  Plotly.restyle(plotDiv, {
+    x: [[v],        [v],        [curSideX]],
+    y: [[c],        [curBackY], [c]],
+    z: [[curFloorZ],[s],        [s]],
+    visible: [scrubEnabled && projEnabled.floor,
+              scrubEnabled && projEnabled.back,
+              scrubEnabled && projEnabled.side],
+  }, [10, 11, 12]);
+}
+
+function scrubReadout3d(j) {
+  var w = currentWindows[j];
+  var timeScrubVal = document.getElementById('time-scrub-val');
+  timeScrubVal.textContent =
+    ym(w.startDate) + ' \u2192 ' + ym(w.endDate) +
+    '  CAGR ' + w.cagr.toFixed(1) + '%  Vol ' + w.volAnnual.toFixed(1) + '%';
+}
+
+// ── Greyout helpers ───────────────────────────────────────────────────────
+
+function updateStrandGreyout() {
+  var hasDots  = strandMode3d === 'markers' || strandMode3d === 'lines+markers';
+  var hasLines = strandMode3d === 'lines'   || strandMode3d === 'lines+markers';
+  document.getElementById('dot-size-label').classList.toggle('ctrl-na', !hasDots);
+  document.getElementById('dot-opacity-label').classList.toggle('ctrl-na', !hasDots);
+  document.getElementById('line-weight-label').classList.toggle('ctrl-na', !hasLines);
+  document.getElementById('strand-color-group').classList.toggle('ctrl-na', strandMode3d === 'none');
+}
+
+function updateProjGreyout() {
+  var isOff    = projMode3d === 'none';
+  var hasDots  = projMode3d === 'markers' || projMode3d === 'lines+markers';
+  var hasLines = projMode3d === 'lines'   || projMode3d === 'lines+markers';
+  document.getElementById('proj-controls').classList.toggle('ctrl-na', isOff);
+  document.getElementById('proj-dot-size-label').classList.toggle('ctrl-na', !isOff && !hasDots);
+  document.getElementById('proj-width-label').classList.toggle('ctrl-na', !isOff && !hasLines);
+}
+
+function updateScrubGreyout() {
+  document.getElementById('scrub-width-label').classList.toggle('ctrl-na', !scrubEnabled);
+}
+
+// ── View presets ──────────────────────────────────────────────────────────
+
+function applyViewPreset(name) {
+  if (!currentWindows) return;
+  var plotDiv = document.getElementById('scatter3d');
+
+  function setSlider(id, val) {
+    document.getElementById(id).value = val;
+    document.getElementById(id + '-val').textContent = val;
+  }
+  function activateBtn(attr, val) {
+    document.querySelectorAll('[' + attr + ']').forEach(function(b) {
+      b.classList.toggle('active', b.getAttribute(attr) === String(val));
+    });
+  }
+
+  if (name === 'default') {
+    strandMode3d = 'lines+markers';
+    activateBtn('data-strand', strandMode3d);
+    Plotly.restyle(plotDiv, {
+      visible: true, mode: strandMode3d,
+      'marker.size': 3, 'marker.opacity': 0.8, 'line.width': 2,
+    }, [0]);
+    setSlider('dot-size', 3);
+    setSlider('dot-opacity', 0.8);
+    setSlider('line-weight', 2);
+
+    document.getElementById('show-plane').checked = true;
+    Plotly.restyle(plotDiv, { visible: true }, [1]);
+
+    projMode3d = 'lines';
+    activateBtn('data-proj', projMode3d);
+    projEnabled.floor = projEnabled.back = projEnabled.side = true;
+    ['show-proj-floor', 'show-proj-back', 'show-proj-side'].forEach(function(id) {
+      document.getElementById(id).checked = true;
+    });
+    Plotly.restyle(plotDiv, {
+      visible: true, mode: 'lines',
+      opacity: 0.25, 'line.width': 1.5, 'marker.size': 2,
+    }, [2, 3, 4]);
+    setSlider('proj-opacity', 0.25);
+    setSlider('proj-width', 1.5);
+    setSlider('proj-dot-size', 2);
+
+  } else if (name === 'proj-lines') {
+    strandMode3d = 'none';
+    activateBtn('data-strand', strandMode3d);
+    Plotly.restyle(plotDiv, { visible: false }, [0]);
+
+    projMode3d = 'lines';
+    activateBtn('data-proj', projMode3d);
+    Plotly.restyle(plotDiv, {
+      visible: true, mode: 'lines',
+      opacity: 0.75, 'line.width': 6,
+    }, [2, 3, 4]);
+    setSlider('proj-opacity', 0.75);
+    setSlider('proj-width', 6);
+
+  } else if (name === 'proj-dots') {
+    strandMode3d = 'none';
+    activateBtn('data-strand', strandMode3d);
+    Plotly.restyle(plotDiv, { visible: false }, [0]);
+
+    projMode3d = 'markers';
+    activateBtn('data-proj', projMode3d);
+    Plotly.restyle(plotDiv, {
+      visible: true, mode: 'markers',
+      opacity: 1, 'marker.size': 2.5,
+    }, [2, 3, 4]);
+    setSlider('proj-opacity', 1);
+    setSlider('proj-dot-size', 2.5);
+  }
+
+  updateStrandGreyout();
+  updateProjGreyout();
+}
+
+
+function wireInnerControls() {
+  // Plotly drag events are cleared by Plotly.newPlot — re-attach on every call.
+  // DOM event listeners accumulate with addEventListener, so they are guarded by
+  // innerControlsWired and added only once.  All mutable UI state is module-level.
+
+  var plotDiv  = document.getElementById('scatter3d');
+  var projIdx  = [2, 3, 4];
+  var SCRUB_TR = [5, 6, 7, 8, 9, 10, 11, 12];
+
+  function syncProjectionFaces() {
+    var cam = getCurrentCamera(), eye = cam.eye;
+    var n = currentWindows.length;
+    // Deadband around 0 prevents oscillation when eye component is near-perpendicular.
+    // No camera relayout here — writing the same camera back fires plotly_relayouting
+    // which calls hideProjections(), then plotly_relayout calls syncProjectionFaces()
+    // again, creating a feedback loop that can flip faces to the wrong side.
+    var D = 0.12;
+    if      (eye.z >  D) curFloorZ = scenarioFixedBounds.zMin;
+    else if (eye.z < -D) curFloorZ = scenarioFixedBounds.zMax;
+    Plotly.restyle(plotDiv, { z: [new Array(n).fill(curFloorZ)], visible: projEnabled.floor && projMode3d !== 'none' }, [2]);
+    Plotly.restyle(plotDiv, { z: [[curFloorZ, curFloorZ, curFloorZ, curFloorZ]] }, [1]);
+
+    if      (eye.y >  D) curBackY = scenarioFixedBounds.pCagrMin;
+    else if (eye.y < -D) curBackY = scenarioFixedBounds.pCagrMax;
+    Plotly.restyle(plotDiv, { y: [new Array(n).fill(curBackY)], visible: projEnabled.back && projMode3d !== 'none' }, [3]);
+
+    if      (eye.x >  D) curSideX = scenarioFixedBounds.pVolMin;
+    else if (eye.x < -D) curSideX = scenarioFixedBounds.pVolMax;
+    Plotly.restyle(plotDiv, { x: [new Array(n).fill(curSideX)], visible: projEnabled.side && projMode3d !== 'none' }, [4]);
+
+    updateScrubTraces();
+  }
+
+  function hideProjections() {
+    Plotly.restyle(plotDiv, { visible: false }, projIdx.concat(SCRUB_TR));
+  }
+
+  var dragging = false;
+  plotDiv.on('plotly_relayouting', function () { if (!dragging) { dragging = true; hideProjections(); } });
+  plotDiv.on('plotly_relayout',    function () { if (dragging)  { dragging = false; syncProjectionFaces(); } });
+
+  // Guard DOM listeners — addEventListener accumulates across newPlot calls
+  if (innerControlsWired) return;
+  innerControlsWired = true;
+
+  // ── Time scrubber ─────────────────────────────────────────────────
+  var timeScrub    = document.getElementById('time-scrub');
+  timeScrub.max   = currentWindows.length - 1;
+  scrubReadout3d(Number(timeScrub.value));
+
+  var scrubQueued = false;
+  timeScrub.addEventListener('input', function () {
+    scrubReadout3d(Number(this.value));
+    if (!scrubQueued) {
+      scrubQueued = true;
+      requestAnimationFrame(function () { scrubQueued = false; updateScrubTraces(); });
+    }
+  });
+
+  document.getElementById('show-scrub').addEventListener('change', function () {
+    scrubEnabled = this.checked;
+    if (this.checked && !projEnabled.floor && !projEnabled.back && !projEnabled.side) {
+      projEnabled.floor = projEnabled.back = projEnabled.side = true;
+      ['show-proj-floor','show-proj-back','show-proj-side'].forEach(function (id) {
+        document.getElementById(id).checked = true;
+      });
+      Plotly.restyle(plotDiv, { visible: true }, projIdx);
+    }
+    updateScrubTraces();
+    updateScrubGreyout();
+  });
+
+  var scrubWSlider = document.getElementById('scrub-width');
+  var scrubWVal    = document.getElementById('scrub-width-val');
+  scrubWSlider.addEventListener('input', function () {
+    scrubWVal.textContent = this.value;
+    Plotly.restyle(plotDiv, { 'line.width': Number(this.value) }, [6, 7, 8, 9]);
+  });
+
+  // ── Strand sliders ────────────────────────────────────────────────
+  function wireSlider(id, prop) {
+    var slider = document.getElementById(id), valEl = document.getElementById(id + '-val');
+    slider.addEventListener('input', function () {
+      valEl.textContent = this.value;
+      Plotly.restyle(plotDiv, { [prop]: Number(this.value) }, [0]);
+    });
+  }
+  wireSlider('dot-size',    'marker.size');
+  wireSlider('dot-opacity', 'marker.opacity');
+  wireSlider('line-weight', 'line.width');
+
+  // ── Strand mode ───────────────────────────────────────────────────
+  var strandBtns = document.querySelectorAll('[data-strand]');
+  strandBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      strandBtns.forEach(function (b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      strandMode3d = this.dataset.strand;
+      if (strandMode3d === 'none') Plotly.restyle(plotDiv, { visible: false }, [0]);
+      else Plotly.restyle(plotDiv, { visible: true, mode: strandMode3d }, [0]);
+      updateStrandGreyout();
+    });
+  });
+
+  // ── Strand color mode ─────────────────────────────────────────────
+  var colorBtns = document.querySelectorAll('[data-color]');
+  colorBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      colorBtns.forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+      colorMode3d = this.dataset.color;
+      var endIdx = currentWindows.map(w => w.startIdx + currentWindowMonths - 1);
+      var quality = computeQualityArr(currentWindows, scenarioFixedBounds);
+      if (colorMode3d === 'quality') {
+        Plotly.restyle(plotDiv, {
+          'marker.color': [quality], 'marker.colorscale': [QUALITY_COLORSCALE],
+          'marker.cmin': 0, 'marker.cmax': 1,
+          'line.color':   [quality], 'line.colorscale':   [QUALITY_COLORSCALE],
+          'line.cmin': 0, 'line.cmax': 1,
+        }, [0]);
+      } else {
+        Plotly.restyle(plotDiv, {
+          'marker.color': [endIdx], 'marker.colorscale': [COLORSCALE],
+          'marker.cmin': 0, 'marker.cmax': scenarioNAll - 1,
+          'line.color':   [endIdx], 'line.colorscale':   [COLORSCALE],
+          'line.cmin': 0, 'line.cmax': scenarioNAll - 1,
+        }, [0]);
+      }
+    });
+  });
+
+  // ── Reference plane ───────────────────────────────────────────────
+  document.getElementById('show-plane').addEventListener('change', function () {
+    Plotly.restyle(plotDiv, { visible: this.checked }, [1]);
+  });
+
+  // ── Projection mode ───────────────────────────────────────────────
+  var projBtns = document.querySelectorAll('[data-proj]');
+  projBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      projBtns.forEach(function (b) { b.classList.remove('active'); });
+      this.classList.add('active');
+      projMode3d = this.dataset.proj;
+      if (projMode3d === 'none') Plotly.restyle(plotDiv, { visible: false }, projIdx);
+      else Plotly.restyle(plotDiv, { visible: true, mode: projMode3d }, projIdx);
+      updateProjGreyout();
+    });
+  });
+
+  var projSlider = document.getElementById('proj-opacity');
+  var projVal    = document.getElementById('proj-opacity-val');
+  projSlider.addEventListener('input', function () {
+    projVal.textContent = this.value;
+    Plotly.restyle(plotDiv, { opacity: Number(this.value) }, projIdx);
+  });
+  var projWSlider = document.getElementById('proj-width');
+  var projWVal    = document.getElementById('proj-width-val');
+  projWSlider.addEventListener('input', function () {
+    projWVal.textContent = this.value;
+    Plotly.restyle(plotDiv, { 'line.width': Number(this.value) }, projIdx);
+  });
+  var projDSlider = document.getElementById('proj-dot-size');
+  var projDVal    = document.getElementById('proj-dot-size-val');
+  projDSlider.addEventListener('input', function () {
+    projDVal.textContent = this.value;
+    Plotly.restyle(plotDiv, { 'marker.size': Number(this.value) }, projIdx);
+  });
+
+  // ── Wall checkboxes ───────────────────────────────────────────────
+  document.getElementById('show-proj-floor').addEventListener('change', function () {
+    projEnabled.floor = this.checked;
+    Plotly.restyle(plotDiv, { visible: this.checked }, [2]);
+    if (scrubEnabled) Plotly.restyle(plotDiv, { visible: this.checked }, [6, 10]);
+  });
+  document.getElementById('show-proj-back').addEventListener('change', function () {
+    projEnabled.back = this.checked;
+    Plotly.restyle(plotDiv, { visible: this.checked }, [3]);
+    if (scrubEnabled) Plotly.restyle(plotDiv, { visible: this.checked }, [7, 11]);
+  });
+  document.getElementById('show-proj-side').addEventListener('change', function () {
+    projEnabled.side = this.checked;
+    Plotly.restyle(plotDiv, { visible: this.checked }, [4]);
+    if (scrubEnabled) Plotly.restyle(plotDiv, { visible: this.checked }, [8, 12]);
+  });
+
+  // ── Camera presets ────────────────────────────────────────────────
+  document.querySelectorAll('[data-view]').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var cam = CAMERAS[this.dataset.view];
+      if (!cam) return;
+      if ((this.dataset.view === 'cagr' || this.dataset.view === 'vol') &&
+          plotDiv.layout.scene.dragmode === 'turntable') {
+        Plotly.relayout(plotDiv, { 'scene.dragmode': 'orbit' });
+      }
+      hideProjections();
+      animateCamera(cam, 800, syncProjectionFaces);
+    });
+  });
+
+  // ── View presets ──────────────────────────────────────────────────
+  document.querySelectorAll('[data-preset]').forEach(function(btn) {
+    btn.addEventListener('click', function() { applyViewPreset(this.dataset.preset); });
+  });
+
+  // ── Initial grey-out ──────────────────────────────────────────────
+  updateStrandGreyout();
+  updateProjGreyout();
+  updateScrubGreyout();
+}
+
+
+// ── Initialization ────────────────────────────────────────────────────────
+
+async function init() {
+  // ── Wire scenario controls ONCE ───────────────────────────────────
+  document.getElementById('era-select').addEventListener('change', async function () {
+    currentConfig.era = this.value;
+    await loadAndRender();
+  });
+
+  document.getElementById('stock-pct').addEventListener('input', debounce(async function () {
+    currentConfig.stockPct = +this.value;
+    document.getElementById('stock-pct-val').textContent = this.value + '%';
+    if (rawData) document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, rawData.tickers, currentConfig.domesticPct / 100);
+    await loadAndRender();
+  }, 150));
+
+  document.getElementById('domestic-pct').addEventListener('input', debounce(async function () {
+    currentConfig.domesticPct = +this.value;
+    document.getElementById('domestic-pct-val').textContent = this.value + '%';
+    if (rawData) document.getElementById('tickers-display').textContent =
+      formatWeights(currentConfig.stockPct, rawData.tickers, currentConfig.domesticPct / 100);
+    await loadAndRender();
+  }, 150));
+
+  document.getElementById('rebalance-select').addEventListener('change', async function () {
+    currentConfig.rebalance = this.value;
+    await loadAndRender();
+  });
+
+  // Window-length wired to recompute — no refetch
+  var winSlider = document.getElementById('window-length');
+  var winVal    = document.getElementById('window-length-val');
+  var winDebounce = null;
+  winSlider.addEventListener('input', function () {
+    var newL = Number(this.value);
+    winVal.textContent = formatWindowLength(newL) + ' \u00b7 \u2026';
+    clearTimeout(winDebounce);
+    winDebounce = setTimeout(function () { recompute(newL); }, 80);
+  });
+
+  // ── Axes lock ────────────────────────────────────────────────────
+  document.getElementById('axes-auto').addEventListener('click', function () {
+    axesLocked = false;
+    document.getElementById('axes-auto').classList.add('active');
+    document.getElementById('axes-lock').classList.remove('active');
+  });
+  document.getElementById('axes-lock').addEventListener('click', function () {
+    axesLocked = true;
+    document.getElementById('axes-lock').classList.add('active');
+    document.getElementById('axes-auto').classList.remove('active');
+  });
+
+  // ── Initial load ──────────────────────────────────────────────────
+  await loadAndRender();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

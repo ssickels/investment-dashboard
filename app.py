@@ -87,7 +87,6 @@ ACTIVE_FUND_SETS = {
     },
 }
 
-
 # Bond funds, from the fund metadata above: the last ticker of every 3-fund set
 # plus the momentum bond universes. Everything else counts toward equity %.
 BOND_FUNDS = (
@@ -99,6 +98,12 @@ BOND_FUNDS = (
 
 def equity_funds_of(tickers):
     return [t for t in tickers if t not in BOND_FUNDS]
+
+
+PASSIVE_FUND_ERS = {
+    "VFINX": 0.14, "VWIGX": 0.44, "VBMFX": 0.15,  # pre-ETF era
+    "VTI":   0.03, "VXUS":  0.07, "BND":  0.03,    # ETF era
+}
 
 
 @app.route("/")
@@ -129,6 +134,113 @@ def rebalancing_guide():
 @app.route("/reading-charts")
 def reading_charts():
     return send_from_directory("static", "what-charts-show.html")
+
+
+@app.route("/rolling-windows")
+def rolling_windows():
+    return send_from_directory("static", "rolling-windows.html")
+
+
+@app.route("/rolling-windows-3d")
+def rolling_windows_3d():
+    return send_from_directory("static", "rolling-windows-3d.html")
+
+
+@app.route("/rolling-windows-delta")
+def rolling_windows_delta():
+    return send_from_directory("static", "rolling-windows-delta.html")
+
+
+@app.route("/rolling-windows-delta-3d")
+def rolling_windows_delta_3d():
+    return send_from_directory("static", "rolling-windows-delta-3d.html")
+
+
+@app.route("/rolling-windows-threads")
+def rolling_windows_threads():
+    return send_from_directory("static", "rolling-windows-threads.html")
+
+
+@app.route("/independent-windows")
+def independent_windows():
+    return send_from_directory("static", "independent-windows.html")
+
+
+@app.route("/api/active-passive-data")
+def active_passive_data():
+    """Return inner-joined returns for active vs passive comparison.
+    Used by the rolling-windows-delta page in active-vs-passive mode."""
+    era = request.args.get("era", "pre_etf")
+    if era not in DIY_PORTFOLIO_SETS:
+        era = "pre_etf"
+    fund_set_key = request.args.get("fund_set", "american_dodge")
+    if fund_set_key not in ACTIVE_FUND_SETS:
+        fund_set_key = "american_dodge"
+
+    passive_tickers = DIY_PORTFOLIO_SETS[era]["tickers"]
+    active_fund_set = ACTIVE_FUND_SETS[fund_set_key]
+    active_tickers = active_fund_set["tickers"]
+
+    # Inner join all 6 tickers (deduped in case of overlap)
+    all_tickers = list(dict.fromkeys(passive_tickers + active_tickers))
+    try:
+        returns_df = data_module.load_returns_for_tickers(all_tickers)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    dates = [str(d.date()) for d in returns_df.index]
+    returns = {t: [round(float(v), 8) for v in returns_df[t]] for t in all_tickers}
+
+    passive_ers = [PASSIVE_FUND_ERS.get(t, 0.0) for t in passive_tickers]
+    active_ers = active_fund_set["expense_ratios"]
+
+    era_label = DIY_PORTFOLIO_SETS[era]["label"]
+    fund_set_label = active_fund_set["label"]
+
+    available_sets = [
+        {"key": k, "label": v["label"], "description": v["description"]}
+        for k, v in ACTIVE_FUND_SETS.items()
+    ]
+
+    return jsonify({
+        "dates": dates,
+        "returns": returns,
+        "passive_tickers": passive_tickers,
+        "active_tickers": active_tickers,
+        "passive_ers": passive_ers,
+        "active_ers": active_ers,
+        "fund_set_label": fund_set_label,
+        "era_label": era_label,
+        "label": era_label + " \u00b7 " + fund_set_label,
+        "available_sets": available_sets,
+    })
+
+
+@app.route("/api/rolling-window-data")
+def rolling_window_data():
+    """Return raw monthly returns for a DIY portfolio era.
+    Used by the rolling-window risk/return explorer."""
+    era = request.args.get("era", "pre_etf")
+    if era not in DIY_PORTFOLIO_SETS:
+        era = "pre_etf"
+    portfolio = DIY_PORTFOLIO_SETS[era]
+    tickers = portfolio["tickers"]
+
+    try:
+        returns_df = data_module.load_returns_for_tickers(tickers)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+    dates = [str(d.date()) for d in returns_df.index]
+    returns = {t: [round(float(v), 8) for v in returns_df[t]] for t in tickers}
+
+    return jsonify({
+        "dates": dates,
+        "returns": returns,
+        "tickers": tickers,
+        "era": era,
+        "label": portfolio["label"],
+    })
 
 
 def _safe_float(val, default):

@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Delta vs Horizon &mdash; Thread Cloud</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <script src="https://cdn.plot.ly/plotly-2.35.0.min.js"></script>
+  <style>
+    body {
+      font-family: var(--font-sans);
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--color-text);
+      background: var(--color-bg);
+      padding: 50px 24px 80px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; margin-bottom: 6px; }
+    .subtitle { color: var(--color-text-dim); font-size: 0.9rem; margin-bottom: 8px; }
+    .framing-note {
+      font-size: 0.8rem; color: var(--color-text-dim); opacity: 0.7;
+      margin-bottom: 20px; font-style: italic;
+    }
+    .chart-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 12px 8px 4px;
+      margin-bottom: 20px;
+    }
+    .chart-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+    @media (max-width: 800px) { .chart-row { grid-template-columns: 1fr; } }
+    .config-bar {
+      display: flex; flex-wrap: wrap; gap: 16px; align-items: center;
+      margin-bottom: 20px; font-size: 0.85rem; color: var(--color-text-dim);
+    }
+    .config-bar span { white-space: nowrap; }
+    .config-bar code {
+      color: var(--color-primary); background: var(--color-surface);
+      padding: 1px 6px; border-radius: 3px;
+    }
+    #loading { text-align: center; padding: 60px 0; color: var(--color-text-dim); font-size: 1.1rem; }
+    #error   { display: none; text-align: center; padding: 40px 0; color: var(--color-negative); }
+    /* ── Control panel ─────────────────────────────────────────────── */
+    .ctrl-section {
+      display: flex; flex-wrap: wrap; gap: 8px 18px; align-items: center;
+      margin-bottom: 10px; font-size: 0.82rem; color: var(--color-text-dim);
+    }
+    .ctrl-section label { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+    .ctrl-section input[type="range"] { width: 110px; accent-color: #7dd4e8; }
+    .ctrl-section select {
+      background: var(--color-surface); color: var(--color-text);
+      border: 1px solid rgba(100,210,230,0.2); border-radius: 4px;
+      padding: 2px 6px; font-size: 0.82rem;
+    }
+    .slider-val { color: var(--color-primary); min-width: 2ch; text-align: right; }
+    .ctrl-sep { height: 1px; background: rgba(100,210,230,0.12); margin: 2px 0 10px; }
+    .section-label {
+      font-size: 0.72rem; color: var(--color-text-dim); opacity: 0.45;
+      text-transform: uppercase; letter-spacing: 0.06em; min-width: 42px;
+    }
+    .control-group { display: flex; align-items: center; gap: 5px; }
+    .control-label { margin-right: 2px; }
+    .ctrl-btn {
+      background: var(--color-surface); color: rgba(125,212,232,0.6);
+      border: 1px solid rgba(100,210,230,0.15); border-radius: 4px;
+      padding: 3px 10px; font-size: 0.8rem; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s, background 0.15s; font-family: inherit;
+    }
+    .ctrl-btn:hover { color: #c8f0f8; border-color: rgba(100,210,230,0.3); }
+    .ctrl-btn.active { color: #7dd4e8; border-color: #7dd4e8; background: rgba(100,210,230,0.08); }
+    /* ── Scrubber ──────────────────────────────────────────────────── */
+    #scrub-row {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 20px; font-size: 0.82rem; color: var(--color-text-dim);
+    }
+    #scrub-row label { white-space: nowrap; }
+    #scrub-slider { flex: 1; min-width: 200px; max-width: 500px; accent-color: #e8c020; }
+    #scrub-label { color: #e8c020; font-family: var(--font-mono); }
+    #scrub-clear {
+      background: var(--color-surface); color: rgba(125,212,232,0.6);
+      border: 1px solid rgba(100,210,230,0.15); border-radius: 4px;
+      padding: 3px 10px; font-size: 0.8rem; cursor: pointer; font-family: inherit;
+    }
+    #scrub-clear:hover { color: #c8f0f8; border-color: rgba(100,210,230,0.3); }
+    /* ── Framing notes ─────────────────────────────────────────────── */
+    .framing-details {
+      margin-bottom: 16px; border: 1px solid rgba(100,210,230,0.1);
+      border-radius: var(--radius-md); overflow: hidden;
+    }
+    .framing-details summary {
+      padding: 8px 14px; cursor: pointer; font-size: 0.82rem;
+      color: rgba(125,212,232,0.6); background: var(--color-surface);
+      list-style: none; display: flex; align-items: center; gap: 6px;
+    }
+    .framing-details summary::before { content: '▸'; transition: transform 0.2s; }
+    .framing-details[open] summary::before { transform: rotate(90deg); }
+    .framing-details summary:hover { color: #c8f0f8; }
+    .framing-details .detail-body {
+      padding: 10px 14px; font-size: 0.82rem; color: var(--color-text-dim);
+      line-height: 1.6;
+    }
+    /* ── Zoom caveat ────────────────────────────────────────────────── */
+    .zoom-caveat {
+      font-size: 0.75rem; color: rgba(125,212,232,0.38); font-style: italic;
+      margin: 0 0 4px 42px; line-height: 1.5;
+    }
+    /* ── Debug ─────────────────────────────────────────────────────── */
+    .debug-section { margin-top: 32px; border-top: 1px solid var(--color-border); padding-top: 20px; }
+    .debug-section summary {
+      font-size: 0.82rem; color: var(--color-text-dim); cursor: pointer; padding: 4px 0;
+    }
+    .debug-table { font-size: 0.8rem; font-family: var(--font-mono); margin-top: 10px; }
+    .debug-table td { padding: 3px 14px 3px 0; }
+    .debug-table .label { color: var(--color-text-dim); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Active vs Passive: Delta vs Horizon</h1>
+    <p class="subtitle">How the active-minus-passive delta changes with investment horizon</p>
+    <p class="framing-note">
+      Teal haze = all overlapping threads (one per exit date, swept across horizons).
+      Gold dots = non-overlapping independent windows &mdash; hover for window span.
+      Violet ribbon = &plusmn;1 SE keyed to n<sub>indep</sub>: widens toward long horizons as
+      independent windows collapse toward&nbsp;1.
+      Toggle &ldquo;Independent only&rdquo; to collapse the haze to the handful of truly
+      non-overlapping threads.
+      Narrow violet band = uncertainty in the <em>average</em> delta;
+      wide teal band = range a <em>single window</em> tends to land in.
+      You get one window, not the average.
+      Annualized deltas compress toward zero at long horizons (a 20-year CAGR is a 20th-root);
+      the near-zero right edge is partly the metric, not the market &mdash; and the
+      20yr point rests on a single non-overlapping window.
+    </p>
+
+    <div id="ctrl-panel">
+      <!-- Scenario -->
+      <div class="ctrl-section">
+        <span class="section-label">Scenario</span>
+        <div class="control-group">
+          <span class="control-label">Era:</span>
+          <button class="ctrl-btn active" data-era="pre_etf">Pre-ETF (1987&ndash;)</button>
+          <button class="ctrl-btn"        data-era="etf">ETF (2011&ndash;)</button>
+        </div>
+        <label>Stocks:
+          <input type="range" id="stock-pct" min="20" max="100" step="10" value="80" />
+          <span class="slider-val" id="stock-pct-val">80%</span>
+        </label>
+        <label>Domestic:
+          <input type="range" id="domestic-pct" min="0" max="100" step="5" value="80" />
+          <span class="slider-val" id="domestic-pct-val">80%</span>
+        </label>
+        <div class="control-group">
+          <span class="control-label">Rebalance:</span>
+          <button class="ctrl-btn active" data-rebal="annually">Annually</button>
+          <button class="ctrl-btn"        data-rebal="quarterly">Quarterly</button>
+          <button class="ctrl-btn"        data-rebal="never">Never</button>
+        </div>
+      </div>
+      <div class="ctrl-sep"></div>
+
+      <!-- Active Leg -->
+      <div class="ctrl-section">
+        <span class="section-label">Active Leg</span>
+        <label>Fund set:
+          <select id="active-fund-set">
+            <!-- Populated by JS -->
+          </select>
+        </label>
+        <div class="control-group">
+          <span class="control-label">Costs:</span>
+          <button class="ctrl-btn"        data-fee="gross">Gross</button>
+          <button class="ctrl-btn"        data-fee="net_fees">Net of fees</button>
+          <button class="ctrl-btn active" data-fee="net_tax">Net+tax</button>
+        </div>
+      </div>
+      <div class="ctrl-sep"></div>
+
+      <!-- Display -->
+      <div class="ctrl-section">
+        <span class="section-label">Display</span>
+        <div class="control-group">
+          <span class="control-label">Horizon step:</span>
+          <button class="ctrl-btn active" data-step="12">12 mo</button>
+          <button class="ctrl-btn"        data-step="6">6 mo</button>
+        </div>
+        <div class="control-group">
+          <span class="control-label">Bands:</span>
+          <button class="ctrl-btn active" data-band="show">Show</button>
+          <button class="ctrl-btn"        data-band="hide">Hide</button>
+        </div>
+        <div class="control-group">
+          <span class="control-label">Haze:</span>
+          <button class="ctrl-btn active" data-indep="off">All threads</button>
+          <button class="ctrl-btn"        data-indep="on">Independent only</button>
+        </div>
+        <div class="control-group">
+          <span class="control-label">Y-range:</span>
+          <label>&Delta;Gain
+            <input type="range" id="gain-zoom" min="0.25" max="10" step="0.25" value="10" />
+            <span class="slider-val" id="gain-zoom-val" style="min-width:4.5ch">auto</span>
+          </label>
+          <label>&Delta;Vol
+            <input type="range" id="vol-zoom" min="0.25" max="10" step="0.25" value="10" />
+            <span class="slider-val" id="vol-zoom-val" style="min-width:4.5ch">auto</span>
+          </label>
+        </div>
+      </div>
+      <div class="zoom-caveat">
+        Zooming in at long horizons magnifies the region with the fewest independent windows &mdash;
+        read the sign together with the gold dots and the SE ribbon, not on its own.
+      </div>
+      <div class="ctrl-sep"></div>
+    </div><!-- end #ctrl-panel -->
+
+    <div class="config-bar" id="config-bar"></div>
+
+    <div id="loading">Loading data&hellip;</div>
+    <div id="error"></div>
+
+    <div id="charts" style="display:none">
+      <div class="chart-row">
+        <div class="chart-box"><div id="gain-chart"></div></div>
+        <div class="chart-box"><div id="vol-chart"></div></div>
+      </div>
+
+      <!-- Scrubber -->
+      <div id="scrub-row">
+        <label>Highlight end date: <span id="scrub-label">&mdash;</span></label>
+        <input type="range" id="scrub-slider" min="0" step="1" value="0" />
+        <button id="scrub-clear">Clear</button>
+      </div>
+
+      <!-- Thread timeline (shown only when an exit date is highlighted) -->
+      <div id="thread-timeline-box" class="chart-box" style="display:none;padding-bottom:10px;margin-bottom:20px">
+        <canvas id="thread-timeline" style="width:100%;height:260px;display:block;background:#002535;border-radius:4px 4px 0 0"></canvas>
+        <p style="font-size:0.78rem;color:rgba(125,212,232,0.5);margin:8px 14px 2px;line-height:1.55">
+          Each bar = one window in the highlighted thread &mdash; all share the same right edge (exit date).
+          Hover a bar to see the <strong style="color:rgba(232,192,32,0.75)">shared tail</strong>
+          (gold overlay): the nesting shows that longer windows contain shorter ones as their rightmost segment.
+          See <a href="/independent-windows" style="color:rgba(125,212,232,0.65)">Why Windows Overlap</a> for the full explainer.
+        </p>
+      </div>
+
+      <!-- n_indep chart -->
+      <div class="chart-box"><div id="nindep-chart"></div></div>
+
+      <!-- Export -->
+      <div style="margin-bottom:20px">
+        <button id="csv-export" class="ctrl-btn" style="font-size:0.8rem;padding:4px 14px">
+          &#8595;&thinsp;Download independent windows (CSV)
+        </button>
+        <span style="font-size:0.75rem;color:rgba(125,212,232,0.38);margin-left:10px;font-style:italic">
+          Non-overlapping windows for the current scenario &mdash; for offline Bayesian analysis.
+        </span>
+      </div>
+
+      <!-- Framing notes -->
+      <details class="framing-details">
+        <summary>Within-thread autocorrelation</summary>
+        <div class="detail-body">
+          Consecutive points on one thread share all but 1 month of data. Curves appear smooth
+          not because returns are stable, but because windows overlap heavily &mdash; a 5-year
+          thread point shares ~98% of its data with the adjacent point one month earlier. This
+          is why the haze looks dense and convergent at long horizons: it is an artifact of
+          overlap, not a narrowing of the true outcome distribution.
+        </div>
+      </details>
+      <details class="framing-details">
+        <summary>Across-thread overlap &amp; the &ldquo;Independent only&rdquo; toggle</summary>
+        <div class="detail-body">
+          Threads for nearby exit dates also share data. At a 20-year max horizon with ~35 years
+          of history, there are only ~1&ndash;2 non-overlapping windows &mdash; the n<sub>indep</sub>
+          bar chart makes this concrete. Toggle <strong>Independent only</strong> to collapse the
+          haze to exactly those non-overlapping threads. The transition from hundreds of threads
+          to two lonely paths is the most honest summary of what the data actually support.
+        </div>
+      </details>
+      <details class="framing-details">
+        <summary>SE ribbon: what it measures and what it doesn&rsquo;t</summary>
+        <div class="detail-body">
+          The violet ribbon is &plusmn;1 standard error of the mean, computed from the
+          <strong>same non-overlapping windows drawn as gold dots</strong> &mdash; not from
+          the full haze. This self-consistency matters: overlapping windows share ~99% of their
+          data at long horizons, so haze-derived &sigma; is artificially small there. Using
+          &sigma; from the independent set gives an honest spread.
+          <br><br>
+          <strong>Why the ribbon is roughly flat (not dramatic):</strong>
+          For annualized deltas the two horizon effects nearly cancel &mdash;
+          longer holds shrink the per-window spread
+          (&sigma;<sub>indep</sub>&thinsp;&prop;&thinsp;1/&radic;H)
+          but also reduce the count
+          (n<sub>indep</sub>&thinsp;&prop;&thinsp;T/H), so
+          SE&thinsp;=&thinsp;&sigma;/&radic;n<sub>indep</sub>&thinsp;&prop;&thinsp;1/&radic;T
+          &mdash; roughly independent of horizon H. The SE is pinned by the total data span T,
+          not by how finely it is sliced. A flat ribbon is therefore
+          <em>correct by construction</em> for annualized quantities. A cumulative (non-annualized)
+          delta would widen; here the effects cancel.
+          <br><br>
+          The ribbon <strong>vanishes</strong> where n<sub>indep</sub>&thinsp;=&thinsp;1
+          (only one independent window &mdash; no variance to estimate). This SE measures
+          uncertainty <em>within</em> this single realized history only.
+        </div>
+      </details>
+      <details class="framing-details">
+        <summary>Why annualized deltas compress toward zero at long horizons</summary>
+        <div class="detail-body">
+          A 20-year CAGR is a 20th-root, so even a large terminal-wealth gap between active and
+          passive shrinks to a fraction of a percent <em>per year</em>. The near-zero right edge
+          is partly the metric, not the market &mdash; it would look very different on a
+          cumulative (un-annualized) scale where long-horizon gaps spread back out.
+          <br><br>
+          More importantly, the 20yr horizon rests on a <strong>single non-overlapping window</strong>
+          (e.g. 1987&rarr;2006 in the Pre-ETF era) &mdash; one realized history, not a long-run
+          average. The apparent convergence toward zero is not evidence of equivalence; it is
+          an artifact of annualization plus a sample of one.
+        </div>
+      </details>
+      <details class="framing-details">
+        <summary>Two bands: average uncertainty vs single-window spread</summary>
+        <div class="detail-body">
+          The <strong style="color:rgba(190,120,255,0.85)">narrow violet band</strong> is
+          <em>±1 SE of the mean</em> — it answers &ldquo;where does the <strong>average</strong>
+          delta sit?&rdquo; and shrinks as n<sub>indep</sub> grows. The
+          <strong style="color:rgba(125,212,232,0.75)">wide teal band</strong> is
+          <em>±1 σ of the independent windows</em> — it answers &ldquo;where does a
+          <strong>single</strong> future window tend to land?&rdquo; and does
+          <em>not</em> shrink just because more (overlapping) data is added.
+          <br><br>
+          The gap between the bands &mdash; a factor of &radic;n<sub>indep</sub> &mdash; is
+          exactly how much the overlapping haze is
+          over-claiming precision by treating correlated windows as independent observations.
+          At short horizons (many n<sub>indep</sub>) the gap is large; at long horizons
+          (few n<sub>indep</sub>) both bands converge and the wide band itself becomes
+          rough &mdash; the honest signal that even the outcome spread is barely estimable.
+        </div>
+      </details>
+      <details class="framing-details">
+        <summary>One history, not a sampling distribution</summary>
+        <div class="detail-body">
+          The entire plot reflects a single realized sequence of market returns. Different
+          regimes (inflation, rate cycles, secular trends) will shift every thread up or down.
+          The SE ribbon captures sampling uncertainty within this history only; it cannot account
+          for regime risk or the fact that the next 20 years may not resemble any sub-period here.
+        </div>
+      </details>
+
+      <!-- Debug -->
+      <details class="debug-section">
+        <summary>Debug info</summary>
+        <table class="debug-table" id="debug-table"></table>
+      </details>
+    </div>
+  </div>
+
+  <script src="/static/nav.js"></script>
+  <script src="/static/rw-shared.js"></script>
+  <script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   Delta vs Horizon — Thread Cloud
+   Reuses: computeAnyDeltaWindows, addBackMonthlyFee, applyEndTax, computeWeights
+           from rw-shared.js. Plotly for rendering.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+// ── Plotly theme ──────────────────────────────────────────────────────────
+const PLOTLY_BASE = {
+  paper_bgcolor: 'rgba(0,0,0,0)',
+  plot_bgcolor:  '#002535',
+  font: { color: '#e4f6fb', family: 'system-ui, -apple-system, sans-serif', size: 12 },
+  margin: { t: 40, r: 24, b: 52, l: 64 },
+  hoverlabel: {
+    bgcolor: '#003a50', bordercolor: 'rgba(100,210,230,0.3)',
+    font: { color: '#e4f6fb', size: 12 },
+  },
+};
+const AXIS_STYLE = {
+  gridcolor:     'rgba(100,210,230,0.07)',
+  zerolinecolor: 'rgba(255,255,255,0.2)',
+  zerolinewidth: 1,
+  tickfont:      { size: 11 },
+  title:         { font: { size: 13 } },
+};
+const PLOTLY_CONFIG = { responsive: true, displayModeBar: false };
+
+// Colors
+var GOLD   = '#e8c020';
+var VIOLET = 'rgba(190,120,255,0.22)';  // ribbon fill — third color
+var TEAL   = 'rgba(125,212,232,0.75)';  // mean line
+
+// ── ERA → active fund sets (mirrors rolling-windows-delta.html) ───────────
+var ERA_ACTIVE_SETS = {
+  etf: [
+    { value: 'american_dodge',  label: 'American/Dodge \u2014 AGTHX / DODFX / PTTAX' },
+    { value: 'fidelity',        label: 'Fidelity \u2014 FCNTX / FIEUX / FTBFX' },
+    { value: 'vanguard_active', label: 'Vanguard Active \u2014 VWUSX / VWILX / VBTLX' },
+    { value: 't_rowe_price',    label: 'T. Rowe Price \u2014 PRGFX / PRITX / PRTIX' },
+  ],
+  pre_etf: [
+    { value: 'fidelity_classic', label: 'Fidelity Classic \u2014 FMAGX / FOSFX / FBNDX' },
+    { value: 'american_funds',   label: 'American Funds \u2014 AGTHX / ANWPX / ABNDX' },
+    { value: 't_rowe_price',     label: 'T. Rowe Price \u2014 PRGFX / PRITX / PRTIX (1989+)' },
+  ],
+};
+
+// ── Module-level state ────────────────────────────────────────────────────
+var currentConfig   = { era: 'pre_etf', stockPct: 80, domesticPct: 80, rebalance: 'annually' };
+var activeFundSet   = 'fidelity_classic';
+var feeMode         = 'net_tax';
+var horizonStep     = 12;
+var showBand        = true;
+var independentOnly = false;    // (3) toggle: haze = independent threads only
+var activeData      = null;
+var activeDataKey   = null;
+var horizonData     = null;     // { horizons, byHorizon, byEndDate, endDates }
+var selectedEndDate = null;
+var chartsInitialized = false;
+var selectedHorizonL = null;    // hovered horizon in months; null = no highlight
+var highlightShapes  = [];      // Plotly shape for vertical horizon-indicator line
+var gainZoom         = null;    // null = auto; number = half-range pp/yr
+var volZoom          = null;    // null = auto; number = half-range pp ann.
+
+
+// ── Core computation ──────────────────────────────────────────────────────
+
+/**
+ * Build horizon data: for each horizon L, compute all delta windows.
+ * Each entry in byHorizon[L] includes startDate for hover display.
+ * Returns { horizons, byHorizon, byEndDate, endDates }.
+ */
+function computeHorizonData(dates, returnsA, tickersA, weightsA, rebalanceA,
+                             returnsB, tickersB, weightsB, rebalanceB,
+                             step, afterCagrFn) {
+  var N = dates.length;
+  var maxL = Math.min(MAX_WINDOW_MONTHS, N - 1);
+  var horizons = [];
+  for (var L = Math.max(step, MIN_WINDOW_MONTHS); L <= maxL; L += step) {
+    horizons.push(L);
+  }
+
+  var byHorizon = {}, byEndDate = {};
+  for (var hi = 0; hi < horizons.length; hi++) {
+    var L = horizons[hi];
+    var deltas = computeAnyDeltaWindows(dates,
+      returnsA, tickersA, weightsA, rebalanceA,
+      returnsB, tickersB, weightsB, rebalanceB,
+      L, afterCagrFn);
+    byHorizon[L] = deltas.map(function(d, i) {
+      // startDate included for per-dot hover: "YYYY-MM → YYYY-MM"
+      return { startDate: dates[i], endDate: dates[i + L - 1], dGain: d.dGain, dVol: d.dVol };
+    });
+    for (var pi = 0; pi < byHorizon[L].length; pi++) {
+      var pt = byHorizon[L][pi];
+      if (!byEndDate[pt.endDate]) byEndDate[pt.endDate] = {};
+      byEndDate[pt.endDate][L] = { dGain: pt.dGain, dVol: pt.dVol, startDate: pt.startDate };
+    }
+  }
+
+  var endDates = Object.keys(byEndDate).sort();
+  return { horizons: horizons, byHorizon: byHorizon, byEndDate: byEndDate, endDates: endDates };
+}
+
+/**
+ * Return the end dates of the mutually non-overlapping tiling at the
+ * longest horizon. These are the "true" independent threads; there will
+ * be roughly floor(N / maxL) of them.
+ */
+function computeIndependentEndDates(byHorizon, maxL) {
+  var windows = byHorizon[maxL];
+  if (!windows || windows.length === 0) return [];
+  var result = [];
+  // Step by maxL to pick non-overlapping windows (same stride as gold dots at maxL)
+  for (var i = 0; i < windows.length; i += maxL) {
+    result.push(windows[i].endDate);
+  }
+  return result;
+}
+
+
+// ── Fee / weight helper ───────────────────────────────────────────────────
+
+function getActiveComputeInputs() {
+  var d  = activeData;
+  var pt = d.passive_tickers, at = d.active_tickers;
+  var pr = {}, ar = {};
+  for (var i = 0; i < pt.length; i++) pr[pt[i]] = d.returns[pt[i]];
+  for (var i = 0; i < at.length; i++) ar[at[i]] = d.returns[at[i]];
+  if (feeMode === 'gross') {
+    pr = addBackMonthlyFee(pr, pt, d.passive_ers);
+    ar = addBackMonthlyFee(ar, at, d.active_ers);
+  }
+  var afterTax = (feeMode === 'net_tax') ? applyEndTax : null;
+  var domesticFrac = currentConfig.domesticPct / 100;
+  var weightsA = computeWeights(currentConfig.stockPct, at, domesticFrac);
+  var weightsB = computeWeights(currentConfig.stockPct, pt, domesticFrac);
+  return {
+    returnsA: ar, tickersA: at, weightsA: weightsA,
+    returnsB: pr, tickersB: pt, weightsB: weightsB,
+    afterTax: afterTax,
+  };
+}
+
+
+// ── Trace builders ────────────────────────────────────────────────────────
+
+/**
+ * Haze trace (trace 0).
+ * Normal mode: all threads, low alpha, NaN-separated polyline.
+ * Independent-only mode: only the non-overlapping threads, moderate alpha.
+ */
+function buildHazeTrace(byEndDate, endDates, horizons, metric) {
+  if (independentOnly) {
+    return buildIndependentOnlyHaze(byEndDate, horizons, metric);
+  }
+  // Full haze
+  var xArr = [], yArr = [];
+  for (var ei = 0; ei < endDates.length; ei++) {
+    var ed = endDates[ei];
+    var thread = byEndDate[ed];
+    for (var hi = 0; hi < horizons.length; hi++) {
+      var L = horizons[hi];
+      if (thread[L] !== undefined) {
+        xArr.push(L / 12);
+        yArr.push(thread[L][metric]);
+      }
+    }
+    xArr.push(null); yArr.push(null);
+  }
+  return {
+    x: xArr, y: yArr, mode: 'lines',
+    line: { color: 'rgba(125,212,232,0.06)', width: 1 },
+    hoverinfo: 'none', showlegend: false, name: 'all threads',
+  };
+}
+
+/**
+ * Independent-only haze: draws only the non-overlapping threads (≈1–2 at 20yr),
+ * at higher alpha so they read as real threads rather than ghost lines.
+ */
+function buildIndependentOnlyHaze(byEndDate, horizons, metric) {
+  var maxL = horizons[horizons.length - 1];
+  var indepDates = computeIndependentEndDates(horizonData.byHorizon, maxL);
+  var xArr = [], yArr = [];
+  for (var ei = 0; ei < indepDates.length; ei++) {
+    var ed = indepDates[ei];
+    var thread = byEndDate[ed] || {};
+    for (var hi = 0; hi < horizons.length; hi++) {
+      var L = horizons[hi];
+      if (thread[L] !== undefined) {
+        xArr.push(L / 12);
+        yArr.push(thread[L][metric]);
+      }
+    }
+    xArr.push(null); yArr.push(null);
+  }
+  return {
+    x: xArr, y: yArr, mode: 'lines',
+    line: { color: 'rgba(125,212,232,0.65)', width: 1.5 },
+    hoverinfo: 'none', showlegend: false, name: 'indep threads',
+  };
+}
+
+/**
+ * Non-overlapping gold dots (trace 1).
+ * Uniform opaque gold — not a thread, so no color gradient, no connecting lines.
+ * Hover shows the actual window span "YYYY-MM → YYYY-MM".
+ */
+function buildNonoverlappingMarkers(byHorizon, horizons, metric) {
+  var xArr = [], yArr = [], textArr = [];
+  for (var hi = 0; hi < horizons.length; hi++) {
+    var L = horizons[hi];
+    var windows = byHorizon[L];
+    // Step by L to select non-overlapping windows
+    for (var i = 0; i < windows.length; i += L) {
+      var pt = windows[i];
+      xArr.push(L / 12);
+      yArr.push(pt[metric]);
+      // Show actual window span on hover so arbitrary tiling is self-evident
+      textArr.push(pt.startDate.slice(0, 7) + ' \u2192 ' + pt.endDate.slice(0, 7));
+    }
+  }
+  return {
+    x: xArr, y: yArr, mode: 'markers',
+    marker: { color: GOLD, size: 7, opacity: 0.9, line: { width: 0 } },
+    text: textArr,
+    hovertemplate: '%{text}<br>Horizon: %{x:.1f}yr<br>\u0394: %{y:.2f}%<extra></extra>',
+    // Show one legend entry so the gold layer has a label
+    name: 'independent windows', showlegend: true,
+  };
+}
+
+/**
+ * Mean ± SE (3 traces: mean line, hi bound, lo bound with ribbon fill).
+ *
+ * Self-consistency rule: sigma and n_indep come from the SAME set of windows —
+ * the non-overlapping (independent) subset that is also drawn as gold dots.
+ * Using sigma from the full overlapping haze paired with an honest n_indep is
+ * wrong: overlapping windows look artificially similar at long horizons (they
+ * share ~99% of data), so haze-sigma is too small there, producing a spuriously
+ * narrow waist rather than an honest wide/absent tail.
+ *
+ * Tail behavior:
+ *   n_indep == 1  →  SE undefined (one window, no variance) → null → no ribbon.
+ *   n_indep == 2  →  SE from two points → ribbon is wide and ratty.
+ *   n_indep ≥ 3   →  normal estimate; ribbon widens as n_indep falls.
+ *
+ * Note on the expected shape (annualized deltas):
+ *   sigma_indep ∝ 1/sqrt(H)  (central-limit shrinkage in the annualized metric)
+ *   n_indep     ∝ T/H
+ *   SE = sigma / sqrt(n_indep) ∝ (1/sqrt(H)) / sqrt(T/H) = 1/sqrt(T)
+ *   → SE is roughly FLAT across horizons for annualized quantities.
+ *   A cumulative (un-annualized) delta would widen; annualized effects cancel.
+ *   So a flat ribbon is correct by construction, not a bug.
+ */
+function buildMeanBand(byHorizon, horizons, metric) {
+  var xArr = [], meanArr = [], hiArr = [], loArr = [];
+  for (var hi = 0; hi < horizons.length; hi++) {
+    var L = horizons[hi];
+
+    // Independent (non-overlapping) values — same windows as the gold dots
+    var indepVals = [];
+    for (var i = 0; i < byHorizon[L].length; i += L) {
+      indepVals.push(byHorizon[L][i][metric]);
+    }
+    var nIndep = indepVals.length;
+
+    // Mean and sigma from the independent set only (self-consistent)
+    var mean = nIndep > 0
+      ? indepVals.reduce(function(a, b) { return a + b; }, 0) / nIndep
+      : 0;
+    // SE unestimable when only one independent window (no variance to compute)
+    var se = nIndep >= 2
+      ? Math.sqrt(indepVals.reduce(function(s, v) { return s + (v - mean) * (v - mean); }, 0) / (nIndep - 1)) / Math.sqrt(nIndep)
+      : null;
+
+    xArr.push(L / 12);
+    meanArr.push(mean);
+    hiArr.push(se !== null ? mean + se : null);
+    loArr.push(se !== null ? mean - se : null);
+  }
+
+  // Dotted mean line — mean of the INDEPENDENT (non-overlapping) windows, same set as gold dots.
+  // "Descriptive" because with ≤ ~10 independent windows this is a rough summary of few points,
+  // not a reliable posterior estimate. The haze density may also appear as an apparent center line —
+  // that is a visual artifact of overlapping threads, not an explicitly drawn line.
+  var meanTrace = {
+    x: xArr, y: meanArr, mode: 'lines',
+    line: { color: TEAL, width: 1.5, dash: 'dot' },
+    name: 'mean (descriptive)',
+    showlegend: true,
+    hovertemplate: 'Horizon: %{x:.1f}yr<br>Mean \u0394: %{y:.2f}%<extra></extra>',
+  };
+
+  // Upper bound (invisible line — just provides the top edge for fill)
+  var hiTrace = {
+    x: xArr, y: hiArr, mode: 'lines',
+    line: { width: 0, color: 'rgba(0,0,0,0)' },
+    name: 'SE+', showlegend: false, hoverinfo: 'none',
+    visible: showBand,
+  };
+
+  // Lower bound (fills up to hiTrace → produces the ribbon)
+  var loTrace = {
+    x: xArr, y: loArr, mode: 'lines', fill: 'tonexty',
+    line: { color: 'rgba(190,120,255,0.4)', width: 0.5 },
+    fillcolor: VIOLET,
+    name: '\u00b11 SE (avg uncertainty)', showlegend: true, hoverinfo: 'none',
+    visible: showBand,
+  };
+
+  return [meanTrace, hiTrace, loTrace];
+}
+
+/** Highlighted end-date thread (trace 7 — amber, drawn on top). */
+function buildHighlightTrace(byEndDate, selEndDate, horizons, metric) {
+  if (!selEndDate) {
+    return { x: [], y: [], mode: 'lines', name: 'highlighted thread', showlegend: false };
+  }
+  var thread = byEndDate[selEndDate] || {};
+  var xArr = [], yArr = [];
+  for (var hi = 0; hi < horizons.length; hi++) {
+    var L = horizons[hi];
+    if (thread[L] !== undefined) {
+      xArr.push(L / 12);
+      yArr.push(thread[L][metric]);
+    }
+  }
+  return {
+    x: xArr, y: yArr, mode: 'lines+markers',
+    line: { color: GOLD, width: 2.5 },
+    marker: { size: 5, color: GOLD },
+    name: 'exit ' + selEndDate.slice(0, 7) + ' (one thread)',
+    showlegend: true,
+    hovertemplate: 'Highlighted thread \u2014 exit: ' + selEndDate.slice(0, 7) +
+      '<br>Horizon: %{x:.1f}yr<br>\u0394: %{y:.2f}%<extra></extra>',
+  };
+}
+
+/** n_indep bar chart traces (separate chart below the two main charts). */
+function buildNIndepTraces(horizons, totalMonths) {
+  var xArr = horizons.map(function(L) { return L / 12; });
+  var yArr = horizons.map(function(L) { return Math.floor(totalMonths / L); });
+  return [
+    {
+      x: xArr, y: yArr, type: 'bar',
+      marker: {
+        color: 'rgba(125,212,232,0.32)',
+        line: { color: 'rgba(125,212,232,0.55)', width: 1 },
+      },
+      hovertemplate: 'Horizon: %{x:.1f}yr<br>n_indep: %{y}<extra></extra>',
+      name: 'n_indep', showlegend: false,
+    },
+    {
+      // Reference line at n_indep=1: below this SE is unestimable
+      x: [horizons[0] / 12, horizons[horizons.length - 1] / 12],
+      y: [1, 1], mode: 'lines',
+      line: { color: 'rgba(214,69,69,0.55)', width: 1, dash: 'dot' },
+      hoverinfo: 'none', showlegend: false, name: 'n=1',
+    },
+  ];
+}
+
+
+// ── Chart layout helpers ──────────────────────────────────────────────────
+
+function xAxisHorizon(horizons) {
+  var minH = horizons[0] / 12, maxH = horizons[horizons.length - 1] / 12;
+  var pad = (maxH - minH) * 0.05 || 0.5;
+  return {
+    ...AXIS_STYLE,
+    title: { text: 'Horizon (years)', font: { size: 13 } },
+    range: [minH - pad, maxH + pad],
+    zeroline: false,
+  };
+}
+
+function buildAnnotations(horizons, nIndepThreads) {
+  if (!independentOnly) return [];
+  var maxL = horizons[horizons.length - 1];
+  return [{
+    text: nIndepThreads + ' non-overlapping thread' + (nIndepThreads !== 1 ? 's' : '') +
+          ' at max horizon (' + (maxL / 12).toFixed(0) + 'yr)',
+    xref: 'paper', yref: 'paper', x: 0.99, y: 0.97,
+    xanchor: 'right', yanchor: 'top', showarrow: false,
+    font: { size: 11, color: 'rgba(125,212,232,0.85)' },
+    bgcolor: 'rgba(0,37,53,0.8)', bordercolor: 'rgba(125,212,232,0.25)',
+    borderwidth: 1, borderpad: 4,
+  }];
+}
+
+/**
+ * Count all window measurements (across all horizons) that fall outside [-range, +range].
+ * Returns Plotly annotation objects for the top and/or bottom edge of the chart.
+ * These annotations travel with the plot so clipping is always disclosed.
+ */
+function buildClipAnnotations(hd, metric, range) {
+  if (range === null) return [];
+  var above = 0, below = 0;
+  for (var hi = 0; hi < hd.horizons.length; hi++) {
+    var L = hd.horizons[hi];
+    var wins = hd.byHorizon[L];
+    for (var wi = 0; wi < wins.length; wi++) {
+      var v = wins[wi][metric];
+      if (v > range) above++;
+      else if (v < -range) below++;
+    }
+  }
+  var annots = [];
+  if (above > 0) {
+    annots.push({
+      text: '\u25b2\u202f' + above.toLocaleString() + ' above',
+      xref: 'paper', yref: 'paper',
+      x: 0.5, y: 0.99, xanchor: 'center', yanchor: 'top',
+      showarrow: false,
+      font: { size: 11, color: 'rgba(210,90,70,0.85)' },
+      bgcolor: 'rgba(0,37,53,0.85)', bordercolor: 'rgba(210,90,70,0.30)',
+      borderwidth: 1, borderpad: 4,
+    });
+  }
+  if (below > 0) {
+    annots.push({
+      text: '\u25bc\u202f' + below.toLocaleString() + ' below',
+      xref: 'paper', yref: 'paper',
+      x: 0.5, y: 0.01, xanchor: 'center', yanchor: 'bottom',
+      showarrow: false,
+      font: { size: 11, color: 'rgba(210,90,70,0.85)' },
+      bgcolor: 'rgba(0,37,53,0.85)', bordercolor: 'rgba(210,90,70,0.30)',
+      borderwidth: 1, borderpad: 4,
+    });
+  }
+  return annots;
+}
+
+/**
+ * Compute the natural half-range for a metric (rounded up to nearest 0.25).
+ * Used to set the zoom slider maximum so that "slider at max" = auto / full range.
+ */
+function computeAutoRange(hd, metric) {
+  var maxAbs = 0;
+  for (var hi = 0; hi < hd.horizons.length; hi++) {
+    var wins = hd.byHorizon[hd.horizons[hi]];
+    for (var wi = 0; wi < wins.length; wi++) {
+      maxAbs = Math.max(maxAbs, Math.abs(wins[wi][metric]));
+    }
+  }
+  return Math.ceil(maxAbs * 1.08 * 4) / 4;   // 8% padding, rounded to 0.25
+}
+
+/** Reset zoom sliders to auto after new data is loaded. */
+function initZoomSliders() {
+  var hd   = horizonData;
+  var gMax = computeAutoRange(hd, 'dGain');
+  var vMax = computeAutoRange(hd, 'dVol');
+
+  var gs = document.getElementById('gain-zoom');
+  gs.min = 0.25; gs.max = gMax; gs.step = 0.25; gs.value = gMax;
+  gainZoom = null;
+  document.getElementById('gain-zoom-val').textContent = 'auto';
+
+  var vs = document.getElementById('vol-zoom');
+  vs.min = 0.25; vs.max = vMax; vs.step = 0.25; vs.value = vMax;
+  volZoom = null;
+  document.getElementById('vol-zoom-val').textContent = 'auto';
+}
+
+var LEGEND_STYLE = {
+  showlegend: true,
+  legend: {
+    x: 0.01, y: 0.99, xanchor: 'left', yanchor: 'top',
+    bgcolor: 'rgba(0,37,53,0.85)', bordercolor: 'rgba(100,210,230,0.15)',
+    borderwidth: 1, font: { size: 11 },
+  },
+};
+
+function gainLayout(horizons, annotations) {
+  var yConf = { ...AXIS_STYLE, zeroline: true, title: { text: '\u0394 Gain (%pp/yr)', font: { size: 12 } } };
+  if (gainZoom !== null) yConf.range = [-gainZoom, gainZoom];
+  return {
+    ...PLOTLY_BASE, ...LEGEND_STYLE,
+    title: { text: '\u0394 Gain (active \u2212 passive)', font: { size: 14 } },
+    xaxis: xAxisHorizon(horizons),
+    yaxis: yConf,
+    annotations: annotations || [],
+    shapes: highlightShapes,
+    height: 350,
+  };
+}
+
+function volLayout(horizons, annotations) {
+  var yConf = { ...AXIS_STYLE, zeroline: true, title: { text: '\u0394 Vol (%pp ann.)', font: { size: 12 } } };
+  if (volZoom !== null) yConf.range = [-volZoom, volZoom];
+  return {
+    ...PLOTLY_BASE, ...LEGEND_STYLE,
+    title: { text: '\u0394 Vol (active \u2212 passive)', font: { size: 14 } },
+    xaxis: xAxisHorizon(horizons),
+    yaxis: yConf,
+    annotations: annotations || [],
+    shapes: highlightShapes,
+    height: 350,
+  };
+}
+
+function nindepLayout(horizons, totalMonths) {
+  return {
+    ...PLOTLY_BASE,
+    margin: { t: 28, r: 24, b: 48, l: 64 },
+    height: 148,
+    xaxis: xAxisHorizon(horizons),
+    yaxis: {
+      ...AXIS_STYLE, zeroline: false,
+      title: { text: 'n<sub>indep</sub>', font: { size: 12 } },
+    },
+    annotations: [{
+      text: 'Non-overlapping independent windows &nbsp;(total months = ' + totalMonths + ')',
+      xref: 'paper', yref: 'paper', x: 0.5, y: 1.25, showarrow: false,
+      font: { size: 11, color: 'rgba(125,212,232,0.55)' }, xanchor: 'center',
+    }],
+  };
+}
+
+
+/**
+ * Outcome band: ±1σ of the independent-window values at each horizon.
+ * Answers "where does a SINGLE window land?" — stays wide even where SE shrinks.
+ * Absent where n_indep < 2 (unestimable).
+ */
+function buildOutcomeBand(byHorizon, horizons, metric) {
+  var xArr = [], hiArr = [], loArr = [];
+  for (var hi = 0; hi < horizons.length; hi++) {
+    var L = horizons[hi];
+    var indepVals = [];
+    for (var i = 0; i < byHorizon[L].length; i += L) {
+      indepVals.push(byHorizon[L][i][metric]);
+    }
+    var n = indepVals.length;
+    xArr.push(L / 12);
+    if (n < 2) {
+      hiArr.push(null);
+      loArr.push(null);
+    } else {
+      var mean = indepVals.reduce(function(a, b) { return a + b; }, 0) / n;
+      var sd   = Math.sqrt(indepVals.reduce(function(s, v) { return s + (v - mean) * (v - mean); }, 0) / (n - 1));
+      hiArr.push(mean + sd);
+      loArr.push(mean - sd);
+    }
+  }
+  return [
+    {
+      x: xArr, y: hiArr, mode: 'lines',
+      line: { width: 0, color: 'rgba(0,0,0,0)' },
+      name: 'outcome+', showlegend: false, hoverinfo: 'none', visible: showBand,
+    },
+    {
+      x: xArr, y: loArr, mode: 'lines', fill: 'tonexty',
+      line: { color: 'rgba(125,212,232,0.25)', width: 0.5 },
+      fillcolor: 'rgba(125,212,232,0.09)',
+      name: '\u00b11\u03c3 (single window)', showlegend: true, hoverinfo: 'none', visible: showBand,
+    },
+  ];
+}
+
+// ── Trace list assembly ───────────────────────────────────────────────────
+// Fixed 8-trace order (same for both gain and vol charts):
+//   0: outcome_hi  (invisible upper bound for outcome band)
+//   1: outcome_lo  (faint teal fill — single-window spread, drawn first/behind)
+//   2: haze        (all or independent-only threads)
+//   3: gold dots   (independent windows)
+//   4: mean        (dotted teal)
+//   5: SE_hi       (invisible upper bound for SE ribbon)
+//   6: SE_lo       (violet fill — avg uncertainty, drawn on top of outcome band)
+//   7: highlight   (amber, topmost)
+
+function buildTraces(hd, metric, totalMonths) {
+  var outcome   = buildOutcomeBand(hd.byHorizon, hd.horizons, metric);
+  var haze      = buildHazeTrace(hd.byEndDate, hd.endDates, hd.horizons, metric);
+  var dots      = buildNonoverlappingMarkers(hd.byHorizon, hd.horizons, metric);
+  var band      = buildMeanBand(hd.byHorizon, hd.horizons, metric);
+  var highlight = buildHighlightTrace(hd.byEndDate, selectedEndDate, hd.horizons, metric);
+  return [outcome[0], outcome[1], haze, dots, band[0], band[1], band[2], highlight];
+}
+
+
+// ── Render / update ───────────────────────────────────────────────────────
+
+function renderAll() {
+  var hd = horizonData;
+  var N  = activeData.dates.length;
+
+  var maxL       = hd.horizons[hd.horizons.length - 1];
+  var nIndepThr  = computeIndependentEndDates(hd.byHorizon, maxL).length;
+  var baseAnnot  = buildAnnotations(hd.horizons, nIndepThr);
+  var gainAnnot  = baseAnnot.concat(buildClipAnnotations(hd, 'dGain', gainZoom));
+  var volAnnot   = baseAnnot.concat(buildClipAnnotations(hd, 'dVol',  volZoom));
+
+  var gainTraces   = buildTraces(hd, 'dGain', N);
+  var volTraces    = buildTraces(hd, 'dVol',  N);
+  var nindepTraces = buildNIndepTraces(hd.horizons, N);
+
+  if (chartsInitialized) {
+    Plotly.react('gain-chart',   gainTraces,   gainLayout(hd.horizons, gainAnnot),   PLOTLY_CONFIG);
+    Plotly.react('vol-chart',    volTraces,    volLayout(hd.horizons, volAnnot),    PLOTLY_CONFIG);
+    Plotly.react('nindep-chart', nindepTraces, nindepLayout(hd.horizons, N), PLOTLY_CONFIG);
+  } else {
+    Plotly.newPlot('gain-chart',   gainTraces,   gainLayout(hd.horizons, gainAnnot),   PLOTLY_CONFIG);
+    Plotly.newPlot('vol-chart',    volTraces,    volLayout(hd.horizons, volAnnot),    PLOTLY_CONFIG);
+    Plotly.newPlot('nindep-chart', nindepTraces, nindepLayout(hd.horizons, N), PLOTLY_CONFIG);
+    chartsInitialized = true;
+    attachPlotlyHooks();
+  }
+
+  // Update scrub slider range
+  var slider = document.getElementById('scrub-slider');
+  slider.max = hd.endDates.length - 1;
+  if (+slider.value >= hd.endDates.length) slider.value = 0;
+
+  updateConfigBar();
+  updateDebug(nIndepThr);
+  drawThreadTimeline();
+}
+
+/** Fast update: only re-render the highlight thread (trace 7) in both charts. */
+function updateHighlight() {
+  var hd = horizonData;
+  if (!hd) return;
+  var gH = buildHighlightTrace(hd.byEndDate, selectedEndDate, hd.horizons, 'dGain');
+  var vH = buildHighlightTrace(hd.byEndDate, selectedEndDate, hd.horizons, 'dVol');
+  Plotly.restyle('gain-chart', { x: [gH.x], y: [gH.y], name: [gH.name], showlegend: [gH.showlegend] }, [7]);
+  Plotly.restyle('vol-chart',  { x: [vH.x], y: [vH.y], name: [vH.name], showlegend: [vH.showlegend] }, [7]);
+  drawThreadTimeline();
+}
+
+
+// ── Thread-timeline panel ─────────────────────────────────────────────────
+
+/** "YYYY-MM" → decimal year (e.g. "2020-06" → 2020.458) */
+function dateToDecYear(d) {
+  var y = +d.slice(0, 4), m = +d.slice(5, 7);
+  return y + (m - 0.5) / 12;
+}
+
+/**
+ * Set the hovered horizon (L in months). Updates the Plotly vertical-line shape
+ * on both charts and redraws the canvas timeline.
+ */
+function setHorizonHighlight(L) {
+  if (L === selectedHorizonL) return;
+  selectedHorizonL = L;
+  highlightShapes = (L !== null) ? [{
+    type: 'line', x0: L / 12, y0: 0, x1: L / 12, y1: 1,
+    xref: 'x', yref: 'paper',
+    line: { color: 'rgba(232,192,32,0.35)', width: 1.5, dash: 'dot' },
+  }] : [];
+  if (chartsInitialized) {
+    Plotly.relayout('gain-chart', { shapes: highlightShapes });
+    Plotly.relayout('vol-chart',  { shapes: highlightShapes });
+  }
+  drawThreadTimeline();
+}
+
+/**
+ * Draw (or hide) the thread-decomposition timeline canvas.
+ * All windows in the selected thread as right-edge-anchored horizontal bars;
+ * longer horizons occupy upper rows, all bars share the same right edge (exit date).
+ */
+function drawThreadTimeline() {
+  var box = document.getElementById('thread-timeline-box');
+  if (!selectedEndDate || !horizonData) {
+    box.style.display = 'none';
+    return;
+  }
+  box.style.display = '';
+
+  var hd      = horizonData;
+  var horizons = hd.horizons;   // sorted ascending (shortest first)
+  var thread   = hd.byEndDate[selectedEndDate] || {};
+
+  var cv  = document.getElementById('thread-timeline');
+  var DPR = window.devicePixelRatio || 1;
+  var W   = cv.clientWidth;
+  var H   = cv.clientHeight;
+  if (W === 0 || H === 0) return;
+  cv.width  = W * DPR;
+  cv.height = H * DPR;
+  var ctx = cv.getContext('2d');
+  ctx.scale(DPR, DPR);
+  ctx.clearRect(0, 0, W, H);
+
+  ctx.fillStyle = '#002535';
+  ctx.fillRect(0, 0, W, H);
+
+  var ML = 44, MR = 14, MT = 18, MB = 22;
+  var pW = W - ML - MR;
+  var pH = H - MT - MB;
+
+  // X-axis: calendar years
+  var exitYr = dateToDecYear(selectedEndDate);
+  var maxL   = horizons[horizons.length - 1];
+  var xMin   = exitYr - maxL / 12 - 0.3;
+  var xMax   = exitYr + 0.3;
+  function tx(yr) { return ML + (yr - xMin) / (xMax - xMin) * pW; }
+
+  // Y-axis: one row per horizon; longest horizon on top (row 0), shortest at bottom
+  var nRows = horizons.length;
+  var rowH  = pH / nRows;
+  var barH  = Math.max(3, Math.min(rowH * 0.58, 12));
+
+  function rowCY(L) {
+    var idx = horizons.indexOf(L);
+    var row = (nRows - 1) - idx;    // flip so longest is at top
+    return MT + row * rowH + rowH / 2;
+  }
+
+  // Faint year grid lines
+  ctx.lineWidth   = 0.5;
+  var yr0 = Math.ceil(xMin), yr1 = Math.floor(xMax);
+  for (var yr = yr0; yr <= yr1; yr++) {
+    if (yr % 2 !== 0) continue;
+    var xt = tx(yr);
+    if (xt < ML || xt > W - MR) continue;
+    ctx.strokeStyle = 'rgba(125,212,232,0.06)';
+    ctx.beginPath(); ctx.moveTo(xt, MT); ctx.lineTo(xt, H - MB); ctx.stroke();
+  }
+
+  // Exit-date vertical marker
+  var xExit = tx(exitYr);
+  ctx.strokeStyle = 'rgba(232,192,32,0.55)';
+  ctx.lineWidth   = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(xExit, MT); ctx.lineTo(xExit, H - MB); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Draw bars (back-to-front: teal first, then gold overlays)
+  var anyHi = (selectedHorizonL !== null);
+  for (var i = 0; i < horizons.length; i++) {
+    var L  = horizons[i];
+    var pt = thread[L];
+    if (!pt || !pt.startDate) continue;
+
+    var xBar  = tx(dateToDecYear(pt.startDate));
+    var yC    = rowCY(L);
+    var yTop  = yC - barH / 2;
+    var isHi  = (L === selectedHorizonL);
+
+    if (isHi) {
+      ctx.fillStyle   = 'rgba(232,192,32,0.88)';
+      ctx.strokeStyle = GOLD;
+      ctx.lineWidth   = 1;
+    } else {
+      var alpha = anyHi ? 0.20 : 0.50;
+      ctx.fillStyle   = 'rgba(125,212,232,' + alpha + ')';
+      ctx.strokeStyle = 'rgba(125,212,232,' + (anyHi ? 0.35 : 0.60) + ')';
+      ctx.lineWidth   = 0.5;
+    }
+    ctx.fillRect(xBar, yTop, xExit - xBar, barH);
+    ctx.strokeRect(xBar, yTop, xExit - xBar, barH);
+
+    // Shared-tail gold overlay: rightmost min(L, selectedHorizonL) months
+    if (!isHi && anyHi) {
+      var sharedMonths = Math.min(L, selectedHorizonL);
+      var xShared = tx(exitYr - sharedMonths / 12);
+      var xLeft   = Math.max(xBar, xShared);
+      if (xLeft < xExit) {
+        ctx.fillStyle = 'rgba(232,192,32,0.40)';
+        ctx.fillRect(xLeft, yTop, xExit - xLeft, barH);
+      }
+    }
+
+    // Horizon label (left margin)
+    ctx.fillStyle    = isHi ? GOLD : (anyHi ? 'rgba(125,212,232,0.40)' : 'rgba(125,212,232,0.60)');
+    ctx.font         = '9px system-ui';
+    ctx.textAlign    = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillText((L / 12).toFixed(0) + 'yr', ML - 4, yC);
+  }
+
+  // X-axis year tick labels (even years)
+  ctx.fillStyle    = 'rgba(125,212,232,0.40)';
+  ctx.font         = '9px system-ui';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'top';
+  for (var yr = yr0; yr <= yr1; yr++) {
+    if (yr % 2 !== 0) continue;
+    var xt = tx(yr);
+    if (xt < ML || xt > W - MR) continue;
+    ctx.fillText(yr, xt, H - MB + 3);
+  }
+
+  // Exit-date label above the dashed line
+  ctx.fillStyle    = 'rgba(232,192,32,0.75)';
+  ctx.font         = 'bold 9px system-ui';
+  ctx.textAlign    = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(ym(selectedEndDate), xExit, MT - 1);
+}
+
+/**
+ * Attach plotly_hover / plotly_unhover listeners to both main charts.
+ * Called after each Plotly.newPlot so listeners stay fresh.
+ */
+function attachPlotlyHooks() {
+  var gainEl = document.getElementById('gain-chart');
+  var volEl  = document.getElementById('vol-chart');
+
+  function onHover(data) {
+    if (!data.points || !data.points.length || !horizonData) return;
+    var xVal = data.points[0].x;  // horizon in years
+    var L    = Math.round(xVal * 12);
+    var nearest = horizonData.horizons.reduce(function(best, h) {
+      return Math.abs(h - L) < Math.abs(best - L) ? h : best;
+    }, horizonData.horizons[0]);
+    setHorizonHighlight(nearest);
+  }
+  function onUnhover() { setHorizonHighlight(null); }
+
+  gainEl.on('plotly_hover',   onHover);
+  gainEl.on('plotly_unhover', onUnhover);
+  volEl.on('plotly_hover',    onHover);
+  volEl.on('plotly_unhover',  onUnhover);
+}
+
+
+// ── CSV export ────────────────────────────────────────────────────────────
+
+/**
+ * Download the non-overlapping independent windows for the current scenario as CSV.
+ * One row per (horizon, window) pair; scenario info encoded in a header comment and filename.
+ */
+function downloadCSV() {
+  if (!horizonData || !activeData) return;
+  var hd = horizonData;
+
+  var scenarioLines = [
+    '# era: '          + currentConfig.era,
+    '# fund_set: '     + activeFundSet,
+    '# fund_label: '   + (activeData.fund_set_label || ''),
+    '# stocks_pct: '   + currentConfig.stockPct,
+    '# domestic_pct: ' + currentConfig.domesticPct,
+    '# rebalance: '    + currentConfig.rebalance,
+    '# cost_basis: '   + feeMode,
+    '# date_range: '   + activeData.dates[0].slice(0, 7) +
+                         ' to ' + activeData.dates[activeData.dates.length - 1].slice(0, 7),
+    '# exported: '     + new Date().toISOString().slice(0, 10),
+    '# note: non-overlapping (stride=L) independent windows only',
+  ].join('\n');
+
+  var cols = ['horizon_years', 'start_date', 'end_date', 'delta_gain_pp_yr', 'delta_vol_pp_ann'];
+  var rows = [cols.join(',')];
+  for (var hi = 0; hi < hd.horizons.length; hi++) {
+    var L    = hd.horizons[hi];
+    var wins = hd.byHorizon[L];
+    for (var i = 0; i < wins.length; i += L) {
+      var w = wins[i];
+      rows.push([
+        (L / 12).toFixed(6),
+        w.startDate.slice(0, 7),
+        w.endDate.slice(0, 7),
+        w.dGain.toFixed(6),
+        w.dVol.toFixed(6),
+      ].join(','));
+    }
+  }
+
+  var content = scenarioLines + '\n' + rows.join('\n');
+  var blob    = new Blob([content], { type: 'text/csv;charset=utf-8;' });
+  var url     = URL.createObjectURL(blob);
+  var a       = document.createElement('a');
+  a.href      = url;
+  a.download  = 'indep-windows_' + currentConfig.era +
+    '_' + activeFundSet +
+    '_s' + currentConfig.stockPct +
+    '_d' + currentConfig.domesticPct +
+    '_' + currentConfig.rebalance +
+    '_' + feeMode + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ── Data loading ──────────────────────────────────────────────────────────
+
+function loadAndRender() {
+  // Validate fund set for current era
+  var validSets = ERA_ACTIVE_SETS[currentConfig.era].map(function(s) { return s.value; });
+  if (validSets.indexOf(activeFundSet) === -1) {
+    activeFundSet = validSets[0];
+  }
+
+  // Repopulate fund-set dropdown
+  var sel = document.getElementById('active-fund-set');
+  sel.innerHTML = '';
+  ERA_ACTIVE_SETS[currentConfig.era].forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s.value;
+    opt.textContent = s.label;
+    sel.appendChild(opt);
+  });
+  sel.value = activeFundSet;
+
+  var cacheKey = currentConfig.era + ':' + activeFundSet;
+
+  function doCompute() {
+    var inp = getActiveComputeInputs();
+    horizonData = computeHorizonData(
+      activeData.dates,
+      inp.returnsA, inp.tickersA, inp.weightsA, currentConfig.rebalance,
+      inp.returnsB, inp.tickersB, inp.weightsB, 'never',
+      horizonStep, inp.afterTax
+    );
+    initZoomSliders();
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('charts').style.display  = '';
+    renderAll();
+  }
+
+  if (activeDataKey === cacheKey && activeData) {
+    doCompute();
+    return;
+  }
+
+  document.getElementById('loading').style.display = '';
+  document.getElementById('loading').textContent   = 'Loading data\u2026';
+  document.getElementById('charts').style.display  = 'none';
+  document.getElementById('error').style.display   = 'none';
+
+  fetch('/api/active-passive-data?era=' + currentConfig.era + '&fund_set=' + activeFundSet)
+    .then(function(r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      activeData    = data;
+      activeDataKey = cacheKey;
+      doCompute();
+    })
+    .catch(function(e) {
+      document.getElementById('loading').style.display = 'none';
+      document.getElementById('error').style.display   = '';
+      document.getElementById('error').textContent     = 'Error: ' + e.message;
+    });
+}
+
+
+// ── Config bar & debug ────────────────────────────────────────────────────
+
+function updateConfigBar() {
+  var d = activeData;
+  var parts = [
+    '<span>' + (currentConfig.era === 'pre_etf' ? 'Pre-ETF era' : 'ETF era') + '</span>',
+    '<span>Stocks: <code>' + currentConfig.stockPct + '%</code></span>',
+    '<span>Domestic: <code>' + currentConfig.domesticPct + '%</code></span>',
+    '<span>Rebalance: <code>' + currentConfig.rebalance + '</code></span>',
+    '<span>' + (d ? d.fund_set_label : '') + '</span>',
+    '<span>Costs: <code>' + feeMode + '</code></span>',
+    '<span>Step: <code>' + horizonStep + 'mo</code></span>',
+    independentOnly ? '<span style="color:#e8c020">&#9632; independent threads only</span>' : '',
+  ];
+  document.getElementById('config-bar').innerHTML = parts.join('');
+}
+
+function updateDebug(nIndepThr) {
+  var hd = horizonData;
+  if (!hd || !activeData) return;
+  var N = activeData.dates.length;
+  var maxL = hd.horizons[hd.horizons.length - 1];
+  var rows = [
+    ['Total months', N],
+    ['Date range', activeData.dates[0].slice(0,7) + ' \u2013 ' + activeData.dates[N-1].slice(0,7)],
+    ['Horizons', hd.horizons.length + ' (' + (hd.horizons[0]/12).toFixed(1) + 'yr \u2013 ' + (maxL/12).toFixed(1) + 'yr)'],
+    ['Unique end dates', hd.endDates.length],
+    ['n_indep @ max horizon (' + (maxL/12).toFixed(0) + 'yr)', Math.floor(N / maxL) + ' thread(s)'],
+    ['Independent threads shown', nIndepThr !== undefined ? nIndepThr : '\u2014'],
+    ['Active tickers', activeData.active_tickers.join(', ')],
+    ['Passive tickers', activeData.passive_tickers.join(', ')],
+    ['Horizon step', horizonStep + ' months'],
+    ['Fee mode', feeMode],
+  ];
+  var html = rows.map(function(r) {
+    return '<tr><td class="label">' + r[0] + '</td><td>' + r[1] + '</td></tr>';
+  }).join('');
+  document.getElementById('debug-table').innerHTML = html;
+}
+
+
+// ── Event wiring ──────────────────────────────────────────────────────────
+
+var debouncedLoadAndRender = debounce(loadAndRender, 180);
+
+// Era buttons
+document.querySelectorAll('[data-era]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-era]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentConfig.era = btn.dataset.era;
+    chartsInitialized = false;
+    loadAndRender();
+  });
+});
+
+// Stocks slider
+document.getElementById('stock-pct').addEventListener('input', function() {
+  currentConfig.stockPct = +this.value;
+  document.getElementById('stock-pct-val').textContent = this.value + '%';
+  debouncedLoadAndRender();
+});
+
+// Domestic slider
+document.getElementById('domestic-pct').addEventListener('input', function() {
+  currentConfig.domesticPct = +this.value;
+  document.getElementById('domestic-pct-val').textContent = this.value + '%';
+  debouncedLoadAndRender();
+});
+
+// Rebalance buttons
+document.querySelectorAll('[data-rebal]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-rebal]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    currentConfig.rebalance = btn.dataset.rebal;
+    debouncedLoadAndRender();
+  });
+});
+
+// Fund set dropdown
+document.getElementById('active-fund-set').addEventListener('change', function() {
+  activeFundSet = this.value;
+  chartsInitialized = false;
+  loadAndRender();
+});
+
+// Fee buttons
+document.querySelectorAll('[data-fee]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-fee]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    feeMode = btn.dataset.fee;
+    debouncedLoadAndRender();
+  });
+});
+
+// Horizon step buttons
+document.querySelectorAll('[data-step]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-step]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    horizonStep = +btn.dataset.step;
+    chartsInitialized = false;
+    debouncedLoadAndRender();
+  });
+});
+
+// SE band toggle
+document.querySelectorAll('[data-band]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-band]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    showBand = (btn.dataset.band === 'show');
+    if (horizonData) renderAll();
+  });
+});
+
+// (3) Independent-only haze toggle — no data refetch needed, just re-render
+document.querySelectorAll('[data-indep]').forEach(function(btn) {
+  btn.addEventListener('click', function() {
+    document.querySelectorAll('[data-indep]').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    independentOnly = (btn.dataset.indep === 'on');
+    if (horizonData) renderAll();
+  });
+});
+
+// Y-zoom sliders
+document.getElementById('gain-zoom').addEventListener('input', function() {
+  var v = +this.value, max = +this.max;
+  if (v >= max - 0.001) {
+    gainZoom = null;
+    document.getElementById('gain-zoom-val').textContent = 'auto';
+  } else {
+    gainZoom = v;
+    document.getElementById('gain-zoom-val').textContent = '\u00b1' + v.toFixed(2);
+  }
+  if (horizonData) renderAll();
+});
+
+document.getElementById('vol-zoom').addEventListener('input', function() {
+  var v = +this.value, max = +this.max;
+  if (v >= max - 0.001) {
+    volZoom = null;
+    document.getElementById('vol-zoom-val').textContent = 'auto';
+  } else {
+    volZoom = v;
+    document.getElementById('vol-zoom-val').textContent = '\u00b1' + v.toFixed(2);
+  }
+  if (horizonData) renderAll();
+});
+
+// Scrub slider
+document.getElementById('scrub-slider').addEventListener('input', function() {
+  var idx = +this.value;
+  selectedEndDate = horizonData ? horizonData.endDates[idx] : null;
+  document.getElementById('scrub-label').textContent =
+    selectedEndDate ? ym(selectedEndDate) : '\u2014';
+  updateHighlight();
+});
+
+// Scrub clear
+document.getElementById('scrub-clear').addEventListener('click', function() {
+  selectedEndDate = null;
+  document.getElementById('scrub-label').textContent = '\u2014';
+  document.getElementById('scrub-slider').value = 0;
+  updateHighlight();
+});
+
+
+// CSV export
+document.getElementById('csv-export').addEventListener('click', downloadCSV);
+
+// ── Bootstrap ─────────────────────────────────────────────────────────────
+
+// Wire canvas hover → horizon highlight (attached once; canvas persists across data changes)
+(function() {
+  var cv = document.getElementById('thread-timeline');
+  cv.addEventListener('mousemove', function(e) {
+    if (!horizonData || !selectedEndDate) return;
+    var rect  = cv.getBoundingClientRect();
+    var yPx   = e.clientY - rect.top;
+    var MT = 18, MB = 22;
+    var nRows = horizonData.horizons.length;
+    var rowH  = (rect.height - MT - MB) / nRows;
+    var row   = Math.floor((yPx - MT) / rowH);
+    if (row < 0 || row >= nRows) { setHorizonHighlight(null); return; }
+    var horizonIdx = (nRows - 1) - row;   // row 0 = top = longest
+    setHorizonHighlight(horizonData.horizons[horizonIdx]);
+  });
+  cv.addEventListener('mouseleave', function() {
+    setHorizonHighlight(null);
+  });
+})();
+
+loadAndRender();
+
+  </script>
+</body>
+</html>

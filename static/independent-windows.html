@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>How Overlapping Windows Share Information</title>
+  <link rel="icon" type="image/png" href="/static/favicon.png" />
+  <link rel="stylesheet" href="/static/theme.css" />
+  <style>
+    body { padding: 50px 20px 80px; }
+    .container { max-width: 860px; margin: 0 auto; }
+    h1 { margin-bottom: 6px; }
+    .lead { font-size: 1.05rem; color: var(--color-text-dim); margin-bottom: 40px; }
+    section { margin-bottom: 64px; }
+    h2 { border-top: 1px solid var(--color-border); padding-top: 24px; margin-bottom: 14px; }
+    h3 { margin-bottom: 8px; color: var(--color-primary); }
+    /* ── Controls ─────────────────────────────────────────────── */
+    .ctrl-row {
+      display: flex; flex-wrap: wrap; gap: 12px 28px;
+      align-items: center; margin-bottom: 14px;
+      font-size: 0.83rem; color: var(--color-text-dim);
+    }
+    .ctrl-group { display: flex; align-items: center; gap: 8px; }
+    .ctrl-label { white-space: nowrap; }
+    .ctrl-row input[type=range] { width: 130px; accent-color: var(--color-primary); }
+    .ctrl-row input[type=checkbox] { accent-color: var(--color-primary); width: 14px; height: 14px; }
+    .val { color: var(--color-primary); font-family: var(--font-mono); min-width: 3ch; }
+    /* ── Canvas ───────────────────────────────────────────────── */
+    canvas {
+      width: 100%; display: block;
+      background: #002535;
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+    }
+    .two-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 600px) { .two-panel { grid-template-columns: 1fr; } }
+    /* ── Stat boxes ───────────────────────────────────────────── */
+    .stat-row {
+      display: flex; flex-wrap: wrap; gap: 12px;
+      margin: 12px 0;
+    }
+    .stat-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 10px 16px; min-width: 140px;
+    }
+    .stat-box .label {
+      font-size: 0.73rem; color: var(--color-text-dim);
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 3px;
+    }
+    .stat-box .value {
+      font-size: 1.2rem; font-family: var(--font-mono);
+      color: var(--color-text);
+    }
+    .stat-box.gold .value { color: var(--color-accent); }
+    /* ── Callout boxes ────────────────────────────────────────── */
+    .try-box {
+      border-left: 3px solid var(--color-primary);
+      background: var(--color-surface);
+      padding: 12px 16px; margin: 16px 0;
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      font-size: 0.88rem;
+    }
+    .try-box strong { color: var(--color-primary); }
+    .invariant-box {
+      border: 1px solid rgba(232,192,32,0.35);
+      background: rgba(232,192,32,0.07);
+      border-radius: var(--radius-md);
+      padding: 16px 20px; margin: 20px 0;
+      font-size: 0.9rem; line-height: 1.7;
+    }
+    .invariant-box .headline {
+      font-size: 1rem; font-weight: 600;
+      color: var(--color-accent); margin-bottom: 10px;
+    }
+    .errbar-row {
+      display: flex; gap: 24px; margin-top: 12px; flex-wrap: wrap;
+    }
+    .errbar-item {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.85rem;
+    }
+    .errbar-swatch {
+      width: 16px; height: 4px; border-radius: 2px; flex-shrink: 0;
+    }
+    .errbar-label { color: var(--color-text-dim); }
+    .errbar-value { font-family: var(--font-mono); color: var(--color-text); }
+    .errbar-unestimable { color: rgba(232,192,32,0.5); font-style: italic; }
+    /* ── Regen button ─────────────────────────────────────────── */
+    #b4-regen {
+      background: var(--color-surface); color: var(--color-primary);
+      border: 1px solid var(--color-border-hi); border-radius: var(--radius-sm);
+      padding: 6px 16px; font-size: 0.84rem; cursor: pointer;
+      font-family: var(--font-sans); transition: background 0.15s, color 0.15s;
+    }
+    #b4-regen:hover { background: var(--color-surface-hi); color: var(--color-primary-hi); }
+    /* ── Close section ────────────────────────────────────────── */
+    .close-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      border-radius: var(--radius-md);
+      padding: 24px 28px;
+    }
+    .link-back {
+      display: inline-block; margin-top: 14px;
+      background: rgba(125,212,232,0.1);
+      border: 1px solid var(--color-primary);
+      color: var(--color-primary); border-radius: var(--radius-sm);
+      padding: 8px 18px; font-size: 0.9rem; text-decoration: none;
+      transition: background 0.15s, color 0.15s;
+    }
+    .link-back:hover { background: rgba(125,212,232,0.2); color: var(--color-primary-hi); }
+    .canvas-note {
+      font-size: 0.78rem; color: var(--color-text-dim);
+      margin-top: 6px; font-style: italic;
+    }
+    kbd {
+      background: var(--color-surface-hi); border: 1px solid var(--color-border-hi);
+      border-radius: 3px; padding: 1px 6px; font-size: 0.82em;
+      font-family: var(--font-mono); color: var(--color-text);
+    }
+  </style>
+</head>
+<body>
+<script src="/static/nav.js"></script>
+
+<div class="container">
+  <h1>How Overlapping Windows Share Information</h1>
+  <p class="lead">
+    The mechanics behind the gold dots, the SE ribbon, and the
+    &ldquo;Independent only&rdquo; toggle.
+  </p>
+
+  <!-- ── INTRO ──────────────────────────────────────────────────────── -->
+  <section id="intro">
+    <p>
+      Imagine a 40-year record. You study it by sliding a fixed-length window across the timeline
+      and measuring something in each window. The measurements overlap heavily &mdash; each window
+      shares almost all its data with the next. So the apparent count of windows is not the count
+      of <em>independent</em> pieces of evidence.
+    </p>
+    <p>
+      This page strips away the finance and builds the idea from scratch:
+      first on a plain timeline, then onto the abstract &ldquo;horizon&rdquo; x-axis of the
+      <a href="/rolling-windows-threads">Active vs Passive: Delta vs Horizon</a> chart,
+      so that axis stops feeling opaque.
+    </p>
+    <p style="color:var(--color-text-dim);font-size:0.85rem">
+      <strong style="color:var(--color-primary)">Colour convention</strong>
+      (consistent with the main chart):
+      <span style="color:#7dd4e8">&#9644; teal</span> = all overlapping windows &nbsp;&middot;&nbsp;
+      <span style="color:#e8c020">&#9644; gold</span> = independent (non-overlapping) windows.
+    </p>
+  </section>
+
+  <!-- ── BEAT 1: WINDOWS OVERLAP ───────────────────────────────────── -->
+  <section id="beat1">
+    <h2>1 &middot; Windows Overlap</h2>
+    <p>
+      A 40-year record. Each row in the stack is one window position; its bar spans the years it
+      covers. Teal rows overlap; gold rows are one non-overlapping selection
+      of size&nbsp;<code>&#8970;40&nbsp;&divide;&nbsp;L&#8971;</code>.
+    </p>
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Window length L:</span>
+        <input type="range" id="b1-L" min="1" max="20" step="1" value="5" />
+        <span class="val" id="b1-L-val">5yr</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Slide step:</span>
+        <input type="range" id="b1-step" min="1" max="24" step="1" value="12" />
+        <span class="val" id="b1-step-val">12 mo</span>
+      </div>
+    </div>
+    <canvas id="c1" style="height:260px"></canvas>
+    <div class="stat-row">
+      <div class="stat-box">
+        <div class="label">All windows</div>
+        <div class="value" id="b1-nall">&mdash;</div>
+      </div>
+      <div class="stat-box gold">
+        <div class="label">Independent (gold) &nbsp;<code>&#8970;40&divide;L&#8971;</code></div>
+        <div class="value" id="b1-nindep">&mdash;</div>
+      </div>
+      <div class="stat-box">
+        <div class="label">Adjacent windows share</div>
+        <div class="value" id="b1-shared">&mdash;</div>
+      </div>
+    </div>
+    <div class="try-box">
+      <strong>Try this:</strong>
+      Drag the <strong>Slide step</strong> down to 1&nbsp;mo &mdash; the all-window count
+      explodes but the gold count stays fixed at <code>&#8970;40&divide;L&#8971;</code>.
+      Sliding finer never buys independent information.
+      Then drag <strong>L</strong> up: the gold count craters while the record still appears
+      fully covered, because each window is consuming more exclusive length.
+    </div>
+  </section>
+
+  <!-- ── BEAT 2: WHICH WINDOWS? ─────────────────────────────────────── -->
+  <section id="beat2">
+    <h2>2 &middot; Which Windows?</h2>
+    <p>
+      Many different non-overlapping selections exist &mdash; and they needn&rsquo;t be evenly
+      spaced. The <strong>Alternatives</strong> slider cycles through different valid choices.
+      Notice the count never changes.
+    </p>
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Window length L:</span>
+        <input type="range" id="b2-L" min="1" max="20" step="1" value="7" />
+        <span class="val" id="b2-L-val">7yr</span>
+      </div>
+      <div class="ctrl-group">
+        <span class="ctrl-label">Alternative:</span>
+        <input type="range" id="b2-alt" min="0" max="11" step="1" value="0" />
+        <span class="val" id="b2-alt-val">1 / 12</span>
+      </div>
+    </div>
+    <canvas id="c2" style="height:260px"></canvas>
+    <p class="canvas-note">
+      Gold = current selection &middot; dim gold = other valid selections &middot; teal = all overlapping windows
+    </p>
+    <div class="invariant-box">
+      <div class="headline">The invariant</div>
+      An independent selection is a combination of windows that don&rsquo;t share data.
+      Many such combinations exist &mdash; members are your choice.
+      But the <strong>count is not your choice</strong>: the maximum number of non-overlapping
+      L-year windows that fit in a T-year span is exactly
+      <strong><code>&#8970;T&nbsp;&divide;&nbsp;L&#8971;</code></strong>, for any combination,
+      because each window consumes L years of exclusive length.
+      <br><br>
+      This is why the honesty math keys to the <em>count</em> alone.
+      The lone gold window at a 20-year horizon is one arbitrary representative of
+      &ldquo;&asymp;1 independent window&rsquo;s worth of information&rdquo;
+      &mdash; the&nbsp;1 is solid even though the membership is a coin-flip.
+    </div>
+  </section>
+
+  <!-- ── BEAT 3: THE HORIZON BRIDGE ─────────────────────────────────── -->
+  <section id="beat3">
+    <h2>3 &middot; The Horizon Bridge</h2>
+    <p>
+      Each window bar has two properties: its length (L) and its start year.
+      Map them to a scatter: <strong>x = length</strong>, <strong>y = start year</strong>.
+      The entire left-panel stack collapses into one vertical column at x&nbsp;=&nbsp;L.
+      Drag L &mdash; the column slides right. Enable &ldquo;Show all horizons&rdquo; to
+      fill in columns for every window length at once.
+    </p>
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Window length L:</span>
+        <input type="range" id="b3-L" min="1" max="20" step="1" value="5" />
+        <span class="val" id="b3-L-val">5yr</span>
+      </div>
+      <div class="ctrl-group">
+        <label style="display:flex;align-items:center;gap:6px">
+          <input type="checkbox" id="b3-showall" />
+          <span>Show all horizons</span>
+        </label>
+      </div>
+    </div>
+    <div class="two-panel">
+      <div>
+        <canvas id="c3a" style="height:310px"></canvas>
+        <p class="canvas-note">Stack at current L: each row = one window position</p>
+      </div>
+      <div>
+        <canvas id="c3b" style="height:310px"></canvas>
+        <p class="canvas-note">Horizon scatter: each dot = one window, plotted at (length, start year)</p>
+      </div>
+    </div>
+    <div class="try-box" style="margin-top:16px">
+      <strong>The bridge:</strong>
+      A bar at start&nbsp;year&nbsp;=&nbsp;10 in the left stack &rarr;
+      a dot at (L,&nbsp;10) in the right scatter.
+      The faint gold dots for all other horizons are always visible &mdash; you can
+      already see the skeleton thinning toward the right.
+      Tick &ldquo;Show all horizons&rdquo; to add the full teal haze: that is the exact
+      <em>shape</em> of the
+      <a href="/rolling-windows-threads">Active vs Passive: Delta vs Horizon</a>
+      chart. On the real chart the y-axis swaps start&nbsp;year for a financial delta;
+      the structure is identical.
+    </div>
+  </section>
+
+  <!-- ── BEAT 4: WHY IT MATTERS ─────────────────────────────────────── -->
+  <section id="beat4">
+    <h2>4 &middot; Why It Matters</h2>
+    <p>
+      Now put measured values on the timeline. Because this is a <em>synthetic</em> example,
+      we build the data ourselves: 480&nbsp;months drawn at random from a process whose average
+      is exactly&nbsp;0. In this toy we therefore <em>know</em> that 0 &mdash; call it the
+      <strong>generated mean</strong> &mdash; and can ask how well our windows recover it.
+      Any handful of windows will average to something <em>near</em>&nbsp;0 but rarely
+      exactly&nbsp;0; that&rsquo;s the <strong>sample mean</strong>, which scatters by luck
+      of the draw. The error bars measure how far the sample is likely to sit from the value
+      we generated from.
+    </p>
+    <p>
+      The horizon scatter shows the real chart&rsquo;s behaviour: at long horizons the teal
+      haze <em>converges</em> vertically (long-window means cluster near the generated value)
+      while the gold dots <em>thin</em> &mdash; so it looks like ever-more-precise evidence
+      while actually resting on ever-fewer independent windows.
+    </p>
+    <p style="font-size:0.88rem;color:var(--color-text-dim);border-left:2px solid var(--color-border);padding-left:12px;margin:14px 0">
+      Real markets give no such number. There is no value waiting to be recovered &mdash;
+      only the one history that happened and whatever model we lay over it.
+      This widget can label a line &ldquo;generated mean&rdquo; precisely because it is
+      a simulation, which is exactly why one history of returns cannot, on its own, tell
+      you there is one.
+    </p>
+    <div class="ctrl-row">
+      <div class="ctrl-group">
+        <span class="ctrl-label">Window length L:</span>
+        <input type="range" id="b4-L" min="1" max="20" step="1" value="5" />
+        <span class="val" id="b4-L-val">5yr</span>
+      </div>
+      <button id="b4-regen">&#8635; Regenerate data</button>
+    </div>
+
+    <p style="font-size:0.85rem;color:var(--color-text-dim);margin-bottom:8px">
+      <strong style="color:var(--color-text)">Top:</strong> raw monthly data (fixed ±3σ scale).
+      <strong style="color:var(--color-text)">Bottom:</strong> window means at the same time positions,
+      zoomed to their actual spread (gold = independent, teal = overlapping).
+    </p>
+    <canvas id="c4a" style="height:280px;margin-bottom:12px"></canvas>
+
+    <p style="font-size:0.85rem;color:var(--color-text-dim);margin-bottom:8px">
+      Horizon scatter: window means by length. Error bars (right) for the current L.
+    </p>
+    <canvas id="c4b" style="height:310px"></canvas>
+
+    <div class="errbar-row" id="b4-errbar-row">
+      <div class="errbar-item">
+        <div class="errbar-swatch" style="background:transparent;border-top:2px dashed rgba(220,100,80,0.85);height:2px;border-radius:0;margin-top:1px"></div>
+        <span class="errbar-label">Naive &nbsp;<code>&#963;/&radic;N<sub>all</sub></code>:</span>
+        <span class="errbar-value" id="b4-naive">&mdash;</span>
+      </div>
+      <div class="errbar-item">
+        <div class="errbar-swatch" style="background:#e8c020"></div>
+        <span class="errbar-label">Honest &nbsp;<code>&#963;/&radic;&#8970;T/L&#8971;</code>:</span>
+        <span class="errbar-value" id="b4-honest">&mdash;</span>
+      </div>
+      <div class="errbar-item" style="color:var(--color-text-dim);font-size:0.82rem;align-items:flex-start;padding-top:2px">
+        Does the error bar bracket the true mean&nbsp;(0)?
+        &ensp;<span id="b4-naive-brackets" style="font-family:var(--font-mono)"></span>
+        &ensp;/&ensp;
+        <span id="b4-honest-brackets" style="font-family:var(--font-mono)"></span>
+      </div>
+    </div>
+
+    <div id="b4-ratio" style="font-size:0.82rem;color:var(--color-text-dim);margin-top:10px;line-height:1.7;padding:0 2px"></div>
+
+    <div class="try-box" style="margin-top:16px">
+      <strong>Try this:</strong>
+      Click <kbd>Regenerate data</kbd> repeatedly.
+      The honest (gold) bar brackets the true mean far more often than the naive (red) bar;
+      the naive bar is overconfident because it treats ~99%-redundant windows as independent evidence.
+      At long horizons even the honest bar misses frequently &mdash; with only one or two independent
+      windows no interval can be reliable, and the honest bar is the one that doesn&rsquo;t pretend otherwise.
+    </div>
+  </section>
+
+  <!-- ── CLOSE ──────────────────────────────────────────────────────── -->
+  <section id="close">
+    <div class="close-box">
+      <h3>Effective Sample Size</h3>
+      <p>
+        The concept has a name: <strong>effective sample size</strong> (ESS).
+        When observations overlap or are autocorrelated, the nominal count
+        N<sub>all</sub> overstates how much independent information you have.
+        The honest count is&nbsp;<code>&#8970;T&nbsp;&divide;&nbsp;L&#8971;</code>,
+        regardless of which combination you pick &mdash; the membership is arbitrary,
+        the count is robust.
+      </p>
+      <p>
+        This is the mechanic behind three features of the
+        <strong>Active vs Passive: Delta vs Horizon</strong> chart:
+      </p>
+      <ul style="padding-left:1.5em;line-height:2">
+        <li>
+          <span style="color:#e8c020">&#9679;</span>
+          <strong>Gold dots</strong> &mdash; each is one non-overlapping window at its horizon;
+          the count per column is <code>&#8970;T&nbsp;&divide;&nbsp;L&#8971;</code>.
+        </li>
+        <li>
+          <span style="color:rgba(190,120,255,0.9)">&#9679;</span>
+          <strong>Violet SE ribbon</strong> &mdash; width is keyed to
+          <code>&#8970;T&nbsp;&divide;&nbsp;L&#8971;</code>, not to the nominal
+          N<sub>all</sub>; it widens toward long horizons because the independent count
+          collapses, even as the teal haze looks increasingly tight.
+        </li>
+        <li>
+          <span style="color:#7dd4e8">&#9679;</span>
+          <strong>&ldquo;Independent only&rdquo; toggle</strong> &mdash; collapses the dense
+          haze to the handful of truly non-overlapping threads, making the data scarcity
+          visible in one click.
+        </li>
+      </ul>
+      <a class="link-back" href="/rolling-windows-threads">
+        &rarr; Active vs Passive: Delta vs Horizon
+      </a>
+    </div>
+  </section>
+</div><!-- .container -->
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   How Overlapping Windows Share Information — interactive explainer
+   Pure canvas / vanilla JS; no external dependencies beyond nav.js.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+// ── Constants & colours ──────────────────────────────────────────────
+var T  = 40;          // span in years
+var MAX_L = 20;
+var DPR = window.devicePixelRatio || 1;
+
+var C_BG         = '#002535';
+var C_TEAL       = 'rgba(125,212,232,0.28)';
+var C_TEAL_BOLD  = 'rgba(125,212,232,0.80)';
+var C_GOLD       = '#e8c020';
+var C_GOLD_FAINT = 'rgba(232,192,32,0.14)';
+var C_TRUE       = 'rgba(255,255,255,0.50)';
+var C_TEXT       = '#e4f6fb';
+var C_DIM        = '#5a9aaa';
+var C_NAIVE      = 'rgba(220,100,80,0.90)';
+
+// ── Per-beat state ───────────────────────────────────────────────────
+var b1 = { L: 5, step: 12 };
+var b2 = { L: 7, altIdx: 0, alts: [] };
+var b3 = { L: 5, showAll: false };
+var b4 = { L: 5, data: null };
+
+// ── Maths helpers ────────────────────────────────────────────────────
+
+function getAllStarts(L_yr, step_mo) {
+  var step_yr = step_mo / 12, starts = [];
+  for (var s = 0; s + L_yr <= T + 1e-9; s += step_yr) starts.push(s);
+  return starts;
+}
+
+function getIndepStarts(L_yr) {
+  var n = Math.floor(T / L_yr), starts = [];
+  for (var i = 0; i < n; i++) starts.push(i * L_yr);
+  return starts;
+}
+
+function nIndep(L_yr) { return Math.floor(T / L_yr); }
+
+function sharedPct(L_yr, step_mo) {
+  return Math.max(0, (L_yr - step_mo / 12) / L_yr * 100);
+}
+
+// All valid independent selections via uniform offset (0..slack years).
+// For integer L and T, this is the exact count: slack+1.
+function genAlts(L_yr) {
+  var n = nIndep(L_yr);
+  if (n === 0) return [[]];
+  var slack = T - n * L_yr, alts = [];
+  for (var offset = 0; offset <= slack; offset++) {
+    var starts = [];
+    for (var i = 0; i < n; i++) starts.push(offset + i * L_yr);
+    alts.push(starts);
+  }
+  return alts;
+}
+
+function sampleArr(arr, n) {
+  if (arr.length <= n) return arr;
+  var out = [];
+  for (var i = 0; i < n; i++) out.push(arr[Math.round(i * (arr.length - 1) / (n - 1))]);
+  return out;
+}
+
+function stddev(arr) {
+  if (arr.length < 2) return 0;
+  var m = arr.reduce(function(a, b) { return a + b; }, 0) / arr.length;
+  return Math.sqrt(arr.reduce(function(s, v) { return s + (v - m) * (v - m); }, 0) / (arr.length - 1));
+}
+
+// ── Canvas setup ─────────────────────────────────────────────────────
+
+function prep(id) {
+  var el = document.getElementById(id);
+  var W = el.clientWidth, H = el.clientHeight;
+  if (!W || !H) return null;
+  el.width  = W * DPR;
+  el.height = H * DPR;
+  var ctx = el.getContext('2d');
+  ctx.scale(DPR, DPR);
+  ctx.fillStyle = C_BG;
+  ctx.fillRect(0, 0, W, H);
+  return { ctx: ctx, W: W, H: H };
+}
+
+// Margins
+var ML = 42, MR = 16, MT = 10, MB = 26;
+
+function plotW(W) { return W - ML - MR; }
+function plotH(H) { return H - MT - MB; }
+function xY(s, T_yr, pW) { return ML + s / T_yr * pW; }
+function yRow(s, T_yr, pH) { return MT + s / T_yr * pH; }
+
+// ── Shared: draw timeline stack ───────────────────────────────────────
+
+function drawStack(ctx, W, H, L_yr, allStarts, indepStarts, titleStr) {
+  var pW_ = plotW(W), pH_ = plotH(H);
+
+  // Grid
+  ctx.font = '10px system-ui'; ctx.fillStyle = C_DIM;
+  for (var yr = 0; yr <= T; yr += 10) {
+    var gx = xY(yr, T, pW_), gy = yRow(yr, T, pH_);
+    ctx.fillStyle = 'rgba(125,212,232,0.07)';
+    ctx.fillRect(ML, gy - 0.5, pW_, 1);
+    ctx.fillRect(gx - 0.5, MT, 1, pH_);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+    ctx.fillText(yr, gx, H - MB + 14);
+    ctx.textAlign = 'right';
+    ctx.fillText(yr, ML - 4, gy + 4);
+  }
+
+  // Axis labels
+  ctx.fillStyle = C_DIM; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('Year \u2192', ML + pW_ / 2, H - 2);
+  ctx.save();
+  ctx.translate(11, MT + pH_ / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.fillText('Start year', 0, 0);
+  ctx.restore();
+
+  if (titleStr) {
+    ctx.fillStyle = C_DIM; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
+    ctx.fillText(titleStr, ML, MT - 2);
+  }
+
+  // All teal window bars
+  var nAll = allStarts.length;
+  var barH = Math.max(0.8, pH_ / nAll * 0.85);
+  var disp  = nAll <= 280 ? allStarts : sampleArr(allStarts, 280);
+  disp.forEach(function(s) {
+    var y = yRow(s, T, pH_);
+    ctx.fillStyle = C_TEAL;
+    ctx.fillRect(xY(s, T, pW_), y - barH / 2, Math.max(1, (L_yr / T) * pW_), Math.max(1, barH));
+  });
+
+  // Gold independent bars (always drawn in full, on top)
+  var goldH = Math.min(8, Math.max(3, barH * 2.5));
+  indepStarts.forEach(function(s) {
+    var y = yRow(s, T, pH_);
+    var x0 = xY(s, T, pW_), wBar = Math.max(2, (L_yr / T) * pW_);
+    ctx.fillStyle = C_GOLD;
+    ctx.fillRect(x0, y - goldH / 2, wBar, goldH);
+    // End tick marks
+    ctx.strokeStyle = C_GOLD; ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x0, y - goldH / 2 - 3); ctx.lineTo(x0, y + goldH / 2 + 3);
+    ctx.moveTo(x0 + wBar, y - goldH / 2 - 3); ctx.lineTo(x0 + wBar, y + goldH / 2 + 3);
+    ctx.stroke();
+  });
+}
+
+// ── Beat 1 ────────────────────────────────────────────────────────────
+
+function drawBeat1() {
+  var r = prep('c1'); if (!r) return;
+  var L = b1.L, step = b1.step;
+  var all   = getAllStarts(L, step);
+  var indep = getIndepStarts(L);
+  drawStack(r.ctx, r.W, r.H, L, all, indep, null);
+
+  // Window-length indicator bar at top
+  var pW_ = plotW(r.W);
+  r.ctx.fillStyle = 'rgba(232,192,32,0.22)';
+  r.ctx.fillRect(ML, MT, (L / T) * pW_, 6);
+  r.ctx.strokeStyle = C_GOLD; r.ctx.lineWidth = 1.5;
+  r.ctx.strokeRect(ML, MT, (L / T) * pW_, 6);
+  r.ctx.fillStyle = C_GOLD; r.ctx.font = '10px system-ui'; r.ctx.textAlign = 'left';
+  r.ctx.fillText('L = ' + L + 'yr', ML + (L / T) * pW_ + 4, MT + 5);
+
+  // Stats
+  document.getElementById('b1-nall').textContent   = all.length.toLocaleString();
+  document.getElementById('b1-nindep').textContent = indep.length + ' = \u230a40\u00f7' + L + '\u230b';
+  document.getElementById('b1-shared').textContent = sharedPct(L, step).toFixed(1) + '%';
+}
+
+// ── Beat 2 ────────────────────────────────────────────────────────────
+
+function drawBeat2() {
+  var r = prep('c2'); if (!r) return;
+  var L = b2.L;
+  b2.alts = genAlts(L);
+  var numAlts = b2.alts.length;
+  b2.numAlts = numAlts;
+  if (b2.altIdx >= numAlts) b2.altIdx = 0;
+  var altSlider = document.getElementById('b2-alt');
+  altSlider.max = numAlts - 1;
+  altSlider.value = b2.altIdx;
+  altSlider.disabled = (numAlts === 1);
+  document.getElementById('b2-alt-val').textContent = (b2.altIdx + 1) + ' / ' + numAlts;
+  var pW_ = plotW(r.W), pH_ = plotH(r.H);
+  var ctx = r.ctx;
+
+  // Grid
+  ctx.font = '10px system-ui';
+  for (var yr = 0; yr <= T; yr += 10) {
+    var gx = xY(yr, T, pW_), gy = yRow(yr, T, pH_);
+    ctx.fillStyle = 'rgba(125,212,232,0.07)';
+    ctx.fillRect(ML, gy - 0.5, pW_, 1);
+    ctx.fillRect(gx - 0.5, MT, 1, pH_);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+    ctx.fillText(yr, gx, r.H - MB + 14);
+    ctx.textAlign = 'right'; ctx.fillText(yr, ML - 4, gy + 4);
+  }
+  ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+  ctx.fillText('Year \u2192', ML + pW_ / 2, r.H - 2);
+  ctx.save();
+  ctx.translate(11, MT + pH_ / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.fillText('Start year', 0, 0);
+  ctx.restore();
+
+  // All overlapping windows (step=1yr) as faint teal
+  getAllStarts(L, 12).forEach(function(s) {
+    var y = yRow(s, T, pH_);
+    ctx.fillStyle = C_TEAL;
+    ctx.fillRect(xY(s, T, pW_), y - 2, Math.max(2, (L / T) * pW_), 4);
+  });
+
+  // Other alternatives as dim gold (behind)
+  b2.alts.forEach(function(alt, i) {
+    if (i === b2.altIdx) return;
+    alt.forEach(function(s) {
+      var y = yRow(s, T, pH_);
+      ctx.fillStyle = C_GOLD_FAINT;
+      ctx.fillRect(xY(s, T, pW_), y - 3, Math.max(2, (L / T) * pW_), 6);
+    });
+  });
+
+  // Current alternative as opaque gold
+  var cur = b2.alts[b2.altIdx] || [];
+  var goldH = Math.min(10, Math.max(4, pH_ / T * 4));
+  cur.forEach(function(s) {
+    var y = yRow(s, T, pH_);
+    var x0 = xY(s, T, pW_), wBar = Math.max(2, (L / T) * pW_);
+    ctx.fillStyle = C_GOLD;
+    ctx.fillRect(x0, y - goldH / 2, wBar, goldH);
+    ctx.strokeStyle = C_GOLD; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x0, y - goldH / 2 - 4); ctx.lineTo(x0, y + goldH / 2 + 4);
+    ctx.moveTo(x0 + wBar, y - goldH / 2 - 4); ctx.lineTo(x0 + wBar, y + goldH / 2 + 4);
+    ctx.stroke();
+  });
+
+  // Label
+  var n = nIndep(L);
+  ctx.fillStyle = C_GOLD; ctx.font = '11px system-ui'; ctx.textAlign = 'right';
+  ctx.fillText('Selection ' + (b2.altIdx + 1) + ' / ' + b2.numAlts +
+    '   count = ' + n + ' = \u230a40\u00f7' + L + '\u230b', ML + pW_, MT + 12);
+}
+
+// ── Beat 3: stack half ────────────────────────────────────────────────
+
+function drawBeat3Stack() {
+  var r = prep('c3a'); if (!r) return;
+  var L = b3.L;
+  drawStack(r.ctx, r.W, r.H, L, getAllStarts(L, 12), getIndepStarts(L),
+            'Stack at L = ' + L + 'yr (step = 1yr)');
+}
+
+// ── Beat 3: horizon scatter half ──────────────────────────────────────
+
+function drawBeat3Horizon() {
+  var r = prep('c3b'); if (!r) return;
+  var ctx = r.ctx, W = r.W, H = r.H;
+  var pW_ = plotW(W), pH_ = plotH(H);
+  var maxH = MAX_L;
+
+  // Axis helpers
+  function hx(L_h) { return ML + (L_h / maxH) * pW_; }
+  function sy(s)    { return MT + (s    / T)    * pH_; }
+
+  // Grid
+  ctx.font = '10px system-ui';
+  for (var h = 0; h <= maxH; h += 5) {
+    ctx.fillStyle = 'rgba(125,212,232,0.07)';
+    ctx.fillRect(hx(h) - 0.5, MT, 1, pH_);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+    ctx.fillText(h + 'yr', hx(h), H - MB + 14);
+  }
+  for (var yr = 0; yr <= T; yr += 10) {
+    ctx.fillStyle = 'rgba(125,212,232,0.07)';
+    ctx.fillRect(ML, sy(yr) - 0.5, pW_, 1);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'right';
+    ctx.fillText(yr, ML - 4, sy(yr) + 4);
+  }
+  ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+  ctx.fillText('Window length (horizon) \u2192', ML + pW_ / 2, H - 2);
+  ctx.save();
+  ctx.translate(11, MT + pH_ / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.fillText('Start year', 0, 0);
+  ctx.restore();
+
+  // Optional teal haze: all non-current horizons (drawn first, lowest z)
+  if (b3.showAll) {
+    for (var Lh = 1; Lh <= maxH; Lh++) {
+      if (Lh === b3.L) continue;
+      getAllStarts(Lh, 12).forEach(function(s) {
+        ctx.beginPath(); ctx.arc(hx(Lh), sy(s), 1.5, 0, 6.283);
+        ctx.fillStyle = C_TEAL; ctx.fill();
+      });
+    }
+  }
+
+  // Faint gold skeleton for all non-current horizons (always visible — shows thinning)
+  for (var Lh = 1; Lh <= maxH; Lh++) {
+    if (Lh === b3.L) continue;
+    getIndepStarts(Lh).forEach(function(s) {
+      ctx.beginPath(); ctx.arc(hx(Lh), sy(s), 2, 0, 6.283);
+      ctx.fillStyle = 'rgba(232,192,32,0.30)'; ctx.fill();
+    });
+  }
+
+  // Current L: full teal + bold gold (drawn on top)
+  getAllStarts(b3.L, 12).forEach(function(s) {
+    ctx.beginPath(); ctx.arc(hx(b3.L), sy(s), 3.5, 0, 6.283);
+    ctx.fillStyle = C_TEAL_BOLD; ctx.fill();
+  });
+  getIndepStarts(b3.L).forEach(function(s) {
+    ctx.beginPath(); ctx.arc(hx(b3.L), sy(s), 6, 0, 6.283);
+    ctx.fillStyle = C_GOLD; ctx.fill();
+  });
+
+  // Current-L column indicator
+  var cx = hx(b3.L);
+  ctx.strokeStyle = 'rgba(125,212,232,0.22)'; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(cx, MT); ctx.lineTo(cx, MT + pH_); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = C_TEAL_BOLD; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText('L = ' + b3.L + 'yr', cx, MT - 2);
+}
+
+function range(a, b) { var r = []; for (var i = a; i <= b; i++) r.push(i); return r; }
+function setOf(arr) { var s = {}; arr.forEach(function(v) { s[v.toFixed(4)] = true; }); return s; }
+
+// ── Beat 4: iid data ─────────────────────────────────────────────────
+
+function genData() {
+  var n = T * 12, data = new Float64Array(n);
+  for (var i = 0; i < n; i++) {
+    var u1 = Math.random() || 1e-15, u2 = Math.random();
+    data[i] = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+  }
+  return data;
+}
+
+function windowMean(data, s_yr, L_yr) {
+  var s = Math.round(s_yr * 12), n = Math.round(L_yr * 12), sum = 0;
+  for (var i = s; i < s + n && i < data.length; i++) sum += data[i];
+  return sum / n;
+}
+
+function drawBeat4Timeline() {
+  var r = prep('c4a'); if (!r) return;
+  var ctx = r.ctx, W = r.W, H = r.H;
+  var pW_ = plotW(W);
+  var data = b4.data, L = b4.L;
+
+  // ── Layout ───────────────────────────────────────────────────────────
+  var rawH = 78;           // raw data panel height
+  var GAP  = 10;           // gap between panels
+  var rawT = MT;           // top of raw panel
+  var rawB = rawT + rawH;  // bottom of raw panel
+  var mnT  = rawB + GAP;   // top of means panel
+  var mnH  = H - MB - mnT; // means panel height
+
+  // ── Y transforms ─────────────────────────────────────────────────────
+  var yRawAbs = 3.2;
+  function tyRaw(v) { return rawT + (1 - (v + yRawAbs) / (2 * yRawAbs)) * rawH; }
+
+  // Compute all window means (needed for auto-scale)
+  var allW = getAllStarts(L, 12);
+  var indepSet4 = setOf(getIndepStarts(L));
+  var means = allW.map(function(s) { return windowMean(data, s, L); });
+  var maxAbsMean = means.reduce(function(m, v) { return Math.max(m, Math.abs(v)); }, 0.01);
+  var yMnAbs = Math.max(0.12, maxAbsMean * 1.35);
+  function tyMn(v) { return mnT + (1 - (v + yMnAbs) / (2 * yMnAbs)) * mnH; }
+
+  // ── Confidence band coordinates ───────────────────────────────────────
+  var grandMean = means.reduce(function(a, b) { return a + b; }, 0) / means.length;
+  var indepMeans = [];
+  allW.forEach(function(s, idx) {
+    if (indepSet4[s.toFixed(4)]) indepMeans.push(means[idx]);
+  });
+  var nI     = indepMeans.length;
+  var iMean  = nI > 0 ? indepMeans.reduce(function(a,b){return a+b;},0)/nI : grandMean;
+  var seN    = means.length > 1 ? stddev(means) / Math.sqrt(means.length) : null;
+  var seH    = nI >= 2 ? stddev(indepMeans) / Math.sqrt(nI) : null;
+  var nBandHi = seN !== null ? tyMn(grandMean + seN) : null;
+  var nBandLo = seN !== null ? tyMn(grandMean - seN) : null;
+  var hBandHi = seH !== null ? tyMn(iMean + seH) : null;
+  var hBandLo = seH !== null ? tyMn(iMean - seH) : null;
+
+  // ── Shared x helper ───────────────────────────────────────────────────
+  function xYr(yr) { return ML + (yr / T) * pW_; }
+
+  // ── Shared x-axis labels + vertical grid lines ────────────────────────
+  ctx.font = '10px system-ui';
+  for (var yr = 0; yr <= T; yr += 10) {
+    var gx = xYr(yr);
+    ctx.fillStyle = 'rgba(125,212,232,0.07)';
+    ctx.fillRect(gx - 0.5, rawT, 1, rawH);
+    ctx.fillRect(gx - 0.5, mnT,  1, mnH);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+    ctx.fillText(yr, gx, H - MB + 14);
+  }
+  ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+  ctx.fillText('Year \u2192', ML + pW_ / 2, H - 2);
+
+  // ── RAW DATA PANEL ────────────────────────────────────────────────────
+
+  // Panel label
+  ctx.fillStyle = C_DIM; ctx.font = '10px system-ui'; ctx.textAlign = 'right';
+  ctx.fillText('raw data (±3\u03c3 scale)', ML + pW_, rawT + 10);
+
+  // Y ticks
+  [-2, 0, 2].forEach(function(v) {
+    var y = tyRaw(v);
+    ctx.fillStyle = 'rgba(125,212,232,0.07)'; ctx.fillRect(ML, y - 0.5, pW_, 1);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'right'; ctx.font = '9px system-ui';
+    ctx.fillText(v, ML - 4, y + 3);
+  });
+
+  // Horizontal band showing the zoom range of the bottom panel
+  var bandTop = tyRaw(yMnAbs), bandBot = tyRaw(-yMnAbs);
+  ctx.fillStyle = 'rgba(125,212,232,0.09)';
+  ctx.fillRect(ML, bandTop, pW_, bandBot - bandTop);
+  ctx.strokeStyle = 'rgba(125,212,232,0.30)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ML, bandTop); ctx.lineTo(ML + pW_, bandTop); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ML, bandBot); ctx.lineTo(ML + pW_, bandBot); ctx.stroke();
+  // Band label on the left edge
+  var bandMid = (bandTop + bandBot) / 2;
+  ctx.fillStyle = 'rgba(125,212,232,0.55)'; ctx.font = '9px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('\u2195 bottom panel', ML + 3, bandMid + 3);
+
+  // Raw data dots (clipped to panel)
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ML, rawT, pW_, rawH); ctx.clip();
+  var step_px = pW_ / (data.length - 1);
+  for (var i = 0; i < data.length; i++) {
+    var px = ML + i * step_px, py = tyRaw(data[i]);
+    ctx.fillStyle = 'rgba(100,180,210,0.20)';
+    ctx.fillRect(px - 1, py - 1, 2, 2);
+  }
+  ctx.restore();
+
+  // ── PANEL DIVIDER ─────────────────────────────────────────────────────
+  ctx.strokeStyle = 'rgba(125,212,232,0.20)'; ctx.lineWidth = 1;
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(ML, rawB + GAP / 2); ctx.lineTo(ML + pW_, rawB + GAP / 2);
+  ctx.stroke(); ctx.setLineDash([]);
+
+  // ── MEANS PANEL ───────────────────────────────────────────────────────
+
+  // Panel label
+  ctx.fillStyle = C_DIM; ctx.font = '10px system-ui'; ctx.textAlign = 'right';
+  ctx.fillText('window means (zoomed)', ML + pW_, mnT + 10);
+
+  // Y ticks (auto-scaled)
+  var mnTick = parseFloat(yMnAbs.toFixed(2));
+  [-mnTick, 0, mnTick].forEach(function(v) {
+    var y = tyMn(v);
+    ctx.fillStyle = 'rgba(125,212,232,0.07)'; ctx.fillRect(ML, y - 0.5, pW_, 1);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'right'; ctx.font = '9px system-ui';
+    ctx.fillText(v.toFixed(2), ML - 4, y + 3);
+  });
+
+  // True mean line
+  ctx.strokeStyle = C_TRUE; ctx.lineWidth = 1.5; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(ML, tyMn(0)); ctx.lineTo(ML + pW_, tyMn(0)); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = C_TRUE; ctx.font = '9px system-ui'; ctx.textAlign = 'left';
+  ctx.fillText('generated mean = 0', ML + 4, tyMn(0) - 4);
+
+  // Confidence bands + window mean bars (all clipped to means panel)
+  ctx.save();
+  ctx.beginPath(); ctx.rect(ML, mnT, pW_, mnH); ctx.clip();
+
+  // Naive: dashed center-line only — fill-vs-line contrast with honest ribbon
+  if (seN !== null) {
+    ctx.strokeStyle = 'rgba(220,100,80,0.75)'; ctx.lineWidth = 1.5; ctx.setLineDash([5, 2]);
+    ctx.beginPath(); ctx.moveTo(ML, tyMn(grandMean)); ctx.lineTo(ML + pW_, tyMn(grandMean)); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // Honest: filled semi-transparent ribbon
+  if (hBandHi !== null) {
+    ctx.fillStyle = 'rgba(232,192,32,0.14)';
+    ctx.fillRect(ML, hBandHi, pW_, hBandLo - hBandHi);
+    ctx.strokeStyle = 'rgba(232,192,32,0.45)'; ctx.lineWidth = 1; ctx.setLineDash([3, 2]);
+    ctx.beginPath(); ctx.moveTo(ML, hBandHi); ctx.lineTo(ML + pW_, hBandHi); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(ML, hBandLo); ctx.lineTo(ML + pW_, hBandLo); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Window mean bars (on top of bands)
+  allW.forEach(function(s, idx) {
+    var m = means[idx];
+    var x0 = xYr(s), x1 = xYr(s + L);
+    var y = tyMn(m);
+    var isIndep = indepSet4[s.toFixed(4)];
+    ctx.strokeStyle = isIndep ? C_GOLD : 'rgba(125,212,232,0.35)';
+    ctx.lineWidth   = isIndep ? 2.5 : 1;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+  });
+  ctx.restore();
+
+  // Band labels (right edge, outside clip so always visible)
+  ctx.font = '9px system-ui'; ctx.textAlign = 'right';
+  if (seN !== null) {
+    ctx.fillStyle = 'rgba(220,100,80,0.85)';
+    ctx.fillText('naive (dashed)', ML + pW_ - 3, tyMn(grandMean) - 3);
+  }
+  if (hBandHi !== null) {
+    ctx.fillStyle = 'rgba(232,192,32,0.85)';
+    ctx.fillText('honest \u00b1SE', ML + pW_ - 3, Math.max(mnT + 10, hBandHi - 2));
+  }
+}
+
+function drawBeat4Horizon() {
+  var r = prep('c4b'); if (!r) return;
+  var ctx = r.ctx, W = r.W, H = r.H;
+  var EB_W = 100;  // right-side panel for error bars
+  var pW_  = W - ML - EB_W - 8, pH_ = plotH(H);
+  var data = b4.L_data = computeAllHorizonMeans();
+  var maxH = MAX_L;
+
+  // Determine y-range from data
+  var allVals = [];
+  data.forEach(function(d) { d.pts.forEach(function(p) { allVals.push(p.m); }); });
+  var yAbsMax = Math.max(0.4, Math.max.apply(null, allVals.map(Math.abs))) * 1.15;
+  function hy(v) { return MT + (1 - (v + yAbsMax) / (2 * yAbsMax)) * pH_; }
+  function hx(L_h) { return ML + (L_h / maxH) * pW_; }
+
+  // Grid
+  ctx.font = '10px system-ui';
+  for (var h = 0; h <= maxH; h += 5) {
+    ctx.fillStyle = 'rgba(125,212,232,0.07)'; ctx.fillRect(hx(h) - 0.5, MT, 1, pH_);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'center'; ctx.fillText(h + 'yr', hx(h), H - MB + 14);
+  }
+  var yTicks = [-0.4, -0.2, 0, 0.2, 0.4];
+  yTicks.forEach(function(v) {
+    var y = hy(v);
+    ctx.fillStyle = 'rgba(125,212,232,0.07)'; ctx.fillRect(ML, y - 0.5, pW_, 1);
+    ctx.fillStyle = C_DIM; ctx.textAlign = 'right'; ctx.fillText(v.toFixed(1), ML - 4, y + 4);
+  });
+  ctx.fillStyle = C_DIM; ctx.textAlign = 'center';
+  ctx.fillText('Horizon (years) \u2192', ML + pW_ / 2, H - 2);
+  ctx.save();
+  ctx.translate(11, MT + pH_ / 2); ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center'; ctx.fillText('Window mean', 0, 0);
+  ctx.restore();
+
+  // True mean
+  ctx.strokeStyle = C_TRUE; ctx.lineWidth = 1.5; ctx.setLineDash([5, 4]);
+  ctx.beginPath(); ctx.moveTo(ML, hy(0)); ctx.lineTo(ML + pW_, hy(0)); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // All window mean dots
+  data.forEach(function(d) {
+    d.pts.forEach(function(p) {
+      ctx.beginPath(); ctx.arc(hx(d.L), hy(p.m), 2, 0, 6.283);
+      ctx.fillStyle = C_TEAL; ctx.fill();
+    });
+    d.indep.forEach(function(p) {
+      ctx.beginPath(); ctx.arc(hx(d.L), hy(p.m), 4, 0, 6.283);
+      ctx.fillStyle = C_GOLD; ctx.fill();
+    });
+  });
+
+  // Current-L column indicator
+  ctx.strokeStyle = 'rgba(125,212,232,0.55)'; ctx.lineWidth = 2; ctx.setLineDash([4, 3]);
+  ctx.beginPath(); ctx.moveTo(hx(b4.L), MT); ctx.lineTo(hx(b4.L), MT + pH_); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Error bars for current L
+  var cur = data.find(function(d) { return d.L === b4.L; });
+  if (!cur) return;
+
+  var grandMean = cur.pts.reduce(function(a, p) { return a + p.m; }, 0) / cur.pts.length;
+  var sdAll   = stddev(cur.pts.map(function(p) { return p.m; }));
+  var nAll    = cur.pts.length;
+  var seNaive = sdAll / Math.sqrt(nAll);
+
+  var nI      = cur.indep.length;
+  var sdIndep = stddev(cur.indep.map(function(p) { return p.m; }));
+  var seHonest = nI >= 2 ? sdIndep / Math.sqrt(nI) : null;
+
+  var ebX1 = ML + pW_ + 22, ebX2 = ML + pW_ + 62;
+  var ymid = hy(grandMean);
+
+  // Divider
+  ctx.strokeStyle = 'rgba(125,212,232,0.12)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ML + pW_ + 8, MT); ctx.lineTo(ML + pW_ + 8, MT + pH_); ctx.stroke();
+
+  // Naive bar
+  drawEBar(ctx, ebX1, ymid, hy(grandMean - seNaive), hy(grandMean + seNaive), C_NAIVE, 'Naive', '\u00b1' + seNaive.toFixed(3));
+
+  // Honest bar
+  if (seHonest !== null) {
+    drawEBar(ctx, ebX2, ymid, hy(grandMean - seHonest), hy(grandMean + seHonest), C_GOLD, 'Honest', '\u00b1' + seHonest.toFixed(3));
+  } else {
+    ctx.fillStyle = C_GOLD; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+    ctx.fillText('Honest', ebX2, ymid - 18);
+    ctx.fillText('unestimable', ebX2, ymid - 4);
+    ctx.fillText('(n\u2080 = 1)', ebX2, ymid + 10);
+  }
+
+  // True mean crosses error bar?
+  var naiveHits   = (grandMean - seNaive <= 0 && 0 <= grandMean + seNaive);
+  var honestHits  = seHonest !== null && (grandMean - seHonest <= 0 && 0 <= grandMean + seHonest);
+
+  document.getElementById('b4-naive').textContent  = '\u00b1' + seNaive.toFixed(3);
+  document.getElementById('b4-honest').textContent =
+    seHonest !== null ? '\u00b1' + seHonest.toFixed(3) : 'unestimable (n\u2080=1)';
+  document.getElementById('b4-naive-brackets').textContent =
+    'Naive: ' + (naiveHits ? '\u2714 yes' : '\u2718 no');
+  document.getElementById('b4-naive-brackets').style.color = naiveHits ? '#4db8a0' : '#e07040';
+  document.getElementById('b4-honest-brackets').textContent =
+    'Honest: ' + (honestHits ? '\u2714 yes' : (seHonest === null ? '\u2014' : '\u2718 no'));
+  document.getElementById('b4-honest-brackets').style.color =
+    honestHits ? '#4db8a0' : (seHonest === null ? C_DIM : '#e07040');
+
+  // Claimed precision ratio
+  var ratio = Math.sqrt(nAll / Math.max(1, nI));
+  var ratioEl = document.getElementById('b4-ratio');
+  if (ratioEl) {
+    if (nI >= 2) {
+      ratioEl.innerHTML =
+        'Counts <strong style="color:rgba(220,100,80,0.9)">' + nAll + '</strong> windows as independent; ' +
+        'only <strong style="color:#e8c020">' + nI + '</strong> are &mdash; ' +
+        'claims &asymp; &radic;(' + nAll + '&thinsp;&divide;&thinsp;' + nI + ') &asymp; ' +
+        '<strong style="color:var(--color-text)">' + ratio.toFixed(1) + '&times;</strong> more precision than it has.';
+    } else {
+      ratioEl.innerHTML =
+        'Counts <strong style="color:rgba(220,100,80,0.9)">' + nAll + '</strong> windows as independent; ' +
+        'only <strong style="color:#e8c020">1</strong> is &mdash; ' +
+        'variance is unestimable from a single independent window.';
+    }
+  }
+}
+
+function drawEBar(ctx, x, yMid, yHi, yLo, color, label, valStr) {
+  ctx.strokeStyle = color; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(x, yHi); ctx.lineTo(x, yLo); ctx.stroke();
+  [[x - 8, yHi, x + 8, yHi], [x - 8, yLo, x + 8, yLo]].forEach(function(seg) {
+    ctx.beginPath(); ctx.moveTo(seg[0], seg[1]); ctx.lineTo(seg[2], seg[3]); ctx.stroke();
+  });
+  ctx.beginPath(); ctx.arc(x, yMid, 3.5, 0, 6.283);
+  ctx.fillStyle = color; ctx.fill();
+  ctx.fillStyle = color; ctx.font = '10px system-ui'; ctx.textAlign = 'center';
+  ctx.fillText(label, x, yLo + 14);
+  if (valStr) ctx.fillText(valStr, x, yLo + 26);
+}
+
+function computeAllHorizonMeans() {
+  var result = [], data = b4.data;
+  for (var L_h = 1; L_h <= MAX_L; L_h++) {
+    var allW  = getAllStarts(L_h, 12);
+    var indepSt = getIndepStarts(L_h);
+    var indepSet4 = setOf(indepSt);
+    var pts = allW.map(function(s) { return { s: s, m: windowMean(data, s, L_h) }; });
+    var indepPts = pts.filter(function(p) { return indepSet4[p.s.toFixed(4)]; });
+    result.push({ L: L_h, pts: pts, indep: indepPts });
+  }
+  return result;
+}
+
+// ── Full redraws ──────────────────────────────────────────────────────
+
+function redrawAll() {
+  drawBeat1();
+  drawBeat2();
+  drawBeat3Stack();
+  drawBeat3Horizon();
+  drawBeat4Timeline();
+  drawBeat4Horizon();
+}
+
+function redrawBeat1() { drawBeat1(); }
+function redrawBeat2() { drawBeat2(); }
+function redrawBeat3() { drawBeat3Stack(); drawBeat3Horizon(); }
+function redrawBeat4() { drawBeat4Timeline(); drawBeat4Horizon(); }
+
+// ── Event wiring ──────────────────────────────────────────────────────
+
+// Beat 1 sliders
+document.getElementById('b1-L').addEventListener('input', function() {
+  b1.L = +this.value;
+  document.getElementById('b1-L-val').textContent = b1.L + 'yr';
+  redrawBeat1();
+});
+document.getElementById('b1-step').addEventListener('input', function() {
+  b1.step = +this.value;
+  document.getElementById('b1-step-val').textContent = b1.step + ' mo';
+  redrawBeat1();
+});
+
+// Beat 2 sliders
+document.getElementById('b2-L').addEventListener('input', function() {
+  b2.L = +this.value;
+  document.getElementById('b2-L-val').textContent = b2.L + 'yr';
+  redrawBeat2();
+});
+document.getElementById('b2-alt').addEventListener('input', function() {
+  b2.altIdx = +this.value;
+  document.getElementById('b2-alt-val').textContent = (b2.altIdx + 1) + ' / ' + (b2.numAlts || 1);
+  redrawBeat2();
+});
+
+// Beat 3 slider + checkbox
+document.getElementById('b3-L').addEventListener('input', function() {
+  b3.L = +this.value;
+  document.getElementById('b3-L-val').textContent = b3.L + 'yr';
+  redrawBeat3();
+});
+document.getElementById('b3-showall').addEventListener('change', function() {
+  b3.showAll = this.checked;
+  redrawBeat3();
+});
+
+// Beat 4 slider + regen
+document.getElementById('b4-L').addEventListener('input', function() {
+  b4.L = +this.value;
+  document.getElementById('b4-L-val').textContent = b4.L + 'yr';
+  redrawBeat4();
+});
+document.getElementById('b4-regen').addEventListener('click', function() {
+  b4.data = genData();
+  redrawBeat4();
+});
+
+// Redraw on window resize
+var resizeTimer = null;
+window.addEventListener('resize', function() {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(redrawAll, 120);
+});
+
+// ── Bootstrap ─────────────────────────────────────────────────────────
+b4.data = genData();
+// Defer initial draw so CSS has laid out canvas heights
+requestAnimationFrame(function() { requestAnimationFrame(redrawAll); });
+
+</script>
+</body>
+</html>
