@@ -599,8 +599,8 @@ function buildChart(results) {
       }
     });
     // Momentum datasets must respect the showMomentum checkbox, not just the stat-card toggle
-    [6, 7].forEach(idx => {
-      if (idx < chart.data.datasets.length) {
+    chart.data.datasets.forEach((ds, idx) => {
+      if (ds.label && ds.label.includes("Momentum")) {
         chart.getDatasetMeta(idx).hidden = !momentumVisible || chart.getDatasetMeta(idx).hidden;
       }
     });
