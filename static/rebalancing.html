@@ -102,6 +102,10 @@
                     <span>With Advisor</span>
                   </label>
                 </div>
+                <div class="strategy-group-funds">
+                  <div class="strategy-group-funds-label">Funds</div>
+                  <div class="er-display" id="diyFundDisplay">—</div>
+                </div>
               </div>
               <div class="strategy-group">
                 <div class="strategy-group-label">Actively Managed</div>
@@ -114,6 +118,10 @@
                     <input type="radio" name="strategy" id="stratActiveManaged" value="active_managed" />
                     <span>With Advisor</span>
                   </label>
+                </div>
+                <div class="strategy-group-funds">
+                  <div class="strategy-group-funds-label"><span id="activeFundSetLabel">Fund family</span></div>
+                  <select id="activeFundSet" aria-label="Actively managed fund family"></select>
                 </div>
               </div>
             </div>
@@ -150,16 +158,6 @@
           </div>
 
           <input type="hidden" id="diyPortfolio" value="etf" />
-
-          <div class="control-group">
-            <label>Low-Cost Index Funds</label>
-            <div class="er-display" id="diyFundDisplay">—</div>
-          </div>
-
-          <div class="control-group">
-            <label for="activeFundSet"><span id="activeFundSetLabel">Actively Managed Funds</span></label>
-            <select id="activeFundSet"></select>
-          </div>
 
           <div class="section-header" id="advisorCostsHeader">Advisor Costs (&#8220;With Advisor&#8221; Strategies)</div>
 

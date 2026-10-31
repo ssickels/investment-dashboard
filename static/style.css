@@ -1065,6 +1065,22 @@ input[type="range"] {
   gap: 6px;
 }
 
+/* Fund choice nested under each strategy group (Rebalancing Impact) */
+.strategy-group-funds {
+  margin-top: 8px;
+}
+.strategy-group-funds-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-500);
+  margin-bottom: 4px;
+}
+.strategy-group-funds .er-display,
+.strategy-group-funds select {
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
 .strategy-option {
   display: flex;
   align-items: center;
