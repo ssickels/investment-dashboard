@@ -847,7 +847,7 @@ const FUND_MIX_COLORS = ["#7dd4e8", "#e8c020", "#4db8a0"];  // --color-data-1..3
 let driftChart = null;
 let volChart   = null;
 let driftView  = "equity";    // equity | mix
-let volView    = "implied";   // implied | realized
+let volView    = "realized";  // realized (default) | implied
 let driftDirty = true;        // data changed since the panel last rendered
 
 const toTs = (d) => new Date(d + "T00:00:00Z").getTime();
@@ -1198,7 +1198,7 @@ function wireDriftPanel() {
       document.getElementById("volRealizedControls").style.display = volView === "realized" ? "" : "none";
       document.getElementById("volCaption").textContent = volView === "realized"
         ? "Volatility the portfolio actually experienced. Market conditions dominate; treat small gaps as noise."
-        : "How much this month’s mix would have swung if held through the whole selected period. Rebalancing holds this steady; drift lets it rise.";
+        : "How much this month’s mix would have swung if held through the whole selected period. Rebalancing holds this steady; drift lets it rise. With few funds, this closely tracks the equity share above.";
       if (lastResults) buildVolChart(lastResults), applyDriftTheme();
     });
   });

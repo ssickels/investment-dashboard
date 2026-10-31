@@ -341,15 +341,15 @@
               <h3>Volatility</h3>
               <div class="drift-chart-controls">
                 <div class="seg-toggle" id="volViewToggle" role="group" aria-label="Volatility view">
-                  <button type="button" class="seg-option seg-option--selected" data-view="implied"
-                    data-tooltip="If you held this month&rsquo;s fund mix through the entire selected period, how much would it have swung? Every point uses the same market history, so the line changes only when the mix drifts. That shows the effect of rebalancing on its own. (Called implied volatility in the Methodology; more in the Rebalancing User Guide.)">Mix-based</button>
-                  <button type="button" class="seg-option" data-view="realized"
+                  <button type="button" class="seg-option seg-option--selected" data-view="realized"
                     data-tooltip="How much the portfolio actually swung over the trailing window of months (set with the slider below). Market ups and downs dominate this view, so it mostly reflects the market rather than the rebalancing choice. (Called realized volatility in the Methodology; more in the Rebalancing User Guide.)">Actual</button>
+                  <button type="button" class="seg-option" data-view="implied"
+                    data-tooltip="If you held this month&rsquo;s fund mix through the entire selected period, how much would it have swung? Every point uses the same market history, so the line changes only when the mix drifts. That shows the effect of rebalancing on its own. (Called implied volatility in the Methodology; more in the Rebalancing User Guide.)">Mix-based</button>
                 </div>
                 <button type="button" class="chart-theme-btn drift-snap-btn" data-chart="vol" title="Save chart as PNG">📷</button>
               </div>
             </div>
-            <div class="vol-realized-controls" id="volRealizedControls" style="display:none;">
+            <div class="vol-realized-controls" id="volRealizedControls">
               <label class="vol-window-label">
                 <span id="volWindowLabel">36-month window</span>
                 <input type="range" id="volWindow" min="12" max="60" step="6" value="36" />
@@ -362,7 +362,7 @@
             <div class="chart-container drift-chart-container">
               <canvas id="volChart"></canvas>
             </div>
-            <p class="drift-caption" id="volCaption">How much this month&rsquo;s mix would have swung if held through the whole selected period. Rebalancing holds this steady; drift lets it rise.</p>
+            <p class="drift-caption" id="volCaption">Volatility the portfolio actually experienced. Market conditions dominate; treat small gaps as noise.</p>
           </div>
 
         </div>
