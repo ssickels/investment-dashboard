@@ -342,9 +342,9 @@
               <div class="drift-chart-controls">
                 <div class="seg-toggle" id="volViewToggle" role="group" aria-label="Volatility view">
                   <button type="button" class="seg-option seg-option--selected" data-view="realized"
-                    data-tooltip="How much the portfolio actually swung over the trailing window of months (set with the slider below). Market ups and downs dominate this view, so it mostly reflects the market rather than the rebalancing choice. (Called realized volatility in the Methodology; more in the Rebalancing User Guide.)">Actual</button>
+                    data-tooltip="How much the portfolio actually swung, per year, over the trailing window of months (set with the slider below). Market ups and downs dominate this view, so it mostly reflects the market rather than the rebalancing choice. (Called realized volatility in the Methodology; more in the Rebalancing User Guide.)">Actual</button>
                   <button type="button" class="seg-option" data-view="implied"
-                    data-tooltip="If you held this month&rsquo;s fund mix through the entire selected period, how much would it have swung? Every point uses the same market history, so the line changes only when the mix drifts. That shows the effect of rebalancing on its own. (Called implied volatility in the Methodology; more in the Rebalancing User Guide.)">Mix-based</button>
+                    data-tooltip="If you held this month&rsquo;s fund mix unchanged from your start date to your end date, how much would it have swung in a typical year? Every point uses that same market history, so the line changes only when the mix drifts. That shows the effect of rebalancing on its own. (Called implied volatility in the Methodology; more in the Rebalancing User Guide.)">Mix-based</button>
                 </div>
                 <button type="button" class="chart-theme-btn drift-snap-btn" data-chart="vol" title="Save chart as PNG">📷</button>
               </div>

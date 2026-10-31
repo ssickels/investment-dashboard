@@ -734,24 +734,50 @@
 
         <h3>Volatility</h3>
         <p>
-          The chart has two views. <strong>Mix-based</strong> (called <em>implied volatility</em> in
-          the Methodology) asks: if you held this month's fund mix through the entire selected
-          period, how much would it have swung? Every point is measured against the same market
-          history, so the line changes only when the mix changes. That isolates the effect of drift,
-          which is exactly what rebalancing is meant to control. Expect the rebalanced lines to stay roughly
-          flat while No Rebalancing climbs as its stock share grows. With only a few funds, such as
-          the three-fund index portfolio, this view closely tracks the equity share in the drift chart,
-          because the stock share is nearly the only thing that changes.
+          Volatility measures how bumpy a portfolio's ride is. Both views show it as a
+          <strong>typical yearly swing</strong> in percent (technically, the annualized standard
+          deviation of monthly returns). A reading of 12% means that in a typical year the return
+          lands within about 12 points of its average, above or below, roughly two years out of three.
         </p>
         <p>
-          <strong>Actual</strong> (called <em>realized volatility</em> in the Methodology) is how much
-          the portfolio actually swung over the trailing window (12 to 60 months, set with the slider). Market conditions dominate it: in
-          2020 and 2022 all strategies spike together, and in 2022 stocks and bonds fell at the same
-          time. Any single rolling estimate is noisy. With a 36-month window, the uncertainty is
-          roughly 12% of the value itself, so differences of a point or two are within the noise.
-          Tick <strong>Show difference</strong> to plot No Rebalancing minus each rebalanced
-          strategy; market swings that hit every strategy cancel out, which makes the effect of drift
-          easier to see.
+          <strong>Actual</strong> (the default; called <em>realized volatility</em> in the Methodology)
+          is how much the portfolio actually swung over the trailing window (12 to 60 months, set with
+          the slider). Market conditions dominate it: in 2020 and 2022 all strategies spike together,
+          and in 2022 stocks and bonds fell at the same time. Any single rolling estimate is noisy.
+          With a 36-month window, the uncertainty is roughly 12% of the value itself, so differences
+          of a point or two are within the noise. Tick <strong>Show difference</strong> to plot No
+          Rebalancing minus each rebalanced strategy; market swings that hit every strategy cancel
+          out, which makes the effect of drift easier to see.
+        </p>
+        <p>
+          <strong>Mix-based</strong> (called <em>implied volatility</em> in the Methodology) answers
+          a narrower question: <em>how risky is this month's mix?</em> For each month it takes that
+          month's fund mix, pretends you held exactly that mix unchanged from your Start Date to your
+          End Date, and reports how much that frozen portfolio would have swung. For example, an
+          80/20 mix of VTI, VXUS and BND over 2011&ndash;2026 comes out near 11.7%. By the end of the
+          period, No Rebalancing has drifted to about 95% stocks, and the same calculation for that
+          mix gives about 13.7%. Every point uses the same market history, so the line changes only
+          when the mix changes. That isolates the effect of drift, which is exactly what rebalancing
+          is meant to control: expect the rebalanced lines to stay roughly flat while No Rebalancing
+          climbs.
+        </p>
+        <p>
+          <strong>Why the Mix-based line looks like the drift chart.</strong> With the three-fund
+          index portfolio, the Mix-based chart is close to a rescaled copy of the Equity % chart above
+          it. That is expected, not a glitch. Bonds swing far less than stocks and barely move with
+          them, so nearly all of a portfolio's volatility comes from its stock share. To a good
+          approximation:
+        </p>
+        <p style="text-align:center;"><em>volatility &asymp; stock share &times; stock volatility</em></p>
+        <p>
+          The calculation holds market behavior fixed and changes only the mix, and with this
+          portfolio the mix is described almost entirely by one number, the stock share. So the
+          volatility line moves in step with it: 95 &divide; 80 = 1.19, and 13.7 &divide; 11.7 = 1.17.
+          The small differences come from drift <em>within</em> the stocks (VTI grew faster than VXUS,
+          and the two have different volatilities). The views diverge more when the stock side holds
+          several funds of different risk, as with some actively managed sets. The Mix-based view
+          adds a scale, telling you how much extra risk a given drift amounts to. For what the
+          markets actually did, use the Actual view.
         </p>
         <div class="tip">
           <b>Why monthly contributions don't distort volatility:</b> both volatility charts are built

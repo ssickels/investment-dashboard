@@ -1102,6 +1102,10 @@ function buildVolChart(results) {
     const v = ctx.parsed.y;
     return ` ${ctx.dataset.label}: ${showDiff && v >= 0 ? "+" : ""}${v.toFixed(1)}${showDiff ? " pts" : "%"}`;
   };
+  opts.scales.y.title = {
+    display: true, font: { size: 12 },
+    text: showDiff ? "Difference in yearly swing (points)" : "Yearly swing (%)",
+  };
   volChart = replaceChart(volChart, "volChart", { type: "line", data: { datasets }, options: opts });
 }
 
@@ -1150,6 +1154,7 @@ function applyDriftTheme() {
     for (const ax of ["x", "y"]) {
       c.options.scales[ax].ticks.color = t.tickColor;
       c.options.scales[ax].grid.color  = t.gridColor;
+      if (c.options.scales[ax].title) c.options.scales[ax].title.color = t.tickColor;
     }
     c.update("none");
   }
@@ -1198,7 +1203,7 @@ function wireDriftPanel() {
       document.getElementById("volRealizedControls").style.display = volView === "realized" ? "" : "none";
       document.getElementById("volCaption").textContent = volView === "realized"
         ? "Volatility the portfolio actually experienced. Market conditions dominate; treat small gaps as noise."
-        : "How much this month’s mix would have swung if held through the whole selected period. Rebalancing holds this steady; drift lets it rise. With few funds, this closely tracks the equity share above.";
+        : "Risk of each month’s mix: the typical yearly swing it would have had if held unchanged from your start date to your end date. Rebalancing holds this steady; drift lets it rise. With few funds, this closely tracks the equity share above.";
       if (lastResults) buildVolChart(lastResults), applyDriftTheme();
     });
   });
