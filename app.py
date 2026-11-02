@@ -166,6 +166,25 @@ def independent_windows():
     return send_from_directory("static", "independent-windows.html")
 
 
+# Dev switch for the shared site menu. static/nav.js loads this on localhost,
+# so nav changes can be tested before they're deployed to stevessite.com.
+# Debug mode only; in production it 404s and the live file is used.
+SITE_NAV_DEV_PATH = os.environ.get(
+    "SITE_NAV_DEV_PATH", os.path.expanduser("~/steves-site/public/site-nav.js")
+)
+
+
+@app.route("/dev/site-nav.js")
+def dev_site_nav():
+    if not app.debug or not os.path.isfile(SITE_NAV_DEV_PATH):
+        return "", 404
+    resp = send_from_directory(
+        os.path.dirname(SITE_NAV_DEV_PATH), os.path.basename(SITE_NAV_DEV_PATH)
+    )
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
+
+
 @app.route("/api/active-passive-data")
 def active_passive_data():
     """Return inner-joined returns for active vs passive comparison.
